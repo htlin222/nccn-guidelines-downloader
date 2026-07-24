@@ -1,4 +1,4 @@
-name: Update guideline versions
+name: Update versions & search index
 
 # Cloud, end-to-end version refresh. Runs in GitHub's cloud (no local machine):
 # pulls each cached PDF from R2, extracts "Version X.YYYY" with poppler, and
@@ -34,6 +34,13 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
         run: bash gen_versions.sh
+
+      - name: Build full-text search index → D1
+        working-directory: cf
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+        run: bash build_index.sh
 
       - name: Show result
         working-directory: cf

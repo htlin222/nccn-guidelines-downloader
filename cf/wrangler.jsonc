@@ -17,6 +17,13 @@
       "bucket_name": "nccn-pdfs"
     }
   ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "nccn-search",
+      "database_id": "5af203fd-a38e-4a92-9c44-0c20bfc952f6"
+    }
+  ],
   "triggers": {
     "crons": ["0 3 * * *"]
   },
