@@ -34,7 +34,7 @@ const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
 const PER_DAY = 3;
-const BUILD_TIME = "2026-07-24 14:26 CST"; // stamped by deploy.sh
+const BUILD_TIME = "2026-07-24 14:57 CST"; // stamped by deploy.sh
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8" } });
@@ -670,7 +670,10 @@ function renderViewer(id) {
   .annotationLayer{position:absolute;inset:0;pointer-events:none;}
   .annotationLayer a{position:absolute;pointer-events:auto;cursor:pointer;border-radius:2px;}
   .annotationLayer a:hover{background:rgba(59,130,246,.18);}
-  #msg{position:absolute;top:40%;color:hsl(var(--muted-fg));font-size:.9rem;text-align:center;padding:0 20px;}
+  #msg{position:absolute;top:20px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:12px;color:hsl(var(--muted-fg));font-size:.82rem;max-width:92%;text-align:center;}
+  .preview{max-width:min(72vw,520px);width:auto;border-radius:4px;box-shadow:0 6px 26px -8px rgba(0,0,0,.5);background:#fff;}
+  .ldot{display:inline-flex;align-items:center;gap:8px;animation:pulse 1.2s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:.45}50%{opacity:1}}
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px;}
   .modal[hidden]{display:none;}
   .sheet{background:hsl(var(--bar));color:hsl(var(--fg));border:1px solid hsl(var(--border));border-radius:14px;width:min(680px,100%);max-height:90vh;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px;}
@@ -701,7 +704,7 @@ function renderViewer(id) {
 </div>
 <div class="body">
   <aside class="rail" id="rail"></aside>
-  <div class="viewer" id="viewer"><div id="msg">載入中…</div></div>
+  <div class="viewer" id="viewer"><div id="msg"><img id="preview" class="preview" src="/thumb/${encodeURIComponent(id)}" alt="" onerror="this.remove()"><div class="ldot">載入完整版 PDF…</div></div></div>
 </div>
 <div id="snapModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>頁面截圖筆記</b><button class="btn" id="snapClose">✕</button></div><div class="meta" id="snapMeta"></div><img id="snapImg" class="snapimg" alt="page"><textarea id="snapNote" placeholder="在這裡寫你的 Markdown 筆記…"></textarea><div class="sheetfoot"><button class="btn" id="snapPng">下載 PNG</button><button class="btn dl" id="snapMd">下載 Markdown 筆記</button></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
