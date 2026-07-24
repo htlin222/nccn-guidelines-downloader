@@ -34,7 +34,57 @@ const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
 const PER_DAY = 3;
-const BUILD_TIME = "2026-07-24 14:57 CST"; // stamped by deploy.sh
+const BUILD_TIME = "2026-07-24 16:08 CST"; // stamped by deploy.sh
+
+// Oncology drug brand<->generic synonyms so "keytruda" also finds "pembrolizumab".
+const DRUG_GROUPS = [
+  ["pembrolizumab","keytruda"],["nivolumab","opdivo"],["atezolizumab","tecentriq"],
+  ["durvalumab","imfinzi"],["ipilimumab","yervoy"],["cemiplimab","libtayo"],["dostarlimab","jemperli"],
+  ["trastuzumab","herceptin"],["pertuzumab","perjeta"],["trastuzumab emtansine","kadcyla","t-dm1"],
+  ["trastuzumab deruxtecan","enhertu","t-dxd"],["bevacizumab","avastin"],["rituximab","rituxan"],
+  ["cetuximab","erbitux"],["panitumumab","vectibix"],["ramucirumab","cyramza"],
+  ["osimertinib","tagrisso"],["erlotinib","tarceva"],["gefitinib","iressa"],["afatinib","gilotrif"],
+  ["dacomitinib","vizimpro"],["alectinib","alecensa"],["crizotinib","xalkori"],["lorlatinib","lorbrena"],
+  ["brigatinib","alunbrig"],["ceritinib","zykadia"],["sotorasib","lumakras"],["adagrasib","krazati"],
+  ["tepotinib","tepmetko"],["capmatinib","tabrecta"],["selpercatinib","retevmo"],["pralsetinib","gavreto"],
+  ["larotrectinib","vitrakvi"],["entrectinib","rozlytrek"],["amivantamab","rybrevant"],["mobocertinib","exkivity"],
+  ["imatinib","gleevec"],["dasatinib","sprycel"],["nilotinib","tasigna"],["bosutinib","bosulif"],["ponatinib","iclusig"],
+  ["ibrutinib","imbruvica"],["acalabrutinib","calquence"],["zanubrutinib","brukinsa"],["venetoclax","venclexta"],
+  ["lenalidomide","revlimid"],["pomalidomide","pomalyst"],["thalidomide","thalomid"],
+  ["bortezomib","velcade"],["carfilzomib","kyprolis"],["ixazomib","ninlaro"],
+  ["daratumumab","darzalex"],["isatuximab","sarclisa"],["elotuzumab","empliciti"],
+  ["palbociclib","ibrance"],["ribociclib","kisqali"],["abemaciclib","verzenio"],
+  ["olaparib","lynparza"],["niraparib","zejula"],["rucaparib","rubraca"],["talazoparib","talzenna"],
+  ["enzalutamide","xtandi"],["abiraterone","zytiga"],["apalutamide","erleada"],["darolutamide","nubeqa"],
+  ["sunitinib","sutent"],["sorafenib","nexavar"],["pazopanib","votrient"],["cabozantinib","cabometyx","cometriq"],
+  ["lenvatinib","lenvima"],["regorafenib","stivarga"],["axitinib","inlyta"],["tivozanib","fotivda"],
+  ["everolimus","afinitor"],["temsirolimus","torisel"],["vemurafenib","zelboraf"],["dabrafenib","tafinlar"],
+  ["trametinib","mekinist"],["encorafenib","braftovi"],["binimetinib","mektovi"],["cobimetinib","cotellic"],
+  ["gemcitabine","gemzar"],["capecitabine","xeloda"],["paclitaxel","taxol"],["nab-paclitaxel","abraxane"],
+  ["docetaxel","taxotere"],["pemetrexed","alimta"],["irinotecan","camptosar"],["oxaliplatin","eloxatin"],
+  ["fluorouracil","5-fu"],["doxorubicin","adriamycin"],["liposomal doxorubicin","doxil"],
+  ["sacituzumab govitecan","trodelvy"],["enfortumab vedotin","padcev"],["brentuximab vedotin","adcetris"],
+  ["polatuzumab vedotin","polivy"],["blinatumomab","blincyto"],["mosunetuzumab","lunsumio"],
+  ["tucatinib","tukysa"],["neratinib","nerlynx"],["lapatinib","tykerb"],["margetuximab","margenza"],
+  ["fam-trastuzumab","enhertu"],["mirvetuximab soravtansine","elahere"],
+];
+const SYN = (() => {
+  const m = {};
+  for (const g of DRUG_GROUPS) for (const t of g) {
+    const k = t.toLowerCase();
+    m[k] = (m[k] || []).concat(g.filter((x) => x.toLowerCase() !== k).map((x) => x.toLowerCase()));
+  }
+  return m;
+})();
+function buildMatch(q) {
+  const toks = q.replace(/["*()]/g, " ").split(/\s+/).filter(Boolean);
+  return toks.map((t) => {
+    const alts = SYN[t.toLowerCase()];
+    const terms = ['"' + t + '"*'];
+    if (alts) for (const a of alts) terms.push('"' + a + '"*');
+    return terms.length > 1 ? "(" + terms.join(" OR ") + ")" : terms[0];
+  }).join(" ");
+}
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8" } });
@@ -221,15 +271,18 @@ export default {
 
     if (pathname === "/api/search" && request.method === "GET") {
       const q = (url.searchParams.get("q") || "").trim();
+      const gid = url.searchParams.get("id");
+      const cat = url.searchParams.get("cat");
       if (q.length < 2) return json({ q, results: [] });
-      const match = q.replace(/["*]/g, " ").split(/\s+/).filter(Boolean).map((t) => '"' + t + '"*').join(" ");
+      const match = buildMatch(q);
       if (!match) return json({ q, results: [] });
+      let sql = "SELECT gid, page, name, cat, snippet(pages, 4, '<mark>', '</mark>', '…', 12) AS snip FROM pages WHERE pages MATCH ?";
+      const binds = [match];
+      if (gid && VALID_IDS.has(gid)) { sql += " AND gid = ?"; binds.push(gid); }
+      if (cat) { sql += " AND cat = ?"; binds.push(cat); }
+      sql += " ORDER BY rank LIMIT " + (gid ? 300 : 80);
       try {
-        const stmt = env.DB.prepare(
-          "SELECT gid, page, name, cat, snippet(pages, 4, '<mark>', '</mark>', '…', 12) AS snip " +
-          "FROM pages WHERE pages MATCH ? ORDER BY rank LIMIT 60"
-        ).bind(match);
-        const { results } = await stmt.all();
+        const { results } = await env.DB.prepare(sql).bind(...binds).all();
         return json({ q, count: results.length, results });
       } catch (e) {
         return json({ q, error: String(e), results: [] });
@@ -424,6 +477,13 @@ function renderPage(request) {
   .spage{font-size:.72rem;color:hsl(var(--muted-foreground));font-weight:500;}
   .snip{font-size:.78rem;color:hsl(var(--muted-foreground));margin-top:2px;line-height:1.4;overflow-wrap:anywhere;}
   .snip mark{background:#fde68a;color:#111;border-radius:2px;padding:0 1px;}
+  .sgroup{border-top:1px solid hsl(var(--border));padding:4px 0 3px;}
+  .sgroup:first-of-type{border-top:0;}
+  .sgh{display:flex;align-items:center;gap:7px;padding:5px 6px 3px;font-size:.83rem;}
+  .sgc{margin-left:auto;font-size:.68rem;color:hsl(var(--muted-foreground));background:hsl(var(--muted));padding:1px 8px;border-radius:999px;}
+  .sitem .spage{flex-shrink:0;font-size:.72rem;color:hsl(var(--muted-foreground));font-weight:600;margin-top:1px;}
+  .smore{display:block;font-size:.74rem;color:hsl(var(--muted-foreground));padding:3px 8px 5px;text-decoration:none;}
+  .smore:hover{color:hsl(var(--foreground));}
   main{max-width:1180px;margin:0 auto;padding:8px 20px 80px;}
   .status{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 4px;font-size:.78rem;color:hsl(var(--muted-foreground));}
   .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;border:1px solid hsl(var(--border));background:hsl(var(--card));}
@@ -571,7 +631,8 @@ function applyFilter(){
 }
 q.addEventListener('input',applyFilter);
 var sresEl=document.getElementById('searchResults');var sTimer=null;
-function doSearch(){var qq=q.value.trim();if(qq.length<2){sresEl.innerHTML='';return;}fetch('/api/search?q='+encodeURIComponent(qq)).then(function(r){return r.json();}).then(function(d){if((d.q||'')!==q.value.trim())return;var rs=d.results||[];if(!rs.length){sresEl.innerHTML='<div class="shdr">內容搜尋「'+esc(qq)+'」：無命中</div>';return;}sresEl.innerHTML='<div class="shdr">內容命中 '+rs.length+' 頁（點擊跳到該頁）</div>'+rs.map(function(x){var snip=esc(x.snip||'').split('&lt;mark&gt;').join('<mark>').split('&lt;/mark&gt;').join('</mark>');return '<a class="sitem" href="/preview/'+encodeURIComponent(x.gid)+'?page='+x.page+'">'+'<span class="sdot" style="background:'+(COLOR[x.cat]||'#64748b')+'"></span>'+'<div class="sbody"><div class="stitle">'+esc(x.name)+' <span class="spage">p.'+x.page+'</span></div>'+'<div class="snip">'+snip+'</div></div></a>';}).join('');}).catch(function(){});}
+function unmark(x){return esc(x||'').split('&lt;mark&gt;').join('<mark>').split('&lt;/mark&gt;').join('</mark>');}
+function doSearch(){var qq=q.value.trim();if(qq.length<2){sresEl.innerHTML='';return;}var u='/api/search?q='+encodeURIComponent(qq)+(activeCat?'&cat='+encodeURIComponent(activeCat):'');fetch(u).then(function(r){return r.json();}).then(function(d){if((d.q||'')!==q.value.trim())return;var rs=d.results||[];if(!rs.length){sresEl.innerHTML='<div class="shdr">內容搜尋「'+esc(qq)+'」：無命中</div>';return;}var order=[],G={};rs.forEach(function(x){if(!G[x.gid]){G[x.gid]={name:x.name,cat:x.cat,hits:[]};order.push(x.gid);}G[x.gid].hits.push(x);});var html='<div class="shdr">命中 '+rs.length+' 頁 · '+order.length+' 份'+(activeCat?'（限 '+esc(activeCat)+'）':'')+'</div>';order.forEach(function(gid){var g=G[gid];html+='<div class="sgroup"><div class="sgh"><span class="sdot" style="background:'+(COLOR[g.cat]||'#64748b')+'"></span><b>'+esc(g.name)+'</b><span class="sgc">'+g.hits.length+' 頁</span></div>';g.hits.slice(0,5).forEach(function(x){html+='<a class="sitem" href="/preview/'+encodeURIComponent(x.gid)+'?page='+x.page+'"><span class="spage">p.'+x.page+'</span><div class="snip">'+unmark(x.snip)+'</div></a>';});if(g.hits.length>5)html+='<a class="smore" href="/preview/'+encodeURIComponent(gid)+'?page='+g.hits[5].page+'">還有 '+(g.hits.length-5)+' 頁…</a>';html+='</div>';});sresEl.innerHTML=html;}).catch(function(){});}
 q.addEventListener('input',function(){clearTimeout(sTimer);sTimer=setTimeout(doSearch,250);});
 listEl.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.dlbtn');if(b){e.preventDefault();e.stopPropagation();location.href='/dl/'+b.getAttribute('data-dl');}});
 function buildFilters(){var counts={};DATA.forEach(function(g){counts[g.cat]=(counts[g.cat]||0)+1;});var h='<button class="fchip'+(activeCat?'':' act')+'" data-cat="">全部 <b>'+DATA.length+'</b></button>';CATS.forEach(function(c){if(!counts[c.name])return;h+='<button class="fchip'+(activeCat===c.name?' act':'')+'" data-cat="'+c.name+'" style="--cc:'+c.color+'">'+svg(c.icon)+'<span>'+esc(c.name)+'</span> <b>'+counts[c.name]+'</b></button>';});filtersEl.innerHTML=h;filtersEl.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.fchip');if(!b)return;activeCat=b.getAttribute('data-cat')||null;try{localStorage.setItem('nccncat',activeCat||'');}catch(e){}[].forEach.call(filtersEl.children,function(x){x.className='fchip'+(x===b?' act':'');});applyFilter();});}
@@ -648,6 +709,11 @@ function renderViewer(id) {
   .btn:hover{background:hsl(var(--accent));}
   .btn.on{background:hsl(var(--accent));border-color:hsl(var(--ring));}
   .btn.off{opacity:.35;pointer-events:none;}
+  .findbar{display:flex;align-items:center;gap:6px;padding:7px 12px;background:hsl(var(--bar));border-bottom:1px solid hsl(var(--border));}
+  .findbar[hidden]{display:none;}
+  .findbar .fi{color:hsl(var(--muted-fg));font-size:15px;display:inline-flex;}
+  .findbar input{flex:1;min-width:0;height:32px;padding:0 10px;border:1px solid hsl(var(--border));border-radius:8px;background:hsl(var(--bg));color:inherit;font:inherit;font-size:.85rem;outline:none;}
+  .fcount{font-size:.76rem;color:hsl(var(--muted-fg));min-width:46px;text-align:center;}
   .btn.dl{background:hsl(var(--primary));color:hsl(var(--primary-fg));border-color:transparent;font-weight:600;font-size:.82rem;padding:6px 11px;}
   .grp{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid hsl(var(--border));border-radius:9px;background:hsl(var(--bar));}
   .grp .btn{border:0;padding:5px 7px;}
@@ -698,10 +764,12 @@ function renderViewer(id) {
     <span class="zpct" id="zpct">–</span>
     <button class="btn" id="zin" title="放大"></button>
     <button class="btn" id="fit" title="符合寬度"></button></div>
+  <button class="btn" id="findBtn" title="在本檔搜尋內文"></button>
   <button class="btn" id="snap" title="截圖成筆記"></button>
   <button class="btn" id="theme" title="切換主題"></button>
   <a class="btn dl" href="/dl/${encodeURIComponent(id)}"><span id="dlic"></span>下載</a>
 </div>
+<div class="findbar" id="findbar" hidden><span class="fi" id="findIcon"></span><input id="findInput" type="search" placeholder="在本檔搜尋內文（含藥名同義詞）…"><span class="fcount" id="findCount"></span><button class="btn" id="findPrev" title="上一個"></button><button class="btn" id="findNext" title="下一個"></button><button class="btn" id="findClose" title="關閉">✕</button></div>
 <div class="body">
   <aside class="rail" id="rail"></aside>
   <div class="viewer" id="viewer"><div id="msg"><img id="preview" class="preview" src="/thumb/${encodeURIComponent(id)}" alt="" onerror="this.remove()"><div class="ldot">載入完整版 PDF…</div></div></div>
@@ -717,6 +785,7 @@ if('scrollRestoration' in history){try{history.scrollRestoration='manual';}catch
 var pdfjsLib=window['pdfjs-dist/build/pdf']||window.pdfjsLib;
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 var ICONS={
+  find:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
   histb:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5 5.5 5.5 0 0 1-5.5 5.5H11"/>',
   histf:'<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5 5.5 5.5 0 0 0 9.5 20H13"/>',
   camera:'<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
@@ -809,6 +878,16 @@ $('snapClose').onclick=function(){$('snapModal').hidden=true;};
 $('snapModal').addEventListener('click',function(e){if(e.target===$('snapModal'))$('snapModal').hidden=true;});
 $('snapPng').onclick=function(){var u=$('snapImg').getAttribute('src');if(u)dl2(u,'NCCN-'+GID+'-p'+cur+'.png');};
 $('snapMd').onclick=function(){var u=$('snapImg').getAttribute('src')||'';var note=$('snapNote').value;var url=location.origin+'/preview/'+encodeURIComponent(GID)+'?page='+cur;var lines=['---','guideline: '+GNAME.split('"').join(''),'id: '+GID,'version: '+(VERSION||''),'page: '+cur,'source: '+url,'captured: '+new Date().toISOString(),'---','','# '+GNAME+' — p.'+cur+(VERSION?(' (v'+VERSION+')'):''),'','!['+GNAME+' p.'+cur+']('+u+')','',note,''];var md=lines.join(NL);var blob=new Blob([md],{type:'text/markdown;charset=utf-8'});dl2(URL.createObjectURL(blob),'NCCN-'+GID+'-p'+cur+'.md');};
+var fHits=[],fIdx=-1,fTimer=null;
+$('findBtn').innerHTML=svg('find');$('findIcon').innerHTML=svg('find');$('findPrev').innerHTML=svg('cl');$('findNext').innerHTML=svg('cr');
+$('findBtn').onclick=function(){var fb=$('findbar');fb.hidden=!fb.hidden;if(!fb.hidden){$('findInput').focus();$('findInput').select();}};
+$('findClose').onclick=function(){$('findbar').hidden=true;};
+function gotoHit(){if(fIdx<0||!fHits.length)return;$('findCount').textContent=(fIdx+1)+'/'+fHits.length;jumpTo(fHits[fIdx],true);}
+function runFind(){var qq=$('findInput').value.trim();if(qq.length<2){fHits=[];fIdx=-1;$('findCount').textContent='';return;}fetch('/api/search?q='+encodeURIComponent(qq)+'&id='+encodeURIComponent(GID)).then(function(r){return r.json();}).then(function(d){if($('findInput').value.trim()!==qq)return;var seen={};fHits=[];(d.results||[]).forEach(function(x){if(!seen[x.page]){seen[x.page]=1;fHits.push(x.page);}});fHits.sort(function(a,b){return a-b;});if(!fHits.length){fIdx=-1;$('findCount').textContent='0';return;}fIdx=0;for(var i=0;i<fHits.length;i++){if(fHits[i]>=cur){fIdx=i;break;}}gotoHit();}).catch(function(){});}
+$('findInput').addEventListener('input',function(){clearTimeout(fTimer);fTimer=setTimeout(runFind,250);});
+$('findInput').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();if(fHits.length){fIdx=(fIdx+(e.shiftKey?-1:1)+fHits.length)%fHits.length;gotoHit();}}});
+$('findPrev').onclick=function(){if(fHits.length){fIdx=(fIdx-1+fHits.length)%fHits.length;gotoHit();}};
+$('findNext').onclick=function(){if(fHits.length){fIdx=(fIdx+1)%fHits.length;gotoHit();}};
 })();
 </script>
 </body>
