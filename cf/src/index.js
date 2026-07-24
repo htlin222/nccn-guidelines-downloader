@@ -34,7 +34,7 @@ const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
 const PER_DAY = 3;
-const BUILD_TIME = "2026-07-24 13:18 CST"; // stamped by deploy.sh
+const BUILD_TIME = "2026-07-24 13:26 CST"; // stamped by deploy.sh
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8" } });
@@ -413,8 +413,9 @@ function renderPage(request) {
   .fchip:hover{background:hsl(var(--accent));}
   .fchip.act{background:hsl(var(--primary));color:hsl(var(--primary-foreground));border-color:transparent;}
   .fchip.act svg,.fchip.act b{color:hsl(var(--primary-foreground));}
-  .sresults{margin:6px 0 2px;}
-  .shdr{font-size:.76rem;color:hsl(var(--muted-foreground));margin:8px 0 6px;font-weight:600;}
+  .sresults{position:absolute;top:calc(100% - 6px);left:0;right:0;z-index:30;background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:12px;box-shadow:0 14px 36px -10px rgba(0,0,0,.45);max-height:min(64vh,540px);overflow-y:auto;padding:6px;}
+  .sresults:empty{display:none;}
+  .shdr{position:sticky;top:0;background:hsl(var(--card));font-size:.74rem;color:hsl(var(--muted-foreground));padding:4px 6px 8px;font-weight:600;z-index:1;}
   .sitem{display:flex;gap:10px;padding:9px 11px;border:1px solid hsl(var(--border));border-radius:10px;background:hsl(var(--card));text-decoration:none;color:inherit;margin-bottom:6px;align-items:flex-start;}
   .sitem:hover{border-color:hsl(var(--ring));background:hsl(var(--accent));}
   .sdot{width:8px;height:8px;border-radius:999px;margin-top:5px;flex-shrink:0;}
@@ -464,21 +465,20 @@ function renderPage(request) {
 <header>
   <div class="wrap">
     <div class="htop">
-      <div class="brand"><span class="logo" id="logo"></span><span>NCCN Guidelines<small>${GUIDELINES.length} 份 · R2 快取 · PWA</small></span></div>
+      <div class="brand"><span class="logo" id="logo"></span><span>NCCN Guidelines<small id="sub">${GUIDELINES.length} 份 · R2 · PWA</small></span></div>
       <div class="spacer"></div>
       <button class="iconbtn" id="theme" title="切換主題"></button>
     </div>
     <div class="searchrow">
       <span class="si" id="searchicon"></span>
-      <input id="q" type="search" placeholder="搜尋癌別 / 關鍵字 / 代碼…" autocomplete="off">
+      <input id="q" type="search" placeholder="搜尋病名、分類或 PDF 內文（如 trastuzumab）…" autocomplete="off">
+      <div id="searchResults" class="sresults"></div>
     </div>
     <div class="filters" id="filters"></div>
   </div>
 </header>
 <main>
-  <div id="searchResults" class="sresults"></div>
   <div class="status">
-    <span class="chip" id="r2Status">📦 檢查 R2…</span>
     <span class="chip" id="cookieStatus">🔑 檢查 cookie…</span>
   </div>
   <details id="cookieBox">
@@ -583,10 +583,9 @@ async function refreshCookie(){
   }catch(e){el.textContent='🔑 cookie 狀態未知';}
 }
 async function refreshR2(){
-  const el=document.getElementById('r2Status');
   try{const s=await(await fetch('/api/r2-status')).json();R2=s.cached||{};VER=s.versions||{};
-    el.className='chip';el.textContent='📦 R2 快取 '+s.count+' / '+s.total+' 份（cron 每日 '+s.perDay+' 份）';render();
-  }catch(e){el.textContent='📦 R2 狀態未知';}
+    var sub=document.getElementById('sub');if(sub)sub.textContent=s.count+' / '+s.total+' 份 · R2 · PWA';render();
+  }catch(e){}
 }
 document.getElementById('saveCookie').addEventListener('click',async()=>{
   const btn=document.getElementById('saveCookie'),msg=document.getElementById('saveMsg');
@@ -654,11 +653,19 @@ function renderViewer(id) {
   .page canvas{display:block;border-radius:3px;}
   .textLayer{position:absolute;inset:0;overflow:hidden;line-height:1;pointer-events:auto;}
   .textLayer span{color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0 0;}
-  .textLayer ::selection{background:#3b82f6;color:transparent;}
+  .textLayer ::selection{background:rgba(37,99,235,.4);}
   .annotationLayer{position:absolute;inset:0;pointer-events:none;}
   .annotationLayer a{position:absolute;pointer-events:auto;cursor:pointer;border-radius:2px;}
   .annotationLayer a:hover{background:rgba(59,130,246,.18);}
   #msg{position:absolute;top:40%;color:hsl(var(--muted-fg));font-size:.9rem;text-align:center;padding:0 20px;}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px;}
+  .modal[hidden]{display:none;}
+  .sheet{background:hsl(var(--bar));color:hsl(var(--fg));border:1px solid hsl(var(--border));border-radius:14px;width:min(680px,100%);max-height:90vh;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px;}
+  .sheethead{display:flex;justify-content:space-between;align-items:center;font-size:.95rem;}
+  .meta{font-size:.8rem;color:hsl(var(--muted-fg));}
+  .snapimg{width:100%;border:1px solid hsl(var(--border));border-radius:8px;background:#fff;}
+  .sheet textarea{width:100%;min-height:120px;border:1px solid hsl(var(--border));border-radius:8px;background:hsl(var(--bg));color:inherit;padding:10px;font-family:ui-monospace,monospace;font-size:.85rem;box-sizing:border-box;}
+  .sheetfoot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
   @media (max-width:640px){ .rail{position:absolute;z-index:9;height:100%;box-shadow:2px 0 14px rgba(0,0,0,.35);} }
 </style>
 </head>
@@ -674,6 +681,7 @@ function renderViewer(id) {
     <span class="zpct" id="zpct">–</span>
     <button class="btn" id="zin" title="放大"></button>
     <button class="btn" id="fit" title="符合寬度"></button></div>
+  <button class="btn" id="snap" title="截圖成筆記"></button>
   <button class="btn" id="theme" title="切換主題"></button>
   <a class="btn dl" href="/dl/${encodeURIComponent(id)}"><span id="dlic"></span>下載</a>
 </div>
@@ -681,14 +689,17 @@ function renderViewer(id) {
   <aside class="rail" id="rail"></aside>
   <div class="viewer" id="viewer"><div id="msg">載入中…</div></div>
 </div>
+<div id="snapModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>頁面截圖筆記</b><button class="btn" id="snapClose">✕</button></div><div class="meta" id="snapMeta"></div><img id="snapImg" class="snapimg" alt="page"><textarea id="snapNote" placeholder="在這裡寫你的 Markdown 筆記…"></textarea><div class="sheetfoot"><button class="btn" id="snapPng">下載 PNG</button><button class="btn dl" id="snapMd">下載 Markdown 筆記</button></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 var PDF_URL='/pdf/${encodeURIComponent(id)}';
+var GID=${JSON.stringify(id)};var GNAME=${JSON.stringify(name)};
 (function(){
 window.addEventListener('error',function(ev){var m=document.getElementById('msg');if(m){m.style.display='';m.textContent='執行錯誤：'+(ev.message||(ev.error&&ev.error.message)||ev);}});
 var pdfjsLib=window['pdfjs-dist/build/pdf']||window.pdfjsLib;
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 var ICONS={
+  camera:'<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
   back:'<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
   panel:'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/>',
   cl:'<path d="m15 18-6-6 6-6"/>', cr:'<path d="m9 18 6-6-6-6"/>',
@@ -702,7 +713,7 @@ function svg(n){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[n]|
 function $(i){return document.getElementById(i);}
 $('back').innerHTML=svg('back');$('railBtn').innerHTML=svg('panel');
 $('prev').innerHTML=svg('cl');$('next').innerHTML=svg('cr');
-$('zout').innerHTML=svg('minus');$('zin').innerHTML=svg('plus');$('fit').innerHTML=svg('fit');$('dlic').innerHTML=svg('dl');
+$('zout').innerHTML=svg('minus');$('zin').innerHTML=svg('plus');$('fit').innerHTML=svg('fit');$('dlic').innerHTML=svg('dl');$('snap').innerHTML=svg('camera');
 var themeBtn=$('theme');
 function curTheme(){return document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');}
 function paintTheme(){themeBtn.innerHTML=svg(curTheme()==='dark'?'sun':'moon');}
@@ -711,6 +722,7 @@ paintTheme();
 
 var viewer=$('viewer'),rail=$('rail'),msg=$('msg');
 var pages=[],scale=1.2,fit=true,cur=1,dpr=window.devicePixelRatio||1,pdfDoc=null;
+var VERSION='';fetch('/api/r2-status').then(function(r){return r.json();}).then(function(d){var v=(d.versions||{})[GID];if(v)VERSION=v.v;}).catch(function(){});
 function activeScale(){ if(fit&&pages.length){ var w=viewer.clientWidth-40; var pw=(pages[cur-1]||pages[0]).w; return Math.max(0.2,Math.min(w/pw,4)); } return scale; }
 function setZpct(){ $('zpct').textContent=Math.round(activeScale()*100)+'%'; $('fit').className='btn'+(fit?' on':''); }
 
@@ -721,7 +733,7 @@ function renderPage(i){ var p=pages[i]; if(!p||p.done)return; p.done=true;
   var cv=document.createElement('canvas'); cv.width=Math.floor(vp.width*dpr);cv.height=Math.floor(vp.height*dpr);
   cv.style.width=vp.width+'px';cv.style.height=vp.height+'px'; p.el.appendChild(cv);
   p.pg.render({canvasContext:cv.getContext('2d'),viewport:vp,transform:dpr!==1?[dpr,0,0,dpr,0,0]:null});
-  var tl=document.createElement('div'); tl.className='textLayer'; p.el.appendChild(tl); p.el.style.setProperty('--scale-factor',sc);
+  var tl=document.createElement('div'); tl.className='textLayer'; tl.style.setProperty('--scale-factor',sc); p.el.appendChild(tl); p.el.style.setProperty('--scale-factor',sc);
   p.pg.getTextContent().then(function(tc){ try{ pdfjsLib.renderTextLayer({textContent:tc,container:tl,viewport:vp,textDivs:[]}); }catch(e){} }).catch(function(){});
   var al=document.createElement('div'); al.className='annotationLayer'; p.el.appendChild(al);
   p.pg.getAnnotations().then(function(anns){ anns.forEach(function(a){ if(a.subtype!=='Link')return; var v=vp.convertToViewportRectangle(a.rect); var x=Math.min(v[0],v[2]),y=Math.min(v[1],v[3]),w=Math.abs(v[2]-v[0]),h=Math.abs(v[3]-v[1]); var L=document.createElement('a'); L.style.cssText='left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;'; if(a.url){L.href=a.url;L.target='_blank';L.rel='noopener';}else if(a.dest){L.href='#';(function(dest){L.addEventListener('click',function(e){e.preventDefault();var pr=(typeof dest==='string')?pdfDoc.getDestination(dest):Promise.resolve(dest);Promise.resolve(pr).then(function(dd){if(!dd||!dd[0])return;pdfDoc.getPageIndex(dd[0]).then(function(idx){scrollToPage(idx+1);});});});})(a.dest);} al.appendChild(L); }); }).catch(function(){});
@@ -763,6 +775,14 @@ document.addEventListener('keydown',function(e){ if(e.target&&e.target.tagName==
   else if(e.key==='ArrowLeft'||e.key==='ArrowUp'||e.key==='PageUp'){ e.preventDefault(); if(cur>1)scrollToPage(cur-1); }
   else if(e.key==='+'||e.key==='='){ $('zin').onclick(); } else if(e.key==='-'){ $('zout').onclick(); } });
 var rt; window.addEventListener('resize',function(){ clearTimeout(rt); rt=setTimeout(function(){ if(fit) relayout(); },200); });
+var NL=String.fromCharCode(10);
+function makeSnapCanvas(){var pg=pages[cur-1];if(!pg)return null;var src=pg.el.querySelector('canvas');if(!src)return null;var maxW=1100;var sc=Math.min(1,maxW/src.width);var c=document.createElement('canvas');c.width=Math.round(src.width*sc);c.height=Math.round(src.height*sc);c.getContext('2d').drawImage(src,0,0,c.width,c.height);return c;}
+function dl2(u,nm){var a=document.createElement('a');a.href=u;a.download=nm;document.body.appendChild(a);a.click();a.remove();}
+$('snap').onclick=function(){var c=makeSnapCanvas();var img=$('snapImg');if(c){img.src=c.toDataURL('image/png');}else{img.removeAttribute('src');}$('snapMeta').textContent=GNAME+'  ·  '+(VERSION?('v'+VERSION+'  ·  '):'')+'p.'+cur;$('snapModal').hidden=false;};
+$('snapClose').onclick=function(){$('snapModal').hidden=true;};
+$('snapModal').addEventListener('click',function(e){if(e.target===$('snapModal'))$('snapModal').hidden=true;});
+$('snapPng').onclick=function(){var u=$('snapImg').getAttribute('src');if(u)dl2(u,'NCCN-'+GID+'-p'+cur+'.png');};
+$('snapMd').onclick=function(){var u=$('snapImg').getAttribute('src')||'';var note=$('snapNote').value;var url=location.origin+'/preview/'+encodeURIComponent(GID)+'?page='+cur;var lines=['---','guideline: '+GNAME.split('"').join(''),'id: '+GID,'version: '+(VERSION||''),'page: '+cur,'source: '+url,'captured: '+new Date().toISOString(),'---','','# '+GNAME+' — p.'+cur+(VERSION?(' (v'+VERSION+')'):''),'','!['+GNAME+' p.'+cur+']('+u+')','',note,''];var md=lines.join(NL);var blob=new Blob([md],{type:'text/markdown;charset=utf-8'});dl2(URL.createObjectURL(blob),'NCCN-'+GID+'-p'+cur+'.md');};
 })();
 </script>
 </body>
