@@ -34,7 +34,7 @@ const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
 const PER_DAY = 3;
-const BUILD_TIME = "2026-07-24 12:42 CST"; // stamped by deploy.sh
+const BUILD_TIME = "2026-07-24 13:18 CST"; // stamped by deploy.sh
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8" } });
@@ -441,9 +441,8 @@ function renderPage(request) {
   .card{position:relative;display:flex;flex-direction:column;border:1px solid hsl(var(--border));
     border-radius:var(--radius);background:hsl(var(--card));overflow:hidden;transition:.15s;text-decoration:none;color:inherit;}
   .card:hover{border-color:hsl(var(--ring));transform:translateY(-2px);box-shadow:0 8px 24px -12px rgba(0,0,0,.4);}
-  .thumb{position:relative;aspect-ratio:17/22;background:hsl(var(--muted));overflow:hidden;}
+  .thumb{position:relative;aspect-ratio:16/9;background:hsl(var(--muted));overflow:hidden;}
   .thumb img{width:100%;height:100%;object-fit:cover;object-position:top;display:block;}
-  .thumb .ph{position:absolute;inset:0;display:grid;place-items:center;color:hsl(var(--muted-foreground));font-size:34px;}
   .thumb .tag{position:absolute;top:8px;left:8px;display:inline-flex;align-items:center;gap:5px;
     font-size:.66rem;font-weight:600;padding:3px 8px;border-radius:999px;color:#fff;backdrop-filter:blur(4px);}
   .thumb .ver{position:absolute;top:8px;right:8px;font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:999px;color:#fff;background:#000000aa;backdrop-filter:blur(4px);letter-spacing:.02em;}
@@ -537,8 +536,7 @@ function card(g){
   const r2html=c?'<span class="r2"><span class="d"></span>'+(dt||'R2')+'</span>':'<span class="r2 miss"><span class="d"></span>未快取</span>';
   return '<a class="card" href="/preview/'+encodeURIComponent(g.id)+'">'
     +'<div class="thumb">'
-      +'<div class="ph">'+svg('file')+'</div>'
-      +'<img loading="lazy" src="/thumb/'+encodeURIComponent(g.id)+'" alt="" onload="this.style.opacity=1" onerror="this.remove()" style="opacity:0;transition:.3s">'
+            +'<img loading="lazy" src="/thumb/'+encodeURIComponent(g.id)+'" alt="" onload="this.style.opacity=1" onerror="this.remove()" style="opacity:0;transition:.3s">'
       +'<span class="tag" style="background:'+col+'cc">'+svg(ICON[g.cat]||'help')+esc(g.cat)+'</span>'+(VER[g.id]?'<span class="ver" title="'+esc((VER[g.id].d||''))+'">v'+esc(VER[g.id].v)+'</span>':'')
     +'</div>'
     +'<div class="cardbody"><div class="t">'+esc(g.name)+'</div>'
@@ -647,7 +645,7 @@ function renderViewer(id) {
   .body{flex:1;display:flex;min-height:0;}
   .rail{width:150px;flex-shrink:0;overflow-y:auto;background:hsl(var(--bar));border-right:1px solid hsl(var(--border));padding:10px 8px;display:flex;flex-direction:column;gap:8px;}
   .rail.hide{display:none;}
-  .thumb{border:2px solid transparent;border-radius:6px;padding:0;background:hsl(var(--muted));cursor:pointer;position:relative;line-height:0;aspect-ratio:17/22;overflow:hidden;flex-shrink:0;}
+  .thumb{border:2px solid transparent;border-radius:6px;padding:0;background:hsl(var(--muted));cursor:pointer;position:relative;line-height:0;aspect-ratio:17/22;overflow:hidden;flex-shrink:0;width:100%;}
   .thumb canvas{position:absolute;inset:0;width:100%;height:100%;background:#fff;}
   .thumb .pn{position:absolute;bottom:3px;right:4px;font-size:.62rem;background:#000a;color:#fff;padding:0 5px;border-radius:6px;line-height:1.5;}
   .thumb.cur{border-color:#3b82f6;}
@@ -712,7 +710,7 @@ themeBtn.onclick=function(){var nx=curTheme()==='dark'?'light':'dark';document.d
 paintTheme();
 
 var viewer=$('viewer'),rail=$('rail'),msg=$('msg');
-var pages=[],scale=1.2,fit=true,cur=1,dpr=window.devicePixelRatio||1;
+var pages=[],scale=1.2,fit=true,cur=1,dpr=window.devicePixelRatio||1,pdfDoc=null;
 function activeScale(){ if(fit&&pages.length){ var w=viewer.clientWidth-40; var pw=(pages[cur-1]||pages[0]).w; return Math.max(0.2,Math.min(w/pw,4)); } return scale; }
 function setZpct(){ $('zpct').textContent=Math.round(activeScale()*100)+'%'; $('fit').className='btn'+(fit?' on':''); }
 
@@ -726,7 +724,7 @@ function renderPage(i){ var p=pages[i]; if(!p||p.done)return; p.done=true;
   var tl=document.createElement('div'); tl.className='textLayer'; p.el.appendChild(tl); p.el.style.setProperty('--scale-factor',sc);
   p.pg.getTextContent().then(function(tc){ try{ pdfjsLib.renderTextLayer({textContent:tc,container:tl,viewport:vp,textDivs:[]}); }catch(e){} }).catch(function(){});
   var al=document.createElement('div'); al.className='annotationLayer'; p.el.appendChild(al);
-  p.pg.getAnnotations().then(function(anns){ anns.forEach(function(a){ if(a.subtype!=='Link')return; var v=vp.convertToViewportRectangle(a.rect); var x=Math.min(v[0],v[2]),y=Math.min(v[1],v[3]),w=Math.abs(v[2]-v[0]),h=Math.abs(v[3]-v[1]); var L=document.createElement('a'); L.style.cssText='left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;'; if(a.url){L.href=a.url;L.target='_blank';L.rel='noopener';}else{L.href='#';L.addEventListener('click',function(e){e.preventDefault();});} al.appendChild(L); }); }).catch(function(){});
+  p.pg.getAnnotations().then(function(anns){ anns.forEach(function(a){ if(a.subtype!=='Link')return; var v=vp.convertToViewportRectangle(a.rect); var x=Math.min(v[0],v[2]),y=Math.min(v[1],v[3]),w=Math.abs(v[2]-v[0]),h=Math.abs(v[3]-v[1]); var L=document.createElement('a'); L.style.cssText='left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;'; if(a.url){L.href=a.url;L.target='_blank';L.rel='noopener';}else if(a.dest){L.href='#';(function(dest){L.addEventListener('click',function(e){e.preventDefault();var pr=(typeof dest==='string')?pdfDoc.getDestination(dest):Promise.resolve(dest);Promise.resolve(pr).then(function(dd){if(!dd||!dd[0])return;pdfDoc.getPageIndex(dd[0]).then(function(idx){scrollToPage(idx+1);});});});})(a.dest);} al.appendChild(L); }); }).catch(function(){});
 }
 function relayout(){ var sc=activeScale(); pages.forEach(function(p){ p.done=false; p.el.style.width=(p.w*sc)+'px'; p.el.style.height=(p.h*sc)+'px'; p.el.innerHTML=''; io.unobserve(p.el); io.observe(p.el); }); setZpct(); }
 function scrollToPage(n){ if(pages[n-1]) pages[n-1].el.scrollIntoView({block:'start'}); }
@@ -737,12 +735,12 @@ function updateCur(){ if(!pages.length)return; var vr=viewer.getBoundingClientRe
 var ticking=false;
 viewer.addEventListener('scroll',function(){ if(!ticking){ ticking=true; requestAnimationFrame(function(){ updateCur(); ticking=false; }); } });
 
-pdfjsLib.getDocument({url:PDF_URL}).promise.then(function(d){ $('pageCount').textContent=d.numPages;
+pdfjsLib.getDocument({url:PDF_URL}).promise.then(function(d){ pdfDoc=d; $('pageCount').textContent=d.numPages;
   var chain=Promise.resolve();
   for(var n=1;n<=d.numPages;n++){ (function(n){ chain=chain.then(function(){ return d.getPage(n).then(function(pg){
     var vp=pg.getViewport({scale:1}); var el=document.createElement('div'); el.className='page'; el.dataset.i=n-1;
     viewer.appendChild(el); var idx=pages.length; pages.push({pg:pg,w:vp.width,h:vp.height,el:el,done:false});
-    var tb=document.createElement('button'); tb.className='thumb'; tb.dataset.i=n-1; tb.innerHTML='<span class="pn">'+n+'</span>';
+    var tb=document.createElement('button'); tb.className='thumb'; tb.dataset.i=n-1; tb.style.aspectRatio=vp.width+'/'+vp.height; tb.innerHTML='<span class="pn">'+n+'</span>';
     tb.onclick=function(){ scrollToPage(idx+1); }; rail.appendChild(tb);
   }); }); })(n); }
   chain.then(function(){ msg.style.display='none'; relayout(); buildThumbs(); renderPage(0); if(pages[1])renderPage(1); var pp=parseInt(new URLSearchParams(location.search).get('page'),10); if(pp>=1&&pp<=pages.length){cur=pp;$('pageNum').value=pp;scrollToPage(pp);} });
