@@ -34,7 +34,7 @@ const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
 const PER_DAY = 3;
-const BUILD_TIME = "2026-07-24 16:38 CST"; // stamped by deploy.sh
+const BUILD_TIME = "2026-07-24 22:08 CST"; // stamped by deploy.sh
 
 // Oncology drug brand<->generic synonyms so "keytruda" also finds "pembrolizumab".
 const DRUG_GROUPS = [
@@ -443,7 +443,7 @@ function renderPage(request) {
     --ring:240 4.9% 50%;
   }}
   *{box-sizing:border-box;}
-  body{margin:0;background:hsl(var(--background));color:hsl(var(--foreground));
+  body{margin:0;overflow-x:hidden;background:hsl(var(--background));color:hsl(var(--foreground));
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;
     -webkit-font-smoothing:antialiased;}
   svg{width:1em;height:1em;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;}
@@ -456,7 +456,7 @@ function renderPage(request) {
     background:hsl(var(--primary));color:hsl(var(--primary-foreground));font-size:16px;}
   .brand small{font-weight:500;font-size:.72rem;color:hsl(var(--muted-foreground));display:block;letter-spacing:0;}
   .spacer{flex:1;}
-  .iconbtn{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;cursor:pointer;
+  .iconbtn{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;cursor:pointer;flex:0 0 auto;
     border:1px solid hsl(var(--border));background:hsl(var(--card));color:hsl(var(--foreground));font-size:18px;}
   .iconbtn:hover{background:hsl(var(--accent));}
   .searchrow{padding-bottom:14px;position:relative;}
