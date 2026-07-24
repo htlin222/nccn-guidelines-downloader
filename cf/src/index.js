@@ -34,7 +34,7 @@ const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
 const PER_DAY = 3;
-const BUILD_TIME = "2026-07-24 14:13 CST"; // stamped by deploy.sh
+const BUILD_TIME = "2026-07-24 14:14 CST"; // stamped by deploy.sh
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8" } });
@@ -527,7 +527,7 @@ const COLOR = {}; const ICON = {};
 CATS.forEach(c=>{COLOR[c.name]=c.color;ICON[c.name]=c.icon;});
 let R2 = {}, VER = {}, r2sig='';try{var _c=JSON.parse(localStorage.getItem('nccnr2')||'null');if(_c){R2=_c.cached||{};VER=_c.versions||{};r2sig=(_c.count||0)+':'+Object.keys(_c.versions||{}).length;}}catch(e){}
 const listEl=document.getElementById('list'), q=document.getElementById('q');
-var activeCat=null;var filtersEl=document.getElementById('filters');
+var activeCat=null;try{activeCat=localStorage.getItem('nccncat')||null;}catch(e){}var filtersEl=document.getElementById('filters');
 document.getElementById('logo').innerHTML=svg('cross');
 document.getElementById('searchicon').innerHTML=svg('search');
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
@@ -574,7 +574,7 @@ var sresEl=document.getElementById('searchResults');var sTimer=null;
 function doSearch(){var qq=q.value.trim();if(qq.length<2){sresEl.innerHTML='';return;}fetch('/api/search?q='+encodeURIComponent(qq)).then(function(r){return r.json();}).then(function(d){if((d.q||'')!==q.value.trim())return;var rs=d.results||[];if(!rs.length){sresEl.innerHTML='<div class="shdr">內容搜尋「'+esc(qq)+'」：無命中</div>';return;}sresEl.innerHTML='<div class="shdr">內容命中 '+rs.length+' 頁（點擊跳到該頁）</div>'+rs.map(function(x){var snip=esc(x.snip||'').split('&lt;mark&gt;').join('<mark>').split('&lt;/mark&gt;').join('</mark>');return '<a class="sitem" href="/preview/'+encodeURIComponent(x.gid)+'?page='+x.page+'">'+'<span class="sdot" style="background:'+(COLOR[x.cat]||'#64748b')+'"></span>'+'<div class="sbody"><div class="stitle">'+esc(x.name)+' <span class="spage">p.'+x.page+'</span></div>'+'<div class="snip">'+snip+'</div></div></a>';}).join('');}).catch(function(){});}
 q.addEventListener('input',function(){clearTimeout(sTimer);sTimer=setTimeout(doSearch,250);});
 listEl.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.dlbtn');if(b){e.preventDefault();e.stopPropagation();location.href='/dl/'+b.getAttribute('data-dl');}});
-function buildFilters(){var counts={};DATA.forEach(function(g){counts[g.cat]=(counts[g.cat]||0)+1;});var h='<button class="fchip act" data-cat="">全部 <b>'+DATA.length+'</b></button>';CATS.forEach(function(c){if(!counts[c.name])return;h+='<button class="fchip" data-cat="'+c.name+'" style="--cc:'+c.color+'">'+svg(c.icon)+'<span>'+esc(c.name)+'</span> <b>'+counts[c.name]+'</b></button>';});filtersEl.innerHTML=h;filtersEl.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.fchip');if(!b)return;activeCat=b.getAttribute('data-cat')||null;[].forEach.call(filtersEl.children,function(x){x.className='fchip'+(x===b?' act':'');});applyFilter();});}
+function buildFilters(){var counts={};DATA.forEach(function(g){counts[g.cat]=(counts[g.cat]||0)+1;});var h='<button class="fchip'+(activeCat?'':' act')+'" data-cat="">全部 <b>'+DATA.length+'</b></button>';CATS.forEach(function(c){if(!counts[c.name])return;h+='<button class="fchip'+(activeCat===c.name?' act':'')+'" data-cat="'+c.name+'" style="--cc:'+c.color+'">'+svg(c.icon)+'<span>'+esc(c.name)+'</span> <b>'+counts[c.name]+'</b></button>';});filtersEl.innerHTML=h;filtersEl.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.fchip');if(!b)return;activeCat=b.getAttribute('data-cat')||null;try{localStorage.setItem('nccncat',activeCat||'');}catch(e){}[].forEach.call(filtersEl.children,function(x){x.className='fchip'+(x===b?' act':'');});applyFilter();});}
 
 const themeBtn=document.getElementById('theme');
 function curTheme(){return document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');}
