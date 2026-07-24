@@ -3,6 +3,7 @@
 # thumb/<id>.webp. Pulls PDFs from R2 (already seeded) — does NOT hit NCCN.
 set -u
 cd "$(dirname "$0")"
+[ -f .env ] && set -a && . ./.env && set +a  # load token if present
 BUCKET="nccn-pdfs"
 IDS=$(python3 -c "import json;print('\n'.join(g['id'] for g in json.load(open('guidelines.json'))))")
 WORK=$(mktemp -d)

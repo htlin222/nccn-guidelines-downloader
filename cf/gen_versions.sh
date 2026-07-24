@@ -4,6 +4,7 @@
 # shown on the cards). Pulls PDFs from R2 — does NOT hit NCCN.
 set -u
 cd "$(dirname "$0")"
+[ -f .env ] && set -a && . ./.env && set +a  # load token if present
 del(){ command rip "$@" 2>/dev/null || find "$@" -delete 2>/dev/null; }
 BUCKET="nccn-pdfs"
 IDS=$(python3 -c "import json;print('\n'.join(g['id'] for g in json.load(open('guidelines.json'))))")

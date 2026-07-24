@@ -3,6 +3,7 @@
 # bucket so the Worker serves cached copies immediately. Gentle pacing (2s).
 set -u
 cd "$(dirname "$0")"
+[ -f .env ] && set -a && . ./.env && set +a  # load token if present
 COOKIE="$(cat ../cookie.txt)"
 BUCKET="nccn-pdfs"
 IDS=$(python3 -c "import json;print('\n'.join(g['id'] for g in json.load(open('guidelines.json'))))")
