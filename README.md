@@ -1,5 +1,7 @@
 # NCCN Guidelines Downloader
 
+![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white) ![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?logo=pwa&logoColor=white) ![pdf.js viewer](https://img.shields.io/badge/pdf.js-reader-b30b00) ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg) ![Guidelines](https://img.shields.io/badge/guidelines-86-0a7ea4)
+
 Two ways to grab [NCCN Clinical Practice Guidelines](https://www.nccn.org/) PDFs with
 **your own** NCCN account:
 

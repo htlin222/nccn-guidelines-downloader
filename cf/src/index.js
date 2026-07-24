@@ -1,25 +1,46 @@
 // NCCN guideline downloader — Cloudflare Worker
-// - Serves a gated page listing all guidelines (Access-protected hostname).
-// - Caches PDFs in R2; a daily cron refreshes them round-robin (PER_DAY at a time).
-// - /pdf/:id serves inline (from R2, else live), /dl/:id downloads, /preview/:id = pdf.js viewer.
+// - Access-gated hostname; shadcn-styled PWA card grid on the home page.
+// - PDFs cached in R2; a daily cron refreshes them round-robin (PER_DAY at a time).
+// - First-page thumbnails in R2 under thumb/<id>.webp; PWA icons under asset/.
+// Routes: / (grid), /preview/:id (pdf.js), /pdf/:id (inline), /dl/:id (download),
+//         /thumb/:id, /manifest.webmanifest, /sw.js, /icons/*, /apple-touch-icon.png,
+//         /api/{cookie,cookie-status,r2-status,refresh}.
 
-const GUIDELINES = [{"id":"all","name":"Acute Lymphoblastic Leukemia","cat":"Cancer Types"},{"id":"aml","name":"Acute Myeloid Leukemia","cat":"Cancer Types"},{"id":"ampullary","name":"Ampullary Adenocarcinoma","cat":"Cancer Types"},{"id":"anal","name":"Anal Carcinoma","cat":"Cancer Types"},{"id":"nmsc","name":"Basal Cell Skin Cancer","cat":"Cancer Types"},{"id":"b-cell","name":"B-Cell Lymphomas","cat":"Cancer Types"},{"id":"btc","name":"Biliary Tract Cancers","cat":"Cancer Types"},{"id":"bladder","name":"Bladder Cancer","cat":"Cancer Types"},{"id":"bone","name":"Bone Cancer","cat":"Cancer Types"},{"id":"breast","name":"Breast Cancer","cat":"Cancer Types"},{"id":"cns","name":"Central Nervous System Cancers","cat":"Cancer Types"},{"id":"cervical","name":"Cervical Cancer","cat":"Cancer Types"},{"id":"cll","name":"Chronic Lymphocytic Leukemia/Small Lymphocytic Lymphoma","cat":"Cancer Types"},{"id":"cml","name":"Chronic Myeloid Leukemia","cat":"Cancer Types"},{"id":"colon","name":"Colon Cancer","cat":"Cancer Types"},{"id":"dfsp","name":"Dermatofibrosarcoma Protuberans","cat":"Cancer Types"},{"id":"esophageal","name":"Esophageal and Esophagogastric Junction Cancers","cat":"Cancer Types"},{"id":"gastric","name":"Gastric Cancer","cat":"Cancer Types"},{"id":"gist","name":"Gastrointestinal Stromal Tumors","cat":"Cancer Types"},{"id":"gtn","name":"Gestational Trophoblastic Neoplasia","cat":"Cancer Types"},{"id":"hairy_cell","name":"Hairy Cell Leukemia","cat":"Cancer Types"},{"id":"head-and-neck","name":"Head and Neck Cancers","cat":"Cancer Types"},{"id":"hepatobiliary","name":"Hepatobiliary Cancers","cat":"Cancer Types"},{"id":"hcc","name":"Hepatocellular Carcinoma","cat":"Cancer Types"},{"id":"histiocytic_neoplasms","name":"Histiocytic Neoplasms","cat":"Cancer Types"},{"id":"hodgkins","name":"Hodgkin Lymphoma","cat":"Cancer Types"},{"id":"kaposi","name":"Kaposi Sarcoma","cat":"Cancer Types"},{"id":"kidney","name":"Kidney Cancer","cat":"Cancer Types"},{"id":"cutaneous_melanoma","name":"Melanoma: Cutaneous","cat":"Cancer Types"},{"id":"uveal","name":"Melanoma: Uveal","cat":"Cancer Types"},{"id":"mcc","name":"Merkel Cell Carcinoma","cat":"Cancer Types"},{"id":"meso_peritoneal","name":"Mesothelioma: Peritoneal","cat":"Cancer Types"},{"id":"meso_pleural","name":"Mesothelioma: Pleural","cat":"Cancer Types"},{"id":"Myeloma","name":"Multiple Myeloma","cat":"Cancer Types"},{"id":"mds","name":"Myelodysplastic Syndromes","cat":"Cancer Types"},{"id":"mlne","name":"Myeloid/Lymphoid Neoplasms with Eosinophilia and Tyrosine Kinase Gene Fusions","cat":"Cancer Types"},{"id":"mpn","name":"Myeloproliferative Neoplasms","cat":"Cancer Types"},{"id":"neuroendocrine","name":"Neuroendocrine and Adrenal Tumors","cat":"Cancer Types"},{"id":"nscl","name":"Non-Small Cell Lung Cancer","cat":"Cancer Types"},{"id":"occult","name":"Occult Primary","cat":"Cancer Types"},{"id":"ovarian","name":"Ovarian Cancer/Fallopian Tube Cancer/Primary Peritoneal Cancer","cat":"Cancer Types"},{"id":"pancreatic","name":"Pancreatic Adenocarcinoma","cat":"Cancer Types"},{"id":"ped_all","name":"Pediatric Acute Lymphoblastic Leukemia","cat":"Cancer Types"},{"id":"ped_b-cell","name":"Pediatric Aggressive Mature B-Cell Lymphomas","cat":"Cancer Types"},{"id":"ped_cns","name":"Pediatric Central Nervous System Cancers","cat":"Cancer Types"},{"id":"ped_hodgkin","name":"Pediatric Hodgkin Lymphoma","cat":"Cancer Types"},{"id":"penile","name":"Penile Cancer","cat":"Cancer Types"},{"id":"cutaneous_lymphomas","name":"Primary Cutaneous Lymphomas","cat":"Cancer Types"},{"id":"prostate","name":"Prostate Cancer","cat":"Cancer Types"},{"id":"rectal","name":"Rectal Cancer","cat":"Cancer Types"},{"id":"small_bowel","name":"Small Bowel Adenocarcinoma","cat":"Cancer Types"},{"id":"sclc","name":"Small Cell Lung Cancer","cat":"Cancer Types"},{"id":"sarcoma","name":"Soft Tissue Sarcoma","cat":"Cancer Types"},{"id":"squamous","name":"Squamous Cell Skin Cancer","cat":"Cancer Types"},{"id":"amyloidosis","name":"Systemic Light Chain Amyloidosis","cat":"Cancer Types"},{"id":"mastocytosis","name":"Systemic Mastocytosis","cat":"Cancer Types"},{"id":"t-cell","name":"T-Cell Lymphomas","cat":"Cancer Types"},{"id":"testicular","name":"Testicular Cancer","cat":"Cancer Types"},{"id":"thymic","name":"Thymomas and Thymic Carcinomas","cat":"Cancer Types"},{"id":"thyroid","name":"Thyroid Carcinoma","cat":"Cancer Types"},{"id":"uterine","name":"Uterine Neoplasms","cat":"Cancer Types"},{"id":"vulvar","name":"Vulvar Cancer","cat":"Cancer Types"},{"id":"waldenstroms","name":"Waldenström Macroglobulinemia / Lymphoplasmacytic Lymphoma","cat":"Cancer Types"},{"id":"wilms_tumor","name":"Wilms Tumor (Nephroblastoma)","cat":"Cancer Types"},{"id":"antiemesis","name":"Antiemesis","cat":"Supportive Care"},{"id":"pain","name":"Adult Cancer Pain","cat":"Supportive Care"},{"id":"vte","name":"Cancer-Associated Venous Thromboembolic Disease","cat":"Supportive Care"},{"id":"fatigue","name":"Cancer-Related Fatigue","cat":"Supportive Care"},{"id":"distress","name":"Distress Management","cat":"Supportive Care"},{"id":"hct","name":"Hematopoietic Cell Transplantation","cat":"Supportive Care"},{"id":"growthfactors","name":"Hematopoietic Growth Factors","cat":"Supportive Care"},{"id":"immunotherapy","name":"Management of Immunotherapy-Related Toxicities","cat":"Supportive Care"},{"id":"palliative","name":"Palliative Care","cat":"Supportive Care"},{"id":"infections","name":"Prevention and Treatment of Cancer-Related Infections","cat":"Supportive Care"},{"id":"smoking","name":"Smoking Cessation","cat":"Supportive Care"},{"id":"survivorship","name":"Survivorship","cat":"Supportive Care"},{"id":"aya","name":"Adolescent and Young Adult (AYA) Oncology","cat":"Screening / Prevention / Special"},{"id":"older_adult","name":"Older Adult Oncology","cat":"Screening / Prevention / Special"},{"id":"hiv","name":"Cancer in People with HIV","cat":"Screening / Prevention / Special"},{"id":"breast_risk","name":"Breast Cancer Risk Reduction","cat":"Screening / Prevention / Special"},{"id":"breast-screening","name":"Breast Cancer Screening and Diagnosis","cat":"Screening / Prevention / Special"},{"id":"colorectal_screening","name":"Colorectal Cancer Screening","cat":"Screening / Prevention / Special"},{"id":"genetics_bopp","name":"Genetic/Familial High-Risk Assessment: Breast, Ovarian, and Pancreatic","cat":"Screening / Prevention / Special"},{"id":"genetics_ceg","name":"Genetic/Familial High-Risk Assessment: Colorectal","cat":"Screening / Prevention / Special"},{"id":"lung_screening","name":"Lung Cancer Screening","cat":"Screening / Prevention / Special"},{"id":"prostate_detection","name":"Prostate Cancer Early Detection","cat":"Screening / Prevention / Special"}];
+const GUIDELINES = [{"id":"all","name":"Acute Lymphoblastic Leukemia","cat":"Hematology"},{"id":"aml","name":"Acute Myeloid Leukemia","cat":"Hematology"},{"id":"ampullary","name":"Ampullary Adenocarcinoma","cat":"Gastrointestinal"},{"id":"anal","name":"Anal Carcinoma","cat":"Gastrointestinal"},{"id":"nmsc","name":"Basal Cell Skin Cancer","cat":"Skin & Melanoma"},{"id":"b-cell","name":"B-Cell Lymphomas","cat":"Hematology"},{"id":"btc","name":"Biliary Tract Cancers","cat":"Gastrointestinal"},{"id":"bladder","name":"Bladder Cancer","cat":"Genitourinary"},{"id":"bone","name":"Bone Cancer","cat":"Bone & Sarcoma"},{"id":"breast","name":"Breast Cancer","cat":"Breast"},{"id":"cns","name":"Central Nervous System Cancers","cat":"CNS"},{"id":"cervical","name":"Cervical Cancer","cat":"Gynecologic"},{"id":"cll","name":"Chronic Lymphocytic Leukemia/Small Lymphocytic Lymphoma","cat":"Hematology"},{"id":"cml","name":"Chronic Myeloid Leukemia","cat":"Hematology"},{"id":"colon","name":"Colon Cancer","cat":"Gastrointestinal"},{"id":"dfsp","name":"Dermatofibrosarcoma Protuberans","cat":"Skin & Melanoma"},{"id":"esophageal","name":"Esophageal and Esophagogastric Junction Cancers","cat":"Gastrointestinal"},{"id":"gastric","name":"Gastric Cancer","cat":"Gastrointestinal"},{"id":"gist","name":"Gastrointestinal Stromal Tumors","cat":"Gastrointestinal"},{"id":"gtn","name":"Gestational Trophoblastic Neoplasia","cat":"Gynecologic"},{"id":"hairy_cell","name":"Hairy Cell Leukemia","cat":"Hematology"},{"id":"head-and-neck","name":"Head and Neck Cancers","cat":"Head & Neck"},{"id":"hepatobiliary","name":"Hepatobiliary Cancers","cat":"Gastrointestinal"},{"id":"hcc","name":"Hepatocellular Carcinoma","cat":"Gastrointestinal"},{"id":"histiocytic_neoplasms","name":"Histiocytic Neoplasms","cat":"Hematology"},{"id":"hodgkins","name":"Hodgkin Lymphoma","cat":"Hematology"},{"id":"kaposi","name":"Kaposi Sarcoma","cat":"Skin & Melanoma"},{"id":"kidney","name":"Kidney Cancer","cat":"Genitourinary"},{"id":"cutaneous_melanoma","name":"Melanoma: Cutaneous","cat":"Skin & Melanoma"},{"id":"uveal","name":"Melanoma: Uveal","cat":"Skin & Melanoma"},{"id":"mcc","name":"Merkel Cell Carcinoma","cat":"Skin & Melanoma"},{"id":"meso_peritoneal","name":"Mesothelioma: Peritoneal","cat":"Thoracic"},{"id":"meso_pleural","name":"Mesothelioma: Pleural","cat":"Thoracic"},{"id":"Myeloma","name":"Multiple Myeloma","cat":"Hematology"},{"id":"mds","name":"Myelodysplastic Syndromes","cat":"Hematology"},{"id":"mlne","name":"Myeloid/Lymphoid Neoplasms with Eosinophilia and Tyrosine Kinase Gene Fusions","cat":"Hematology"},{"id":"mpn","name":"Myeloproliferative Neoplasms","cat":"Hematology"},{"id":"neuroendocrine","name":"Neuroendocrine and Adrenal Tumors","cat":"Neuroendocrine"},{"id":"nscl","name":"Non-Small Cell Lung Cancer","cat":"Thoracic"},{"id":"occult","name":"Occult Primary","cat":"Other"},{"id":"ovarian","name":"Ovarian Cancer/Fallopian Tube Cancer/Primary Peritoneal Cancer","cat":"Gynecologic"},{"id":"pancreatic","name":"Pancreatic Adenocarcinoma","cat":"Gastrointestinal"},{"id":"ped_all","name":"Pediatric Acute Lymphoblastic Leukemia","cat":"Pediatric"},{"id":"ped_b-cell","name":"Pediatric Aggressive Mature B-Cell Lymphomas","cat":"Pediatric"},{"id":"ped_cns","name":"Pediatric Central Nervous System Cancers","cat":"Pediatric"},{"id":"ped_hodgkin","name":"Pediatric Hodgkin Lymphoma","cat":"Pediatric"},{"id":"penile","name":"Penile Cancer","cat":"Genitourinary"},{"id":"cutaneous_lymphomas","name":"Primary Cutaneous Lymphomas","cat":"Hematology"},{"id":"prostate","name":"Prostate Cancer","cat":"Genitourinary"},{"id":"rectal","name":"Rectal Cancer","cat":"Gastrointestinal"},{"id":"small_bowel","name":"Small Bowel Adenocarcinoma","cat":"Gastrointestinal"},{"id":"sclc","name":"Small Cell Lung Cancer","cat":"Thoracic"},{"id":"sarcoma","name":"Soft Tissue Sarcoma","cat":"Bone & Sarcoma"},{"id":"squamous","name":"Squamous Cell Skin Cancer","cat":"Skin & Melanoma"},{"id":"amyloidosis","name":"Systemic Light Chain Amyloidosis","cat":"Hematology"},{"id":"mastocytosis","name":"Systemic Mastocytosis","cat":"Hematology"},{"id":"t-cell","name":"T-Cell Lymphomas","cat":"Hematology"},{"id":"testicular","name":"Testicular Cancer","cat":"Genitourinary"},{"id":"thymic","name":"Thymomas and Thymic Carcinomas","cat":"Thoracic"},{"id":"thyroid","name":"Thyroid Carcinoma","cat":"Head & Neck"},{"id":"uterine","name":"Uterine Neoplasms","cat":"Gynecologic"},{"id":"vulvar","name":"Vulvar Cancer","cat":"Gynecologic"},{"id":"waldenstroms","name":"Waldenström Macroglobulinemia / Lymphoplasmacytic Lymphoma","cat":"Hematology"},{"id":"wilms_tumor","name":"Wilms Tumor (Nephroblastoma)","cat":"Pediatric"},{"id":"antiemesis","name":"Antiemesis","cat":"Supportive Care"},{"id":"pain","name":"Adult Cancer Pain","cat":"Supportive Care"},{"id":"vte","name":"Cancer-Associated Venous Thromboembolic Disease","cat":"Supportive Care"},{"id":"fatigue","name":"Cancer-Related Fatigue","cat":"Supportive Care"},{"id":"distress","name":"Distress Management","cat":"Supportive Care"},{"id":"hct","name":"Hematopoietic Cell Transplantation","cat":"Supportive Care"},{"id":"growthfactors","name":"Hematopoietic Growth Factors","cat":"Supportive Care"},{"id":"immunotherapy","name":"Management of Immunotherapy-Related Toxicities","cat":"Supportive Care"},{"id":"palliative","name":"Palliative Care","cat":"Supportive Care"},{"id":"infections","name":"Prevention and Treatment of Cancer-Related Infections","cat":"Supportive Care"},{"id":"smoking","name":"Smoking Cessation","cat":"Supportive Care"},{"id":"survivorship","name":"Survivorship","cat":"Supportive Care"},{"id":"aya","name":"Adolescent and Young Adult (AYA) Oncology","cat":"Special Populations"},{"id":"older_adult","name":"Older Adult Oncology","cat":"Special Populations"},{"id":"hiv","name":"Cancer in People with HIV","cat":"Special Populations"},{"id":"breast_risk","name":"Breast Cancer Risk Reduction","cat":"Screening & Prevention"},{"id":"breast-screening","name":"Breast Cancer Screening and Diagnosis","cat":"Screening & Prevention"},{"id":"colorectal_screening","name":"Colorectal Cancer Screening","cat":"Screening & Prevention"},{"id":"genetics_bopp","name":"Genetic/Familial High-Risk Assessment: Breast, Ovarian, and Pancreatic","cat":"Genetics & Risk"},{"id":"genetics_ceg","name":"Genetic/Familial High-Risk Assessment: Colorectal","cat":"Genetics & Risk"},{"id":"lung_screening","name":"Lung Cancer Screening","cat":"Screening & Prevention"},{"id":"prostate_detection","name":"Prostate Cancer Early Detection","cat":"Screening & Prevention"}];
+
+const CATS = [
+  { name: "Hematology", icon: "droplet", color: "#ef4444" },
+  { name: "Gastrointestinal", icon: "utensils", color: "#f59e0b" },
+  { name: "Thoracic", icon: "wind", color: "#0ea5e9" },
+  { name: "Breast", icon: "heart", color: "#ec4899" },
+  { name: "Gynecologic", icon: "venus", color: "#d946ef" },
+  { name: "Genitourinary", icon: "mars", color: "#06b6d4" },
+  { name: "Head & Neck", icon: "scanface", color: "#8b5cf6" },
+  { name: "Skin & Melanoma", icon: "sun", color: "#f97316" },
+  { name: "CNS", icon: "activity", color: "#6366f1" },
+  { name: "Bone & Sarcoma", icon: "bone", color: "#a8a29e" },
+  { name: "Neuroendocrine", icon: "zap", color: "#10b981" },
+  { name: "Pediatric", icon: "baby", color: "#14b8a6" },
+  { name: "Other", icon: "help", color: "#64748b" },
+  { name: "Supportive Care", icon: "buoy", color: "#22c55e" },
+  { name: "Screening & Prevention", icon: "shield", color: "#3b82f6" },
+  { name: "Genetics & Risk", icon: "flask", color: "#a855f7" },
+  { name: "Special Populations", icon: "users", color: "#f43f5e" },
+];
 
 const VALID_IDS = new Set(GUIDELINES.map((g) => g.id));
 const NAME_BY_ID = Object.fromEntries(GUIDELINES.map((g) => [g.id, g.name]));
 const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
-const PER_DAY = 3; // files refreshed per daily cron run (86 / 3 ≈ monthly full cycle)
+const PER_DAY = 3;
+const BUILD_TIME = "2026-07-24 09:53 CST"; // stamped by deploy.sh
 
 const json = (obj, status = 200) =>
-  new Response(JSON.stringify(obj), {
-    status,
-    headers: { "content-type": "application/json; charset=utf-8" },
-  });
+  new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8" } });
+const html = (body) =>
+  new Response(body, { headers: { "content-type": "text/html; charset=utf-8" } });
 
-// Fetch a guideline PDF live from nccn.org using the stored cookie.
-// Returns { ok, buf?, status?, ctype? }.
 async function fetchLive(env, id) {
   const cookie = await env.NCCN_KV.get(COOKIE_KEY);
   if (!cookie) return { ok: false, error: "no-cookie" };
@@ -37,29 +58,20 @@ async function fetchLive(env, id) {
     }
   );
   const ctype = (upstream.headers.get("content-type") || "").toLowerCase();
-  if (!upstream.ok || !ctype.includes("pdf")) {
-    return { ok: false, status: upstream.status, ctype };
-  }
+  if (!upstream.ok || !ctype.includes("pdf")) return { ok: false, status: upstream.status, ctype };
   const buf = await upstream.arrayBuffer();
-  // Guard: a real PDF starts with "%PDF".
   const head = new Uint8Array(buf.slice(0, 4));
-  if (String.fromCharCode(...head) !== "%PDF") {
-    return { ok: false, status: upstream.status, ctype, error: "not-pdf" };
-  }
+  if (String.fromCharCode(...head) !== "%PDF") return { ok: false, status: upstream.status, ctype, error: "not-pdf" };
   return { ok: true, buf };
 }
 
-// Download live and store into R2. Returns a small result record.
 async function refreshOne(env, id) {
   const r = await fetchLive(env, id);
   if (!r.ok) return { id, ok: false, error: r.error || `${r.status} ${r.ctype}` };
-  await env.PDFS.put(`${id}.pdf`, r.buf, {
-    httpMetadata: { contentType: "application/pdf" },
-  });
+  await env.PDFS.put(`${id}.pdf`, r.buf, { httpMetadata: { contentType: "application/pdf" } });
   return { id, ok: true, size: r.buf.byteLength };
 }
 
-// Refresh `n` guidelines starting at the stored cursor; advance & persist cursor.
 async function refreshBatch(env, n) {
   const cursorRaw = await env.NCCN_KV.get(CURSOR_KEY);
   let cursor = parseInt(cursorRaw || "0", 10);
@@ -74,46 +86,78 @@ async function refreshBatch(env, n) {
   return { cursor, results };
 }
 
-// Serve a guideline PDF: prefer R2 cache, fall back to live (and cache it).
-async function servePdf(env, id, { download }) {
+async function servePdf(env, id, { download, request }) {
+  const key = `${id}.pdf`;
   const today = new Date().toISOString().slice(0, 10);
   const filename = `NCCN-${id}-${today}.pdf`;
-  const disposition = download
-    ? `attachment; filename="${filename}"`
-    : `inline; filename="${filename}"`;
+  const disposition = `${download ? "attachment" : "inline"}; filename="${filename}"`;
+  const rangeHeader = request ? request.headers.get("Range") : null;
 
-  const obj = await env.PDFS.get(`${id}.pdf`);
-  if (obj) {
+  const head = await env.PDFS.head(key);
+  if (head) {
+    // HTTP Range → 206 so pdf.js can lazily fetch page data (mcq-bank style).
+    if (rangeHeader && !download) {
+      const m = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim());
+      if (m && (m[1] !== "" || m[2] !== "")) {
+        const total = head.size;
+        let start = m[1] === "" ? Math.max(total - parseInt(m[2], 10), 0) : parseInt(m[1], 10);
+        let end = m[2] === "" ? total - 1 : parseInt(m[2], 10);
+        if (end > total - 1) end = total - 1;
+        if (start > end || start >= total)
+          return new Response(null, { status: 416, headers: { "content-range": `bytes */${total}`, "accept-ranges": "bytes" } });
+        const length = end - start + 1;
+        const part = await env.PDFS.get(key, { range: { offset: start, length } });
+        return new Response(part.body, {
+          status: 206,
+          headers: {
+            "content-type": "application/pdf",
+            "content-length": String(length),
+            "content-range": `bytes ${start}-${end}/${total}`,
+            "accept-ranges": "bytes",
+            "content-disposition": disposition,
+            "cache-control": "private, max-age=86400",
+          },
+        });
+      }
+    }
+    const obj = await env.PDFS.get(key);
     const headers = new Headers();
     headers.set("content-type", "application/pdf");
-    headers.set("content-disposition", disposition);
     headers.set("content-length", String(obj.size));
+    headers.set("content-disposition", disposition);
+    headers.set("accept-ranges", "bytes");
     headers.set("cache-control", "private, max-age=0, must-revalidate");
     if (obj.uploaded) headers.set("x-r2-uploaded", obj.uploaded.toISOString());
     return new Response(obj.body, { status: 200, headers });
   }
 
-  // Not cached yet — fetch live and store for next time.
   const r = await fetchLive(env, id);
   if (!r.ok) {
-    const msg =
-      r.error === "no-cookie"
-        ? "尚未設定 NCCN cookie，請回首頁貼上 cookie。"
-        : `尚未快取且即時抓取失敗（cookie 可能過期，NCCN 回 ${r.status} ${r.ctype}）。`;
+    const msg = r.error === "no-cookie"
+      ? "尚未設定 NCCN cookie，請回首頁貼上 cookie。"
+      : `尚未快取且即時抓取失敗（cookie 可能過期，NCCN 回 ${r.status} ${r.ctype}）。`;
     return new Response(msg, { status: 502 });
   }
-  await env.PDFS.put(`${id}.pdf`, r.buf, {
-    httpMetadata: { contentType: "application/pdf" },
-  });
+  await env.PDFS.put(key, r.buf, { httpMetadata: { contentType: "application/pdf" } });
   const headers = new Headers();
   headers.set("content-type", "application/pdf");
-  headers.set("content-disposition", disposition);
   headers.set("content-length", String(r.buf.byteLength));
+  headers.set("content-disposition", disposition);
+  headers.set("accept-ranges", "bytes");
   return new Response(r.buf, { status: 200, headers });
 }
 
+async function serveR2Asset(env, key, contentType, cache) {
+  const obj = await env.PDFS.get(key);
+  if (!obj) return new Response("Not found", { status: 404 });
+  const headers = new Headers();
+  headers.set("content-type", contentType);
+  headers.set("content-length", String(obj.size));
+  headers.set("cache-control", cache);
+  return new Response(obj.body, { status: 200, headers });
+}
+
 export default {
-  // Daily cron: refresh PER_DAY guidelines round-robin.
   async scheduled(event, env, ctx) {
     const out = await refreshBatch(env, PER_DAY);
     console.log("cron refresh", JSON.stringify(out));
@@ -123,18 +167,26 @@ export default {
     const url = new URL(request.url);
     const { pathname } = url;
 
-    if (pathname === "/" || pathname === "/index.html") {
-      return html(renderPage(request));
+    if (pathname === "/" || pathname === "/index.html") return html(renderPage(request));
+    if (pathname === "/manifest.webmanifest") return manifestResponse();
+    if (pathname === "/favicon.svg" || pathname === "/favicon.ico") return faviconResponse();
+    if (pathname === "/sw.js")
+      return new Response(SW_JS, { headers: { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-cache" } });
+
+    if (pathname === "/icons/icon-192.png") return serveR2Asset(env, "asset/icon-192.png", "image/png", "public, max-age=604800");
+    if (pathname === "/icons/icon-512.png") return serveR2Asset(env, "asset/icon-512.png", "image/png", "public, max-age=604800");
+    if (pathname === "/apple-touch-icon.png") return serveR2Asset(env, "asset/apple-touch.png", "image/png", "public, max-age=604800");
+
+    if (pathname.startsWith("/thumb/")) {
+      const id = decodeURIComponent(pathname.slice("/thumb/".length));
+      if (!VALID_IDS.has(id)) return new Response("Unknown id", { status: 404 });
+      return serveR2Asset(env, `thumb/${id}.webp`, "image/webp", "public, max-age=86400");
     }
 
     if (pathname === "/api/cookie-status" && request.method === "GET") {
       const cookie = await env.NCCN_KV.get(COOKIE_KEY);
       const meta = await env.NCCN_KV.get(META_KEY, "json");
-      return json({
-        set: !!cookie,
-        length: cookie ? cookie.length : 0,
-        updated: meta?.updated || null,
-      });
+      return json({ set: !!cookie, length: cookie ? cookie.length : 0, updated: meta?.updated || null });
     }
 
     if (pathname === "/api/cookie" && request.method === "POST") {
@@ -153,25 +205,18 @@ export default {
       return json({ ok: true, length: value.length });
     }
 
-    // R2 inventory: which guidelines are cached + when.
     if (pathname === "/api/r2-status" && request.method === "GET") {
       const listed = await env.PDFS.list({ limit: 1000 });
       const map = {};
       for (const o of listed.objects) {
+        if (!o.key.endsWith(".pdf")) continue;
         const id = o.key.replace(/\.pdf$/, "");
         map[id] = { size: o.size, uploaded: o.uploaded ? o.uploaded.toISOString() : null };
       }
       const cursorRaw = await env.NCCN_KV.get(CURSOR_KEY);
-      return json({
-        cached: map,
-        count: Object.keys(map).length,
-        total: GUIDELINES.length,
-        cursor: parseInt(cursorRaw || "0", 10) || 0,
-        perDay: PER_DAY,
-      });
+      return json({ cached: map, count: Object.keys(map).length, total: GUIDELINES.length, cursor: parseInt(cursorRaw || "0", 10) || 0, perDay: PER_DAY });
     }
 
-    // Manual refresh trigger (gated by Access). ?n= how many, ?id= a single id.
     if (pathname === "/api/refresh" && request.method === "POST") {
       const single = url.searchParams.get("id");
       if (single) {
@@ -180,22 +225,20 @@ export default {
       }
       let n = parseInt(url.searchParams.get("n") || "3", 10);
       if (!Number.isFinite(n) || n < 1) n = 3;
-      n = Math.min(n, 25); // stay under Workers subrequest limits
+      n = Math.min(n, 25);
       return json(await refreshBatch(env, n));
     }
 
     if (pathname.startsWith("/pdf/")) {
       const id = decodeURIComponent(pathname.slice("/pdf/".length));
       if (!VALID_IDS.has(id)) return new Response("Unknown id", { status: 404 });
-      return servePdf(env, id, { download: false });
+      return servePdf(env, id, { download: false, request });
     }
-
     if (pathname.startsWith("/dl/")) {
       const id = decodeURIComponent(pathname.slice("/dl/".length));
       if (!VALID_IDS.has(id)) return new Response("Unknown id", { status: 404 });
-      return servePdf(env, id, { download: true });
+      return servePdf(env, id, { download: true, request });
     }
-
     if (pathname.startsWith("/preview/")) {
       const id = decodeURIComponent(pathname.slice("/preview/".length));
       if (!VALID_IDS.has(id)) return new Response("Unknown id", { status: 404 });
@@ -206,148 +249,313 @@ export default {
   },
 };
 
-const html = (body) =>
-  new Response(body, { headers: { "content-type": "text/html; charset=utf-8" } });
+function faviconResponse() {
+  // lucide "cross" glyph on a rounded shadcn-dark tile.
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
+    '<rect width="24" height="24" rx="5" fill="#0b0f19"/>' +
+    '<g transform="translate(4.6 4.6) scale(0.617)" fill="none" stroke="#60a5fa" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2z"/>' +
+    '</g></svg>';
+  return new Response(svg, { headers: { "content-type": "image/svg+xml; charset=utf-8", "cache-control": "public, max-age=604800" } });
+}
+
+function manifestResponse() {
+  const manifest = {
+    name: "NCCN Guidelines",
+    short_name: "NCCN",
+    description: "NCCN clinical practice guidelines — cached, previewable, downloadable.",
+    start_url: "/",
+    scope: "/",
+    display: "standalone",
+    background_color: "#0b0f19",
+    theme_color: "#0b0f19",
+    categories: ["medical", "health", "education"],
+    icons: [
+      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+    ],
+  };
+  return new Response(JSON.stringify(manifest), {
+    headers: { "content-type": "application/manifest+json; charset=utf-8" },
+  });
+}
+
+const SW_JS = `
+const SHELL = 'nccn-shell-v1';
+const ASSETS = 'nccn-assets-v1';
+const SHELL_URLS = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(SHELL).then((c) => c.addAll(SHELL_URLS)).then(() => self.skipWaiting()));
+});
+self.addEventListener('activate', (e) => {
+  e.waitUntil(caches.keys().then((keys) => Promise.all(
+    keys.filter((k) => k !== SHELL && k !== ASSETS).map((k) => caches.delete(k))
+  )).then(() => self.clients.claim()));
+});
+self.addEventListener('fetch', (e) => {
+  const url = new URL(e.request.url);
+  if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith('/thumb/') || url.pathname.startsWith('/icons/')) {
+    e.respondWith(caches.open(ASSETS).then(async (c) => {
+      const hit = await c.match(e.request);
+      if (hit) return hit;
+      const res = await fetch(e.request);
+      if (res.ok) c.put(e.request, res.clone());
+      return res;
+    }));
+    return;
+  }
+  if (url.pathname === '/') {
+    e.respondWith(fetch(e.request).then((res) => {
+      const copy = res.clone();
+      caches.open(SHELL).then((c) => c.put('/', copy));
+      return res;
+    }).catch(() => caches.match('/')));
+  }
+});
+`;
 
 function renderPage(request) {
   const user = request.headers.get("cf-access-authenticated-user-email") || "";
   const data = JSON.stringify(GUIDELINES);
+  const cats = JSON.stringify(CATS);
   return `<!doctype html>
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NCCN Guidelines 下載</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NCCN Guidelines</title>
+<meta name="description" content="NCCN clinical practice guidelines — cached, previewable, downloadable.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0b0f19">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NCCN">
+<script>(function(){try{var t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t;}catch(e){}})();</script>
 <style>
-  :root { color-scheme: light dark; }
-  * { box-sizing: border-box; }
-  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif; background: #f6f7f9; color: #1a1a1a; }
-  @media (prefers-color-scheme: dark) { body { background: #14161a; color: #e7e9ec; } }
-  header { padding: 20px 16px 8px; max-width: 940px; margin: 0 auto; }
-  h1 { font-size: 1.35rem; margin: 0 0 4px; }
-  .sub { font-size: .8rem; opacity: .65; }
-  main { max-width: 940px; margin: 0 auto; padding: 0 16px 60px; }
-  .bar { position: sticky; top: 0; padding: 12px 0; background: inherit; z-index: 5; }
-  input[type=search] { width: 100%; padding: 11px 14px; font-size: 1rem; border-radius: 10px; border: 1px solid rgba(128,128,128,.35); background: rgba(128,128,128,.08); color: inherit; }
-  .status { font-size: .78rem; padding: 8px 12px; border-radius: 8px; margin: 8px 0; }
-  .status.ok { background: rgba(46,160,67,.14); }
-  .status.warn { background: rgba(219,109,0,.16); }
-  .row2 { display: flex; gap: 8px; flex-wrap: wrap; }
-  .row2 > div { flex: 1; min-width: 220px; }
-  details { margin: 8px 0 4px; font-size: .82rem; }
-  summary { cursor: pointer; opacity: .8; }
-  textarea { width: 100%; min-height: 90px; margin-top: 8px; padding: 10px; border-radius: 8px; border: 1px solid rgba(128,128,128,.35); background: rgba(128,128,128,.08); color: inherit; font-family: ui-monospace, monospace; font-size: .8rem; }
-  button { font: inherit; cursor: pointer; border: 0; border-radius: 8px; padding: 8px 14px; background: #2563eb; color: #fff; font-weight: 600; }
-  button.sm { padding: 6px 12px; font-size: .85rem; }
-  button.ghost { background: rgba(128,128,128,.16); color: inherit; }
-  h2.cat { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em; opacity: .55; margin: 22px 0 6px; }
-  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-  li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(128,128,128,.07); border: 1px solid rgba(128,128,128,.14); }
-  li .name { flex: 1; min-width: 0; }
-  li .name b { font-weight: 600; font-size: .95rem; }
-  li .name code { font-size: .72rem; opacity: .5; }
-  .dot { font-size: .68rem; padding: 1px 7px; border-radius: 999px; margin-left: 8px; vertical-align: middle; white-space: nowrap; }
-  .dot.cached { background: rgba(46,160,67,.2); color: #1a7f37; }
-  .dot.miss { background: rgba(128,128,128,.2); opacity: .8; }
-  @media (prefers-color-scheme: dark) { .dot.cached { color: #57d977; } }
-  a.btn { text-decoration: none; }
-  .empty { opacity: .5; padding: 20px 4px; }
+  :root{
+    --background:0 0% 100%; --foreground:240 10% 3.9%;
+    --card:0 0% 100%; --card-foreground:240 10% 3.9%;
+    --muted:240 4.8% 95.9%; --muted-foreground:240 3.8% 46.1%;
+    --border:240 5.9% 90%; --input:240 5.9% 90%;
+    --primary:240 5.9% 10%; --primary-foreground:0 0% 98%;
+    --accent:240 4.8% 95.9%; --accent-foreground:240 5.9% 10%;
+    --ring:240 5% 65%; --radius:.6rem;
+  }
+  :root[data-theme="dark"]{
+    --background:240 10% 3.9%; --foreground:0 0% 98%;
+    --card:240 8% 7%; --card-foreground:0 0% 98%;
+    --muted:240 3.7% 15.9%; --muted-foreground:240 5% 64.9%;
+    --border:240 3.7% 16%; --input:240 3.7% 16%;
+    --primary:0 0% 98%; --primary-foreground:240 5.9% 10%;
+    --accent:240 3.7% 15.9%; --accent-foreground:0 0% 98%;
+    --ring:240 4.9% 50%;
+  }
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+    --background:240 10% 3.9%; --foreground:0 0% 98%;
+    --card:240 8% 7%; --card-foreground:0 0% 98%;
+    --muted:240 3.7% 15.9%; --muted-foreground:240 5% 64.9%;
+    --border:240 3.7% 16%; --input:240 3.7% 16%;
+    --primary:0 0% 98%; --primary-foreground:240 5.9% 10%;
+    --accent:240 3.7% 15.9%; --accent-foreground:0 0% 98%;
+    --ring:240 4.9% 50%;
+  }}
+  *{box-sizing:border-box;}
+  body{margin:0;background:hsl(var(--background));color:hsl(var(--foreground));
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  svg{width:1em;height:1em;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+  header{position:sticky;top:0;z-index:20;backdrop-filter:saturate(180%) blur(12px);
+    background:hsl(var(--background)/.8);border-bottom:1px solid hsl(var(--border));}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px;}
+  .htop{display:flex;align-items:center;gap:14px;padding:14px 0 12px;}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.12rem;letter-spacing:-.01em;}
+  .brand .logo{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;
+    background:hsl(var(--primary));color:hsl(var(--primary-foreground));font-size:16px;}
+  .brand small{font-weight:500;font-size:.72rem;color:hsl(var(--muted-foreground));display:block;letter-spacing:0;}
+  .spacer{flex:1;}
+  .iconbtn{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;cursor:pointer;
+    border:1px solid hsl(var(--border));background:hsl(var(--card));color:hsl(var(--foreground));font-size:18px;}
+  .iconbtn:hover{background:hsl(var(--accent));}
+  .searchrow{padding-bottom:14px;position:relative;}
+  .searchrow .si{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:17px;color:hsl(var(--muted-foreground));pointer-events:none;margin-top:-7px;}
+  input[type=search]{width:100%;height:42px;padding:0 14px 0 40px;font-size:.95rem;border-radius:12px;
+    border:1px solid hsl(var(--input));background:hsl(var(--card));color:inherit;outline:none;}
+  input[type=search]:focus{border-color:hsl(var(--ring));box-shadow:0 0 0 3px hsl(var(--ring)/.25);}
+  main{max-width:1180px;margin:0 auto;padding:8px 20px 80px;}
+  .status{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 4px;font-size:.78rem;color:hsl(var(--muted-foreground));}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;border:1px solid hsl(var(--border));background:hsl(var(--card));}
+  .chip.warn{border-color:#f59e0b66;color:#b45309;background:#f59e0b14;}
+  details{margin:8px 0 2px;font-size:.82rem;}
+  summary{cursor:pointer;color:hsl(var(--muted-foreground));}
+  textarea{width:100%;min-height:84px;margin-top:8px;padding:10px;border-radius:10px;
+    border:1px solid hsl(var(--input));background:hsl(var(--card));color:inherit;font-family:ui-monospace,monospace;font-size:.78rem;}
+  button.btn{font:inherit;cursor:pointer;border:0;border-radius:9px;padding:8px 14px;
+    background:hsl(var(--primary));color:hsl(var(--primary-foreground));font-weight:600;font-size:.85rem;}
+  .cat{display:flex;align-items:center;gap:9px;margin:30px 0 12px;}
+  .cat .ci{display:grid;place-items:center;width:26px;height:26px;border-radius:8px;font-size:15px;}
+  .cat h2{font-size:1rem;margin:0;font-weight:650;letter-spacing:-.01em;}
+  .cat .count{font-size:.74rem;color:hsl(var(--muted-foreground));background:hsl(var(--muted));padding:2px 8px;border-radius:999px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(184px,1fr));gap:14px;}
+  .card{position:relative;display:flex;flex-direction:column;border:1px solid hsl(var(--border));
+    border-radius:var(--radius);background:hsl(var(--card));overflow:hidden;transition:.15s;text-decoration:none;color:inherit;}
+  .card:hover{border-color:hsl(var(--ring));transform:translateY(-2px);box-shadow:0 8px 24px -12px rgba(0,0,0,.4);}
+  .thumb{position:relative;aspect-ratio:5/6;background:hsl(var(--muted));overflow:hidden;}
+  .thumb img{width:100%;height:100%;object-fit:cover;object-position:top;display:block;}
+  .thumb .ph{position:absolute;inset:0;display:grid;place-items:center;color:hsl(var(--muted-foreground));font-size:34px;}
+  .thumb .tag{position:absolute;top:8px;left:8px;display:inline-flex;align-items:center;gap:5px;
+    font-size:.66rem;font-weight:600;padding:3px 8px;border-radius:999px;color:#fff;backdrop-filter:blur(4px);}
+  .cardbody{padding:10px 11px 11px;display:flex;flex-direction:column;gap:6px;flex:1;}
+  .cardbody .t{font-size:.82rem;font-weight:600;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .cardbody .foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:6px;padding-top:4px;}
+  .r2{display:inline-flex;align-items:center;gap:4px;font-size:.66rem;color:hsl(var(--muted-foreground));}
+  .r2 .d{width:7px;height:7px;border-radius:999px;background:#22c55e;}
+  .r2.miss .d{background:hsl(var(--muted-foreground));}
+  .dlbtn{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;font-size:15px;
+    border:1px solid hsl(var(--border));background:hsl(var(--card));color:inherit;cursor:pointer;}
+  .dlbtn:hover{background:hsl(var(--accent));}
+  .empty{opacity:.55;padding:30px 4px;text-align:center;}
+  footer{max-width:1180px;margin:0 auto;padding:0 20px 50px;color:hsl(var(--muted-foreground));font-size:.74rem;}
+  footer a{color:inherit;}
 </style>
 </head>
 <body>
 <header>
-  <h1>NCCN Guidelines</h1>
-  <div class="sub">R2 快取 + 每日 cron 更新，可線上預覽（pdf.js）或下載${user ? " · 登入身分：" + escapeHtml(user) : ""}</div>
+  <div class="wrap">
+    <div class="htop">
+      <div class="brand"><span class="logo" id="logo"></span><span>NCCN Guidelines<small>${GUIDELINES.length} 份 · R2 快取 · PWA</small></span></div>
+      <div class="spacer"></div>
+      <button class="iconbtn" id="theme" title="切換主題"></button>
+    </div>
+    <div class="searchrow">
+      <span class="si" id="searchicon"></span>
+      <input id="q" type="search" placeholder="搜尋癌別 / 關鍵字 / 代碼…" autocomplete="off">
+    </div>
+  </div>
 </header>
 <main>
-  <div class="bar">
-    <input id="q" type="search" placeholder="搜尋癌別 / 關鍵字 / 代碼…" autocomplete="off">
-    <div class="row2">
-      <div id="cookieStatus" class="status warn">檢查 cookie…</div>
-      <div id="r2Status" class="status ok">檢查 R2 快取…</div>
-    </div>
-    <details id="cookieBox">
-      <summary>更新 NCCN cookie（過期時使用）</summary>
-      <p style="opacity:.7;margin:8px 0 0">登入 <a href="https://www.nccn.org/login" target="_blank" rel="noopener">nccn.org</a>，用 cookie-cook 擴充功能複製 <b>Http Header value</b>，貼在下方存檔。</p>
-      <textarea id="cookieInput" placeholder="ASP.NET_SessionId=…; …"></textarea>
-      <div style="margin-top:8px"><button id="saveCookie" class="sm">儲存 cookie</button> <span id="saveMsg" style="font-size:.8rem"></span></div>
-    </details>
+  <div class="status">
+    <span class="chip" id="r2Status">📦 檢查 R2…</span>
+    <span class="chip" id="cookieStatus">🔑 檢查 cookie…</span>
   </div>
+  <details id="cookieBox">
+    <summary>更新 NCCN cookie（過期時使用）</summary>
+    <p style="opacity:.75;margin:8px 0 0">登入 <a href="https://www.nccn.org/login" target="_blank" rel="noopener">nccn.org</a>，用 cookie-cook 擴充功能複製 <b>Http Header value</b> 貼在下方存檔。</p>
+    <textarea id="cookieInput" placeholder="ASP.NET_SessionId=…; …"></textarea>
+    <div style="margin-top:8px"><button class="btn" id="saveCookie">儲存 cookie</button> <span id="saveMsg" style="font-size:.8rem;margin-left:6px"></span></div>
+  </details>
   <div id="list"></div>
 </main>
+<footer>
+  透過你的 NCCN 登入 cookie 代理下載官方 PDF。${user ? "登入身分：" + escapeHtml(user) + " · " : ""}
+  每日 cron 輪流更新 ${PER_DAY} 份 · 資料屬 © NCCN，僅供個人臨床使用。<br>部署時間：${BUILD_TIME}
+</footer>
 <script>
 const DATA = ${data};
+const CATS = ${cats};
+const ICONS = {
+  droplet:'<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>',
+  utensils:'<path d="M3 2v7c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',
+  wind:'<path d="M12.8 19.6A2 2 0 1 0 14 16H2"/><path d="M17.5 8A2.5 2.5 0 1 1 19.5 12H2"/><path d="M9.8 4.4A2 2 0 1 1 11 8H2"/>',
+  heart:'<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+  venus:'<circle cx="12" cy="9" r="5"/><path d="M12 14v8"/><path d="M9 19h6"/>',
+  mars:'<circle cx="10" cy="14" r="6"/><path d="M14.5 9.5 21 3"/><path d="M17 3h4v4"/>',
+  scanface:'<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+  activity:'<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+  bone:'<path d="M17 10c.7-.7 1.69 0 2.5 0a2.5 2.5 0 1 0 0-5 .5.5 0 0 1-.5-.5 2.5 2.5 0 1 0-5 0c0 .81.7 1.8 0 2.5l-7 7c-.7.7-1.69 0-2.5 0a2.5 2.5 0 0 0 0 5c.28 0 .5.22.5.5a2.5 2.5 0 1 0 5 0c0-.81-.7-1.8 0-2.5Z"/>',
+  zap:'<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>',
+  baby:'<path d="M9 12h.01"/><path d="M15 12h.01"/><path d="M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5"/><path d="M19 6.3a9 9 0 0 1 1.8 3.9 2 2 0 0 1 0 3.6 9 9 0 0 1-17.6 0 2 2 0 0 1 0-3.6A9 9 0 0 1 12 3c2 0 3.5 1.1 3.5 2.5s-.9 2.5-2 2.5c-.8 0-1.5-.4-1.5-1"/>',
+  help:'<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+  buoy:'<circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/>',
+  shield:'<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+  flask:'<path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"/><path d="M6.453 15h11.094"/><path d="M8.5 2h7"/>',
+  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+  file:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>',
+  cross:'<path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2z"/>',
+};
+function svg(name){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[name]||'')+'</svg>';}
+const COLOR = {}; const ICON = {};
+CATS.forEach(c=>{COLOR[c.name]=c.color;ICON[c.name]=c.icon;});
 let R2 = {};
-const listEl = document.getElementById('list');
-const q = document.getElementById('q');
+const listEl=document.getElementById('list'), q=document.getElementById('q');
+document.getElementById('logo').innerHTML=svg('cross');
+document.getElementById('searchicon').innerHTML=svg('search');
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
-function badge(id){
-  const c = R2[id];
-  if (c) {
-    const d = c.uploaded ? new Date(c.uploaded).toLocaleDateString() : '';
-    return '<span class="dot cached">R2 ✓ ' + d + '</span>';
-  }
-  return '<span class="dot miss">未快取</span>';
+function card(g){
+  const c=R2[g.id];
+  const col=COLOR[g.cat]||'#64748b';
+  const dt=c&&c.uploaded?new Date(c.uploaded).toLocaleDateString():'';
+  const r2html=c?'<span class="r2"><span class="d"></span>'+(dt||'R2')+'</span>':'<span class="r2 miss"><span class="d"></span>未快取</span>';
+  return '<a class="card" href="/preview/'+encodeURIComponent(g.id)+'">'
+    +'<div class="thumb">'
+      +'<div class="ph">'+svg('file')+'</div>'
+      +'<img loading="lazy" src="/thumb/'+encodeURIComponent(g.id)+'" alt="" onload="this.style.opacity=1" onerror="this.remove()" style="opacity:0;transition:.3s">'
+      +'<span class="tag" style="background:'+col+'cc">'+svg(ICON[g.cat]||'help')+esc(g.cat)+'</span>'
+    +'</div>'
+    +'<div class="cardbody"><div class="t">'+esc(g.name)+'</div>'
+      +'<div class="foot">'+r2html
+        +'<button class="dlbtn" title="下載 PDF" onclick="event.preventDefault();event.stopPropagation();location.href=\'/dl/'+encodeURIComponent(g.id)+'\'">'+svg('download')+'</button>'
+      +'</div></div></a>';
 }
-function render(filter) {
-  const f = filter.trim().toLowerCase();
-  const groups = {};
-  for (const g of DATA) {
-    if (f && !g.name.toLowerCase().includes(f) && !g.id.toLowerCase().includes(f)) continue;
-    (groups[g.cat] ||= []).push(g);
+function render(){
+  const f=q.value.trim().toLowerCase();
+  const byCat={};
+  for(const g of DATA){
+    if(f && !g.name.toLowerCase().includes(f) && !g.id.toLowerCase().includes(f) && !g.cat.toLowerCase().includes(f)) continue;
+    (byCat[g.cat]||=[]).push(g);
   }
-  const cats = Object.keys(groups);
-  if (!cats.length) { listEl.innerHTML = '<div class="empty">沒有符合的項目</div>'; return; }
-  listEl.innerHTML = cats.map(cat =>
-    '<h2 class="cat">' + cat + '</h2><ul>' + groups[cat].map(g =>
-      '<li><span class="name"><b>' + esc(g.name) + '</b> ' + badge(g.id) + '<br><code>' + g.id + '.pdf</code></span>' +
-      '<a class="btn" href="/preview/' + encodeURIComponent(g.id) + '" target="_blank"><button class="sm ghost">預覽</button></a>' +
-      '<a class="btn" href="/dl/' + encodeURIComponent(g.id) + '"><button class="sm">下載</button></a></li>'
-    ).join('') + '</ul>'
-  ).join('');
+  let html='';
+  for(const c of CATS){
+    const items=byCat[c.name]; if(!items||!items.length) continue;
+    html+='<div class="cat"><span class="ci" style="background:'+c.color+'22;color:'+c.color+'">'+svg(c.icon)+'</span>'
+      +'<h2>'+esc(c.name)+'</h2><span class="count">'+items.length+'</span></div>'
+      +'<div class="grid">'+items.map(card).join('')+'</div>';
+  }
+  listEl.innerHTML=html||'<div class="empty">沒有符合「'+esc(q.value)+'」的項目</div>';
 }
-q.addEventListener('input', () => render(q.value));
+q.addEventListener('input',render);
 
-async function refreshCookieStatus() {
-  const el = document.getElementById('cookieStatus');
-  try {
-    const s = await (await fetch('/api/cookie-status')).json();
-    if (s.set) {
-      el.className = 'status ok';
-      el.textContent = '✓ cookie 已設定（' + s.length + ' 字元' + (s.updated ? '，更新於 ' + new Date(s.updated).toLocaleString() : '') + '）';
-    } else {
-      el.className = 'status warn';
-      el.textContent = '⚠ 尚未設定 cookie';
-      document.getElementById('cookieBox').open = true;
-    }
-  } catch (e) { el.textContent = '無法取得 cookie 狀態'; }
+const themeBtn=document.getElementById('theme');
+function curTheme(){return document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');}
+function paintThemeBtn(){themeBtn.innerHTML=svg(curTheme()==='dark'?'sun':'moon');}
+themeBtn.onclick=()=>{const next=curTheme()==='dark'?'light':'dark';document.documentElement.dataset.theme=next;try{localStorage.setItem('theme',next);}catch(e){}paintThemeBtn();
+  document.querySelector('meta[name=theme-color]').setAttribute('content',next==='dark'?'#0b0f19':'#ffffff');};
+paintThemeBtn();
+
+async function refreshCookie(){
+  const el=document.getElementById('cookieStatus');
+  try{const s=await(await fetch('/api/cookie-status')).json();
+    if(s.set){el.className='chip';el.textContent='🔑 cookie 已設定'+(s.updated?'（'+new Date(s.updated).toLocaleDateString()+'）':'');}
+    else{el.className='chip warn';el.textContent='⚠ 尚未設定 cookie';document.getElementById('cookieBox').open=true;}
+  }catch(e){el.textContent='🔑 cookie 狀態未知';}
 }
-async function refreshR2Status() {
-  const el = document.getElementById('r2Status');
-  try {
-    const s = await (await fetch('/api/r2-status')).json();
-    R2 = s.cached || {};
-    el.className = 'status ok';
-    el.textContent = '📦 R2 已快取 ' + s.count + ' / ' + s.total + ' 份（cron 每天更新 ' + s.perDay + ' 份）';
-    render(q.value);
-  } catch (e) { el.textContent = '無法取得 R2 狀態'; }
+async function refreshR2(){
+  const el=document.getElementById('r2Status');
+  try{const s=await(await fetch('/api/r2-status')).json();R2=s.cached||{};
+    el.className='chip';el.textContent='📦 R2 快取 '+s.count+' / '+s.total+' 份（cron 每日 '+s.perDay+' 份）';render();
+  }catch(e){el.textContent='📦 R2 狀態未知';}
 }
-document.getElementById('saveCookie').addEventListener('click', async () => {
-  const btn = document.getElementById('saveCookie');
-  const msg = document.getElementById('saveMsg');
-  const cookie = document.getElementById('cookieInput').value.trim();
-  if (!cookie) { msg.textContent = 'cookie 不可為空'; return; }
-  btn.disabled = true; msg.textContent = '儲存中…';
-  try {
-    const s = await (await fetch('/api/cookie', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({cookie}) })).json();
-    msg.textContent = s.ok ? '✓ 已儲存' : ('失敗：' + (s.error||''));
-    if (s.ok) { document.getElementById('cookieInput').value=''; refreshCookieStatus(); }
-  } catch (e) { msg.textContent = '儲存失敗'; }
-  btn.disabled = false;
+document.getElementById('saveCookie').addEventListener('click',async()=>{
+  const btn=document.getElementById('saveCookie'),msg=document.getElementById('saveMsg');
+  const cookie=document.getElementById('cookieInput').value.trim();
+  if(!cookie){msg.textContent='cookie 不可為空';return;}
+  btn.disabled=true;msg.textContent='儲存中…';
+  try{const s=await(await fetch('/api/cookie',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cookie})})).json();
+    msg.textContent=s.ok?'✓ 已儲存':'失敗：'+(s.error||'');
+    if(s.ok){document.getElementById('cookieInput').value='';refreshCookie();}
+  }catch(e){msg.textContent='儲存失敗';}
+  btn.disabled=false;
 });
-render('');
-refreshCookieStatus();
-refreshR2Status();
+render();refreshCookie();refreshR2();
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}
 </script>
 </body>
 </html>`;
@@ -359,57 +567,151 @@ function renderViewer(id) {
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${escapeHtml(name)} — NCCN 預覽</title>
+<meta name="theme-color" content="#0b0f19">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>(function(){try{var t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t;}catch(e){}})();</script>
 <style>
-  :root { color-scheme: light dark; }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: #52565c; color: #eee; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", sans-serif; }
-  .top { position: sticky; top: 0; display: flex; align-items: center; gap: 12px; padding: 8px 14px; background: #2b2d31; box-shadow: 0 1px 6px rgba(0,0,0,.4); z-index: 10; flex-wrap: wrap; }
-  .top .title { font-size: .9rem; font-weight: 600; flex: 1; min-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .top a, .top button { font: inherit; text-decoration: none; border: 0; border-radius: 7px; padding: 6px 12px; font-size: .82rem; cursor: pointer; }
-  .top .dl { background: #2563eb; color: #fff; font-weight: 600; }
-  .top .zoom { background: #3a3d42; color: #eee; }
-  #pages { padding: 18px 8px 60px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
-  #pages canvas { max-width: 100%; box-shadow: 0 2px 12px rgba(0,0,0,.5); background: #fff; }
-  #msg { text-align: center; padding: 40px 16px; opacity: .8; font-size: .9rem; }
+  :root{ --bg:0 0% 96%; --fg:240 10% 3.9%; --bar:0 0% 100%; --border:240 5.9% 90%;
+    --muted:240 4.8% 95.9%; --muted-fg:240 3.8% 46.1%; --primary:240 5.9% 10%; --primary-fg:0 0% 98%; --accent:240 4.8% 92%; --ring:240 5% 65%; }
+  :root[data-theme="dark"]{ --bg:240 10% 5%; --fg:0 0% 98%; --bar:240 8% 9%; --border:240 3.7% 16%;
+    --muted:240 3.7% 13%; --muted-fg:240 5% 64.9%; --primary:0 0% 98%; --primary-fg:240 5.9% 10%; --accent:240 3.7% 16%; --ring:240 4.9% 45%; }
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){ --bg:240 10% 5%; --fg:0 0% 98%; --bar:240 8% 9%; --border:240 3.7% 16%;
+    --muted:240 3.7% 13%; --muted-fg:240 5% 64.9%; --primary:0 0% 98%; --primary-fg:240 5.9% 10%; --accent:240 3.7% 16%; --ring:240 4.9% 45%; } }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0;display:flex;flex-direction:column;background:hsl(var(--bg));color:hsl(var(--fg));
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC",sans-serif;overflow:hidden;}
+  svg{width:1em;height:1em;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+  .tb{display:flex;align-items:center;gap:6px;padding:8px 12px;background:hsl(var(--bar)/.9);
+    backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid hsl(var(--border));flex-wrap:wrap;z-index:10;}
+  .tb .title{font-size:.88rem;font-weight:650;flex:1;min-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.01em;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font:inherit;text-decoration:none;
+    border:1px solid hsl(var(--border));border-radius:8px;padding:6px 8px;font-size:15px;cursor:pointer;background:hsl(var(--bar));color:hsl(var(--fg));}
+  .btn:hover{background:hsl(var(--accent));}
+  .btn.on{background:hsl(var(--accent));border-color:hsl(var(--ring));}
+  .btn.dl{background:hsl(var(--primary));color:hsl(var(--primary-fg));border-color:transparent;font-weight:600;font-size:.82rem;padding:6px 11px;}
+  .grp{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid hsl(var(--border));border-radius:9px;background:hsl(var(--bar));}
+  .grp .btn{border:0;padding:5px 7px;}
+  .pageinput{width:36px;text-align:center;font:inherit;font-size:.8rem;border:1px solid hsl(var(--border));border-radius:6px;background:hsl(var(--bg));color:inherit;padding:3px;}
+  .pcount{font-size:.76rem;color:hsl(var(--muted-fg));padding:0 4px;}
+  .zpct{font-size:.76rem;color:hsl(var(--muted-fg));min-width:40px;text-align:center;}
+  .body{flex:1;display:flex;min-height:0;}
+  .rail{width:150px;flex-shrink:0;overflow-y:auto;background:hsl(var(--bar));border-right:1px solid hsl(var(--border));padding:10px 8px;display:flex;flex-direction:column;gap:8px;}
+  .rail.hide{display:none;}
+  .thumb{border:2px solid transparent;border-radius:6px;padding:0;background:transparent;cursor:pointer;position:relative;line-height:0;min-height:20px;}
+  .thumb canvas{width:100%;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.25);background:#fff;}
+  .thumb .pn{position:absolute;bottom:3px;right:4px;font-size:.62rem;background:#000a;color:#fff;padding:0 5px;border-radius:6px;line-height:1.5;}
+  .thumb.cur{border-color:#3b82f6;}
+  .viewer{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;align-items:center;gap:16px;position:relative;}
+  .page{position:relative;background:#fff;box-shadow:0 4px 22px -6px rgba(0,0,0,.4);border-radius:3px;flex-shrink:0;}
+  .page canvas{display:block;border-radius:3px;}
+  .textLayer{position:absolute;inset:0;overflow:hidden;opacity:.25;line-height:1;}
+  .textLayer span{color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0 0;}
+  .textLayer ::selection{background:#3b82f6;color:transparent;}
+  #msg{position:absolute;top:40%;color:hsl(var(--muted-fg));font-size:.9rem;text-align:center;padding:0 20px;}
+  @media (max-width:640px){ .rail{position:absolute;z-index:9;height:100%;box-shadow:2px 0 14px rgba(0,0,0,.35);} }
 </style>
 </head>
 <body>
-<div class="top">
-  <a href="/" class="zoom">← 清單</a>
+<div class="tb">
+  <a href="/" class="btn" id="back" title="回清單"></a>
+  <button class="btn" id="railBtn" title="縮圖側欄"></button>
   <span class="title">${escapeHtml(name)}</span>
-  <button class="zoom" id="zout">−</button>
-  <button class="zoom" id="zin">＋</button>
-  <a class="dl" href="/dl/${encodeURIComponent(id)}">下載 PDF</a>
+  <div class="grp"><button class="btn" id="prev" title="上一頁"></button>
+    <input class="pageinput" id="pageNum" value="1" inputmode="numeric"><span class="pcount">/ <span id="pageCount">–</span></span>
+    <button class="btn" id="next" title="下一頁"></button></div>
+  <div class="grp"><button class="btn" id="zout" title="縮小"></button>
+    <span class="zpct" id="zpct">–</span>
+    <button class="btn" id="zin" title="放大"></button>
+    <button class="btn" id="fit" title="符合寬度"></button></div>
+  <button class="btn" id="theme" title="切換主題"></button>
+  <a class="btn dl" href="/dl/${encodeURIComponent(id)}"><span id="dlic"></span>下載</a>
 </div>
-<div id="msg">載入中…</div>
-<div id="pages"></div>
+<div class="body">
+  <aside class="rail" id="rail"></aside>
+  <div class="viewer" id="viewer"><div id="msg">載入中…</div></div>
+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
+var PDF_URL='/pdf/${encodeURIComponent(id)}';
 (function(){
-  const pdfjsLib = window['pdfjs-dist/build/pdf'] || window.pdfjsLib;
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  const pagesEl = document.getElementById('pages');
-  const msgEl = document.getElementById('msg');
-  let pdfDoc = null, scale = 1.3;
-  async function renderAll(){
-    pagesEl.innerHTML = '';
-    for (let n = 1; n <= pdfDoc.numPages; n++) {
-      const page = await pdfDoc.getPage(n);
-      const vp = page.getViewport({ scale: scale * (window.devicePixelRatio || 1) });
-      const canvas = document.createElement('canvas');
-      canvas.width = vp.width; canvas.height = vp.height;
-      canvas.style.width = (vp.width / (window.devicePixelRatio || 1)) + 'px';
-      pagesEl.appendChild(canvas);
-      await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
-    }
-  }
-  pdfjsLib.getDocument('/pdf/${encodeURIComponent(id)}').promise.then(async (doc) => {
-    pdfDoc = doc; msgEl.style.display = 'none'; await renderAll();
-  }).catch((e) => { msgEl.textContent = '無法載入 PDF：' + (e && e.message ? e.message : e) + '（可能尚未快取或 cookie 過期）'; });
-  document.getElementById('zin').onclick = () => { scale = Math.min(scale + 0.2, 3); if (pdfDoc) renderAll(); };
-  document.getElementById('zout').onclick = () => { scale = Math.max(scale - 0.2, 0.5); if (pdfDoc) renderAll(); };
+var pdfjsLib=window['pdfjs-dist/build/pdf']||window.pdfjsLib;
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+var ICONS={
+  back:'<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+  panel:'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/>',
+  cl:'<path d="m15 18-6-6 6-6"/>', cr:'<path d="m9 18 6-6-6-6"/>',
+  minus:'<path d="M5 12h14"/>', plus:'<path d="M5 12h14"/><path d="M12 5v14"/>',
+  fit:'<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+  moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  dl:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>'
+};
+function svg(n){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[n]||'')+'</svg>';}
+function $(i){return document.getElementById(i);}
+$('back').innerHTML=svg('back');$('railBtn').innerHTML=svg('panel');
+$('prev').innerHTML=svg('cl');$('next').innerHTML=svg('cr');
+$('zout').innerHTML=svg('minus');$('zin').innerHTML=svg('plus');$('fit').innerHTML=svg('fit');$('dlic').innerHTML=svg('dl');
+var themeBtn=$('theme');
+function curTheme(){return document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');}
+function paintTheme(){themeBtn.innerHTML=svg(curTheme()==='dark'?'sun':'moon');}
+themeBtn.onclick=function(){var nx=curTheme()==='dark'?'light':'dark';document.documentElement.dataset.theme=nx;try{localStorage.setItem('theme',nx);}catch(e){}paintTheme();};
+paintTheme();
+
+var viewer=$('viewer'),rail=$('rail'),msg=$('msg');
+var pages=[],scale=1.2,fit=true,cur=1,dpr=window.devicePixelRatio||1;
+function activeScale(){ if(fit&&pages.length){ var w=viewer.clientWidth-40; var pw=(pages[cur-1]||pages[0]).w; return Math.max(0.2,Math.min(w/pw,4)); } return scale; }
+function setZpct(){ $('zpct').textContent=Math.round(activeScale()*100)+'%'; $('fit').className='btn'+(fit?' on':''); }
+
+var io=new IntersectionObserver(function(es){es.forEach(function(e){ if(e.isIntersecting){renderPage(+e.target.dataset.i);} });},{root:viewer,rootMargin:'1000px 0px'});
+function renderPage(i){ var p=pages[i]; if(!p||p.done)return; p.done=true;
+  var sc=activeScale(); var vp=p.pg.getViewport({scale:sc});
+  p.el.style.width=vp.width+'px';p.el.style.height=vp.height+'px';p.el.innerHTML='';
+  var cv=document.createElement('canvas'); cv.width=Math.floor(vp.width*dpr);cv.height=Math.floor(vp.height*dpr);
+  cv.style.width=vp.width+'px';cv.style.height=vp.height+'px'; p.el.appendChild(cv);
+  p.pg.render({canvasContext:cv.getContext('2d'),viewport:vp,transform:dpr!==1?[dpr,0,0,dpr,0,0]:null});
+  var tl=document.createElement('div'); tl.className='textLayer'; p.el.appendChild(tl); p.el.style.setProperty('--scale-factor',sc);
+  p.pg.getTextContent().then(function(tc){ try{ pdfjsLib.renderTextLayer({textContent:tc,container:tl,viewport:vp,textDivs:[]}); }catch(e){} }).catch(function(){});
+}
+function relayout(){ var sc=activeScale(); pages.forEach(function(p){ p.done=false; p.el.style.width=(p.w*sc)+'px'; p.el.style.height=(p.h*sc)+'px'; p.el.innerHTML=''; io.unobserve(p.el); io.observe(p.el); }); setZpct(); }
+function scrollToPage(n){ if(pages[n-1]) pages[n-1].el.scrollIntoView({block:'start',behavior:'smooth'}); }
+function markRail(){ var items=rail.children; for(var k=0;k<items.length;k++){ items[k].className='thumb'+(k===cur-1?' cur':''); } var c=items[cur-1]; if(c) c.scrollIntoView({block:'nearest'}); }
+function updateCur(){ if(!pages.length)return; var vr=viewer.getBoundingClientRect(); var line=vr.top+vr.height*0.3; var best=1;
+  for(var k=0;k<pages.length;k++){ if(pages[k].el.getBoundingClientRect().top<=line) best=k+1; else break; }
+  if(best!==cur){ cur=best; $('pageNum').value=cur; markRail(); } }
+var ticking=false;
+viewer.addEventListener('scroll',function(){ if(!ticking){ ticking=true; requestAnimationFrame(function(){ updateCur(); ticking=false; }); } });
+
+pdfjsLib.getDocument({url:PDF_URL}).promise.then(function(d){ $('pageCount').textContent=d.numPages;
+  var chain=Promise.resolve();
+  for(var n=1;n<=d.numPages;n++){ (function(n){ chain=chain.then(function(){ return d.getPage(n).then(function(pg){
+    var vp=pg.getViewport({scale:1}); var el=document.createElement('div'); el.className='page'; el.dataset.i=n-1;
+    viewer.appendChild(el); var idx=pages.length; pages.push({pg:pg,w:vp.width,h:vp.height,el:el,done:false});
+    var tb=document.createElement('button'); tb.className='thumb'; tb.dataset.i=n-1; tb.innerHTML='<span class="pn">'+n+'</span>';
+    tb.onclick=function(){ scrollToPage(idx+1); }; rail.appendChild(tb);
+  }); }); })(n); }
+  chain.then(function(){ msg.style.display='none'; relayout(); buildThumbs(); });
+}).catch(function(e){ msg.textContent='無法載入 PDF：'+(e&&e.message?e.message:e)+'（可能尚未快取或 cookie 過期）'; });
+
+var tio=new IntersectionObserver(function(es){es.forEach(function(e){ if(e.isIntersecting){ thumbRender(+e.target.dataset.i); tio.unobserve(e.target);} });},{root:rail,rootMargin:'400px 0px'});
+function buildThumbs(){ for(var k=0;k<rail.children.length;k++) tio.observe(rail.children[k]); markRail(); }
+function thumbRender(i){ var p=pages[i]; if(!p)return; var vp=p.pg.getViewport({scale:130/p.w}); var cv=document.createElement('canvas');
+  cv.width=vp.width;cv.height=vp.height; var btn=rail.children[i]; btn.insertBefore(cv,btn.firstChild); p.pg.render({canvasContext:cv.getContext('2d'),viewport:vp}); }
+
+$('prev').onclick=function(){ if(cur>1) scrollToPage(cur-1); };
+$('next').onclick=function(){ if(cur<pages.length) scrollToPage(cur+1); };
+$('pageNum').addEventListener('change',function(){ var n=parseInt(this.value,10); if(n>=1&&n<=pages.length) scrollToPage(n); });
+$('zin').onclick=function(){ var b=activeScale(); fit=false; scale=Math.min(b+0.15,4); relayout(); };
+$('zout').onclick=function(){ var b=activeScale(); fit=false; scale=Math.max(b-0.15,0.3); relayout(); };
+$('fit').onclick=function(){ fit=!fit; if(!fit) scale=activeScale(); relayout(); };
+$('railBtn').onclick=function(){ rail.classList.toggle('hide'); if(fit) relayout(); };
+document.addEventListener('keydown',function(e){ if(e.target&&e.target.tagName==='INPUT')return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key==='PageDown'){ e.preventDefault(); if(cur<pages.length)scrollToPage(cur+1); }
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp'||e.key==='PageUp'){ e.preventDefault(); if(cur>1)scrollToPage(cur-1); }
+  else if(e.key==='+'||e.key==='='){ $('zin').onclick(); } else if(e.key==='-'){ $('zout').onclick(); } });
+var rt; window.addEventListener('resize',function(){ clearTimeout(rt); rt=setTimeout(function(){ if(fit) relayout(); },200); });
 })();
 </script>
 </body>

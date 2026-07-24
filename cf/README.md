@@ -78,3 +78,30 @@ bash "$SKILL/scripts/cf-gate.sh" status nccn.hsiehting.com          # 看白名�
 bash "$SKILL/scripts/cf-gate.sh" gate nccn.hsiehting.com a@b.com    # 更新白名單
 bash "$SKILL/scripts/cf-gate.sh" ungate nccn.hsiehting.com          # 移除閘門
 ```
+
+## PDF 閱讀器（`/preview/:id`）
+
+pdf.js 打造、參考 [mcq-bank](https://github.com/htlin222/mcq-bank) 的 EmbedPDF 設計：
+
+- **縮圖側欄**：每頁縮圖（懶載入），點擊跳頁、標示目前頁
+- **頁碼導覽**：上一頁 / 下一頁、直接輸入頁碼跳轉、`目前 / 總頁數`
+- **縮放**：`−` / `+`、百分比、**符合寬度**（fit-width，預設）
+- **連續捲動 + 懶載入**：IntersectionObserver 只渲染接近視窗的頁（大檔也順）
+- **可選取文字層**：pdf.js text layer，可反白／複製
+- **鍵盤**：←/→/PageUp/PageDown 翻頁、`+` / `-` 縮放
+- **light/dark 主題切換**（與首頁共用偏好）
+
+後端 `/pdf/:id` 支援 **HTTP Range（206）**，讓 pdf.js 逐頁串流、首頁更快出現。
+
+## Favicon
+
+`/favicon.svg` 由 Worker 動態產生（lucide「cross」醫療十字 SVG，深色圓角底），首頁與預覽頁都引用。
+
+## 部署（含建置時間戳）
+
+用 `deploy.sh` 部署——它會把台北時間戳進 Worker（顯示在首頁 footer「部署時間」）再 `wrangler deploy`：
+
+```bash
+cd NCCN/cf
+bash deploy.sh
+```
