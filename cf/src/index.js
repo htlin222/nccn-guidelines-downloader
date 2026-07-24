@@ -34,7 +34,7 @@ const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
 const PER_DAY = 3;
-const BUILD_TIME = "2026-07-24 09:53 CST"; // stamped by deploy.sh
+const BUILD_TIME = "2026-07-24 12:00 CST"; // stamped by deploy.sh
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8" } });
@@ -502,7 +502,7 @@ function card(g){
     +'</div>'
     +'<div class="cardbody"><div class="t">'+esc(g.name)+'</div>'
       +'<div class="foot">'+r2html
-        +'<button class="dlbtn" title="下載 PDF" onclick="event.preventDefault();event.stopPropagation();location.href=\'/dl/'+encodeURIComponent(g.id)+'\'">'+svg('download')+'</button>'
+        +'<span class="dlbtn" title="下載 PDF" data-dl="'+encodeURIComponent(g.id)+'">'+svg('download')+'</span>'
       +'</div></div></a>';
 }
 function render(){
@@ -522,6 +522,7 @@ function render(){
   listEl.innerHTML=html||'<div class="empty">沒有符合「'+esc(q.value)+'」的項目</div>';
 }
 q.addEventListener('input',render);
+listEl.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.dlbtn');if(b){e.preventDefault();e.stopPropagation();location.href='/dl/'+b.getAttribute('data-dl');}});
 
 const themeBtn=document.getElementById('theme');
 function curTheme(){return document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');}
@@ -637,6 +638,7 @@ function renderViewer(id) {
 <script>
 var PDF_URL='/pdf/${encodeURIComponent(id)}';
 (function(){
+window.addEventListener('error',function(ev){var m=document.getElementById('msg');if(m){m.style.display='';m.textContent='執行錯誤：'+(ev.message||(ev.error&&ev.error.message)||ev);}});
 var pdfjsLib=window['pdfjs-dist/build/pdf']||window.pdfjsLib;
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 var ICONS={
@@ -692,7 +694,7 @@ pdfjsLib.getDocument({url:PDF_URL}).promise.then(function(d){ $('pageCount').tex
     var tb=document.createElement('button'); tb.className='thumb'; tb.dataset.i=n-1; tb.innerHTML='<span class="pn">'+n+'</span>';
     tb.onclick=function(){ scrollToPage(idx+1); }; rail.appendChild(tb);
   }); }); })(n); }
-  chain.then(function(){ msg.style.display='none'; relayout(); buildThumbs(); });
+  chain.then(function(){ msg.style.display='none'; relayout(); buildThumbs(); renderPage(0); if(pages[1])renderPage(1); });
 }).catch(function(e){ msg.textContent='無法載入 PDF：'+(e&&e.message?e.message:e)+'（可能尚未快取或 cookie 過期）'; });
 
 var tio=new IntersectionObserver(function(es){es.forEach(function(e){ if(e.isIntersecting){ thumbRender(+e.target.dataset.i); tio.unobserve(e.target);} });},{root:rail,rootMargin:'400px 0px'});
