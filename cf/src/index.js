@@ -34,7 +34,7 @@ const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
 const PER_DAY = 3;
-const BUILD_TIME = "2026-07-24 14:14 CST"; // stamped by deploy.sh
+const BUILD_TIME = "2026-07-24 14:26 CST"; // stamped by deploy.sh
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8" } });
@@ -302,7 +302,7 @@ function manifestResponse() {
 }
 
 const SW_JS = `
-const SHELL = 'nccn-shell-v1';
+const SHELL = 'nccn-shell-v2';
 const ASSETS = 'nccn-assets-v1';
 const SHELL_URLS = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
 self.addEventListener('install', (e) => {
@@ -327,11 +327,11 @@ self.addEventListener('fetch', (e) => {
     return;
   }
   if (url.pathname === '/') {
-    e.respondWith(fetch(e.request).then((res) => {
-      const copy = res.clone();
-      caches.open(SHELL).then((c) => c.put('/', copy));
-      return res;
-    }).catch(() => caches.match('/')));
+    e.respondWith(caches.open(SHELL).then(async (c) => {
+      const cached = await c.match('/');
+      const network = fetch(e.request).then((res) => { if (res && res.ok) c.put('/', res.clone()); return res; }).catch(() => cached);
+      return cached || network;
+    }));
   }
 });
 `;
@@ -538,7 +538,7 @@ function card(g){
   const r2html=c?'<span class="r2"><span class="d"></span>'+(dt||'R2')+'</span>':'<span class="r2 miss"><span class="d"></span>未快取</span>';
   return '<a class="card" data-h="'+esc((g.name+' '+g.id+' '+g.cat).toLowerCase())+'" href="/preview/'+encodeURIComponent(g.id)+'">'
     +'<div class="thumb">'
-            +'<img loading="lazy" src="/thumb/'+encodeURIComponent(g.id)+'" alt="" onload="this.style.opacity=1" onerror="this.remove()" style="opacity:0;transition:.3s">'
+            +'<img loading="lazy" src="/thumb/'+encodeURIComponent(g.id)+'" alt="" onerror="this.remove()">'
       +'<span class="tag" style="background:'+col+'cc">'+svg(ICON[g.cat]||'help')+esc(g.cat)+'</span>'+(VER[g.id]?'<span class="ver" title="'+esc((VER[g.id].d||''))+'">v'+esc(VER[g.id].v)+'</span>':'')
     +'</div>'
     +'<div class="cardbody"><div class="t">'+esc(g.name)+'</div>'
