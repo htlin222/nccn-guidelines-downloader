@@ -105,3 +105,18 @@ pdf.js 打造、參考 [mcq-bank](https://github.com/htlin222/mcq-bank) 的 Embe
 cd NCCN/cf
 bash deploy.sh
 ```
+
+## 版本徽章與自動更新（雲端 end-to-end）
+
+每張卡片右上顯示該 guideline 的 NCCN 版本（如 `v5.2026`，滑鼠移上看發布日期）。
+
+- **抽取**：`gen_versions.sh` 從 R2 拉每份 PDF，用 `pdftotext` 抽第一頁的 `Version X.YYYY — <date>`，匯成 `meta/versions.json` 上傳 R2。
+- **顯示**：Worker 在 `/api/r2-status` 回傳 `versions`，前端畫成徽章。
+- **為什麼不在 Worker 內抽**：PDF 文字用內嵌子集字型的字形碼儲存，純解壓/regex 抽不到；要正確解出需 CMap-aware 的引擎（pdftotext / pdf.js / mupdf），塞進 Worker 太重。
+
+**雲端自動更新**：`.github/workflows/update-versions.yml`（GitHub Actions，每週一 04:17 UTC + 可手動）在 GitHub 雲上安裝 poppler、跑 `gen_versions.sh`、刷新 `versions.json`——不需要你的電腦。
+
+一次性設定：到 repo → Settings → Secrets and variables → Actions，新增
+- `CLOUDFLARE_API_TOKEN`：Cloudflare API token，權限 **Account → Workers R2 Storage → Edit**
+
+（Account ID 已寫在 workflow 內。）之後手動觸發一次：Actions 分頁 → *Update guideline versions* → *Run workflow*。
