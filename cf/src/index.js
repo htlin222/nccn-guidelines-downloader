@@ -34,7 +34,7 @@ const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
 const PER_DAY = 3;
-const BUILD_TIME = "2026-07-24 13:26 CST"; // stamped by deploy.sh
+const BUILD_TIME = "2026-07-24 13:27 CST"; // stamped by deploy.sh
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8" } });
