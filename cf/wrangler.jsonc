@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nccn-download",
+  "main": "src/index.js",
+  "compatibility_date": "2025-07-01",
+  "workers_dev": false,
+  "observability": { "enabled": true },
+  "kv_namespaces": [
+    {
+      "binding": "NCCN_KV",
+      "id": "f1c25d8c3a604b3c9fb56d4ddc5f24bb"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "PDFS",
+      "bucket_name": "nccn-pdfs"
+    }
+  ],
+  "triggers": {
+    "crons": ["0 3 * * *"]
+  },
+  "routes": [
+    {
+      "pattern": "nccn.hsiehting.com",
+      "custom_domain": true
+    }
+  ]
+}

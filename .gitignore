@@ -1,0 +1,26 @@
+# ── Secrets — NEVER commit ─────────────────────────────
+# cookie.txt = real NCCN login session cookie
+cookie.txt
+.env
+.dev.vars
+*.pem
+*.key
+
+# ── Downloaded / generated PDFs (large + © NCCN) ───────
+*.pdf
+NCCN-*.pdf
+
+# ── Cloudflare / build artifacts ───────────────────────
+cf/.wrangler/
+cf/node_modules/
+node_modules/
+# base64 blob, derived from the PNG icons
+cf/assets/icons_b64.json
+
+# ── Logs ───────────────────────────────────────────────
+cf/*.log
+*.log
+
+# ── OS junk ────────────────────────────────────────────
+.DS_Store
+Thumbs.db

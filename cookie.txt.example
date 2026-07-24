@@ -1,0 +1,10 @@
+ASP.NET_SessionId=xxxxxxxxxxxxxxxxxxxxxxxx; other_cookie=value; ...
+# ── How to obtain ──────────────────────────────────────
+# 1. Install the cookie-cook browser extension:
+#    https://github.com/gaoliang/cookie-cook
+# 2. Log in at https://www.nccn.org/login
+# 3. Run the extension, pick "Http Header value" from the dropdown, click Copy.
+# 4. Paste the single line here, rename this file to `cookie.txt`
+#    (remove these comment lines and any blank lines).
+#
+# cookie.txt is gitignored — it is your live credential, never commit it.
