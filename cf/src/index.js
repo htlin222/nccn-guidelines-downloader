@@ -34,7 +34,7 @@ const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
 const PER_DAY = 3;
-const BUILD_TIME = "2026-07-24 13:27 CST"; // stamped by deploy.sh
+const BUILD_TIME = "2026-07-24 13:59 CST"; // stamped by deploy.sh
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8" } });
@@ -635,6 +635,7 @@ function renderViewer(id) {
     border:1px solid hsl(var(--border));border-radius:8px;padding:6px 8px;font-size:15px;cursor:pointer;background:hsl(var(--bar));color:hsl(var(--fg));}
   .btn:hover{background:hsl(var(--accent));}
   .btn.on{background:hsl(var(--accent));border-color:hsl(var(--ring));}
+  .btn.off{opacity:.35;pointer-events:none;}
   .btn.dl{background:hsl(var(--primary));color:hsl(var(--primary-fg));border-color:transparent;font-weight:600;font-size:.82rem;padding:6px 11px;}
   .grp{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid hsl(var(--border));border-radius:9px;background:hsl(var(--bar));}
   .grp .btn{border:0;padding:5px 7px;}
@@ -674,6 +675,7 @@ function renderViewer(id) {
   <a href="/" class="btn" id="back" title="回清單"></a>
   <button class="btn" id="railBtn" title="縮圖側欄"></button>
   <span class="title">${escapeHtml(name)}</span>
+  <div class="grp"><button class="btn" id="histBack" title="回上一個位置"></button><button class="btn" id="histFwd" title="前往下一個位置"></button></div>
   <div class="grp"><button class="btn" id="prev" title="上一頁"></button>
     <input class="pageinput" id="pageNum" value="1" inputmode="numeric"><span class="pcount">/ <span id="pageCount">–</span></span>
     <button class="btn" id="next" title="下一頁"></button></div>
@@ -699,6 +701,8 @@ window.addEventListener('error',function(ev){var m=document.getElementById('msg'
 var pdfjsLib=window['pdfjs-dist/build/pdf']||window.pdfjsLib;
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 var ICONS={
+  histb:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5 5.5 5.5 0 0 1-5.5 5.5H11"/>',
+  histf:'<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5 5.5 5.5 0 0 0 9.5 20H13"/>',
   camera:'<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
   back:'<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
   panel:'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/>',
@@ -713,7 +717,7 @@ function svg(n){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[n]|
 function $(i){return document.getElementById(i);}
 $('back').innerHTML=svg('back');$('railBtn').innerHTML=svg('panel');
 $('prev').innerHTML=svg('cl');$('next').innerHTML=svg('cr');
-$('zout').innerHTML=svg('minus');$('zin').innerHTML=svg('plus');$('fit').innerHTML=svg('fit');$('dlic').innerHTML=svg('dl');$('snap').innerHTML=svg('camera');
+$('zout').innerHTML=svg('minus');$('zin').innerHTML=svg('plus');$('fit').innerHTML=svg('fit');$('dlic').innerHTML=svg('dl');$('snap').innerHTML=svg('camera');$('histBack').innerHTML=svg('histb');$('histFwd').innerHTML=svg('histf');
 var themeBtn=$('theme');
 function curTheme(){return document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');}
 function paintTheme(){themeBtn.innerHTML=svg(curTheme()==='dark'?'sun':'moon');}
@@ -722,7 +726,7 @@ paintTheme();
 
 var viewer=$('viewer'),rail=$('rail'),msg=$('msg');
 var pages=[],scale=1.2,fit=true,cur=1,dpr=window.devicePixelRatio||1,pdfDoc=null;
-var VERSION='';fetch('/api/r2-status').then(function(r){return r.json();}).then(function(d){var v=(d.versions||{})[GID];if(v)VERSION=v.v;}).catch(function(){});
+var hBack=[],hFwd=[];var VERSION='';fetch('/api/r2-status').then(function(r){return r.json();}).then(function(d){var v=(d.versions||{})[GID];if(v)VERSION=v.v;}).catch(function(){});
 function activeScale(){ if(fit&&pages.length){ var w=viewer.clientWidth-40; var pw=(pages[cur-1]||pages[0]).w; return Math.max(0.2,Math.min(w/pw,4)); } return scale; }
 function setZpct(){ $('zpct').textContent=Math.round(activeScale()*100)+'%'; $('fit').className='btn'+(fit?' on':''); }
 
@@ -736,14 +740,16 @@ function renderPage(i){ var p=pages[i]; if(!p||p.done)return; p.done=true;
   var tl=document.createElement('div'); tl.className='textLayer'; tl.style.setProperty('--scale-factor',sc); p.el.appendChild(tl); p.el.style.setProperty('--scale-factor',sc);
   p.pg.getTextContent().then(function(tc){ try{ pdfjsLib.renderTextLayer({textContent:tc,container:tl,viewport:vp,textDivs:[]}); }catch(e){} }).catch(function(){});
   var al=document.createElement('div'); al.className='annotationLayer'; p.el.appendChild(al);
-  p.pg.getAnnotations().then(function(anns){ anns.forEach(function(a){ if(a.subtype!=='Link')return; var v=vp.convertToViewportRectangle(a.rect); var x=Math.min(v[0],v[2]),y=Math.min(v[1],v[3]),w=Math.abs(v[2]-v[0]),h=Math.abs(v[3]-v[1]); var L=document.createElement('a'); L.style.cssText='left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;'; if(a.url){L.href=a.url;L.target='_blank';L.rel='noopener';}else if(a.dest){L.href='#';(function(dest){L.addEventListener('click',function(e){e.preventDefault();var pr=(typeof dest==='string')?pdfDoc.getDestination(dest):Promise.resolve(dest);Promise.resolve(pr).then(function(dd){if(!dd||!dd[0])return;pdfDoc.getPageIndex(dd[0]).then(function(idx){scrollToPage(idx+1);});});});})(a.dest);} al.appendChild(L); }); }).catch(function(){});
+  p.pg.getAnnotations().then(function(anns){ anns.forEach(function(a){ if(a.subtype!=='Link')return; var v=vp.convertToViewportRectangle(a.rect); var x=Math.min(v[0],v[2]),y=Math.min(v[1],v[3]),w=Math.abs(v[2]-v[0]),h=Math.abs(v[3]-v[1]); var L=document.createElement('a'); L.style.cssText='left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;'; if(a.url){L.href=a.url;L.target='_blank';L.rel='noopener';}else if(a.dest){L.href='#';(function(dest){L.addEventListener('click',function(e){e.preventDefault();var pr=(typeof dest==='string')?pdfDoc.getDestination(dest):Promise.resolve(dest);Promise.resolve(pr).then(function(dd){if(!dd||!dd[0])return;pdfDoc.getPageIndex(dd[0]).then(function(idx){jumpTo(idx+1,true);});});});})(a.dest);} al.appendChild(L); }); }).catch(function(){});
 }
 function relayout(){ var sc=activeScale(); pages.forEach(function(p){ p.done=false; p.el.style.width=(p.w*sc)+'px'; p.el.style.height=(p.h*sc)+'px'; p.el.innerHTML=''; io.unobserve(p.el); io.observe(p.el); }); setZpct(); }
 function scrollToPage(n){ if(pages[n-1]) pages[n-1].el.scrollIntoView({block:'start'}); }
+function jumpTo(n,rec){ if(n<1||n>pages.length)return; if(rec){hBack.push(cur);hFwd=[];} cur=n; $('pageNum').value=n; scrollToPage(n); updateHist(); }
+function updateHist(){ $('histBack').classList.toggle('off',!hBack.length); $('histFwd').classList.toggle('off',!hFwd.length); }
 function markRail(){ var items=rail.children; for(var k=0;k<items.length;k++){ items[k].className='thumb'+(k===cur-1?' cur':''); } var c=items[cur-1]; if(c) c.scrollIntoView({block:'nearest'}); }
 function updateCur(){ if(!pages.length)return; var vr=viewer.getBoundingClientRect(); var line=vr.top+vr.height*0.3; var best=1;
   for(var k=0;k<pages.length;k++){ if(pages[k].el.getBoundingClientRect().top<=line) best=k+1; else break; }
-  if(best!==cur){ cur=best; $('pageNum').value=cur; markRail(); } }
+  if(best!==cur){ cur=best; $('pageNum').value=cur; markRail(); try{localStorage.setItem('nccnpg:'+GID,cur);}catch(e){} } }
 var ticking=false;
 viewer.addEventListener('scroll',function(){ if(!ticking){ ticking=true; requestAnimationFrame(function(){ updateCur(); ticking=false; }); } });
 
@@ -753,9 +759,9 @@ pdfjsLib.getDocument({url:PDF_URL}).promise.then(function(d){ pdfDoc=d; $('pageC
     var vp=pg.getViewport({scale:1}); var el=document.createElement('div'); el.className='page'; el.dataset.i=n-1;
     viewer.appendChild(el); var idx=pages.length; pages.push({pg:pg,w:vp.width,h:vp.height,el:el,done:false});
     var tb=document.createElement('button'); tb.className='thumb'; tb.dataset.i=n-1; tb.style.aspectRatio=vp.width+'/'+vp.height; tb.innerHTML='<span class="pn">'+n+'</span>';
-    tb.onclick=function(){ scrollToPage(idx+1); }; rail.appendChild(tb);
+    tb.onclick=function(){ jumpTo(idx+1,true); }; rail.appendChild(tb);
   }); }); })(n); }
-  chain.then(function(){ msg.style.display='none'; relayout(); buildThumbs(); renderPage(0); if(pages[1])renderPage(1); var pp=parseInt(new URLSearchParams(location.search).get('page'),10); if(pp>=1&&pp<=pages.length){cur=pp;$('pageNum').value=pp;scrollToPage(pp);} });
+  chain.then(function(){ msg.style.display='none'; relayout(); buildThumbs(); renderPage(0); if(pages[1])renderPage(1); var pp=parseInt(new URLSearchParams(location.search).get('page'),10); if(!(pp>=1)){try{pp=parseInt(localStorage.getItem('nccnpg:'+GID),10);}catch(e){}} if(pp>=2&&pp<=pages.length){cur=pp;$('pageNum').value=pp;scrollToPage(pp);} updateHist(); });
 }).catch(function(e){ msg.textContent='無法載入 PDF：'+(e&&e.message?e.message:e)+'（可能尚未快取或 cookie 過期）'; });
 
 var tio=new IntersectionObserver(function(es){es.forEach(function(e){ if(e.isIntersecting){ thumbRender(+e.target.dataset.i); tio.unobserve(e.target);} });},{root:rail,rootMargin:'400px 0px'});
@@ -765,11 +771,13 @@ function thumbRender(i){ var p=pages[i]; if(!p)return; var vp=p.pg.getViewport({
 
 $('prev').onclick=function(){ if(cur>1) scrollToPage(cur-1); };
 $('next').onclick=function(){ if(cur<pages.length) scrollToPage(cur+1); };
-$('pageNum').addEventListener('change',function(){ var n=parseInt(this.value,10); if(n>=1&&n<=pages.length) scrollToPage(n); });
+$('pageNum').addEventListener('change',function(){ var n=parseInt(this.value,10); if(n>=1&&n<=pages.length) jumpTo(n,true); });
 $('zin').onclick=function(){ var b=activeScale(); fit=false; scale=Math.min(b+0.15,4); relayout(); };
 $('zout').onclick=function(){ var b=activeScale(); fit=false; scale=Math.max(b-0.15,0.3); relayout(); };
 $('fit').onclick=function(){ fit=!fit; if(!fit) scale=activeScale(); relayout(); };
 $('railBtn').onclick=function(){ rail.classList.toggle('hide'); if(fit) relayout(); };
+$('histBack').onclick=function(){ if(!hBack.length)return; hFwd.push(cur); var n=hBack.pop(); cur=n; $('pageNum').value=n; scrollToPage(n); updateHist(); };
+$('histFwd').onclick=function(){ if(!hFwd.length)return; hBack.push(cur); var n=hFwd.pop(); cur=n; $('pageNum').value=n; scrollToPage(n); updateHist(); };
 document.addEventListener('keydown',function(e){ if(e.target&&e.target.tagName==='INPUT')return;
   if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key==='PageDown'){ e.preventDefault(); if(cur<pages.length)scrollToPage(cur+1); }
   else if(e.key==='ArrowLeft'||e.key==='ArrowUp'||e.key==='PageUp'){ e.preventDefault(); if(cur>1)scrollToPage(cur-1); }
