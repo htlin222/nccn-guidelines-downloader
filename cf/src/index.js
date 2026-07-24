@@ -34,7 +34,7 @@ const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
 const PER_DAY = 3;
-const BUILD_TIME = "2026-07-24 12:10 CST"; // stamped by deploy.sh
+const BUILD_TIME = "2026-07-24 12:22 CST"; // stamped by deploy.sh
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8" } });
@@ -214,7 +214,9 @@ export default {
         map[id] = { size: o.size, uploaded: o.uploaded ? o.uploaded.toISOString() : null };
       }
       const cursorRaw = await env.NCCN_KV.get(CURSOR_KEY);
-      return json({ cached: map, count: Object.keys(map).length, total: GUIDELINES.length, cursor: parseInt(cursorRaw || "0", 10) || 0, perDay: PER_DAY });
+      const vobj = await env.PDFS.get("meta/versions.json");
+      const versions = vobj ? await vobj.json().catch(() => ({})) : {};
+      return json({ cached: map, versions, count: Object.keys(map).length, total: GUIDELINES.length, cursor: parseInt(cursorRaw || "0", 10) || 0, perDay: PER_DAY });
     }
 
     if (pathname === "/api/refresh" && request.method === "POST") {
@@ -417,6 +419,7 @@ function renderPage(request) {
   .thumb .ph{position:absolute;inset:0;display:grid;place-items:center;color:hsl(var(--muted-foreground));font-size:34px;}
   .thumb .tag{position:absolute;top:8px;left:8px;display:inline-flex;align-items:center;gap:5px;
     font-size:.66rem;font-weight:600;padding:3px 8px;border-radius:999px;color:#fff;backdrop-filter:blur(4px);}
+  .thumb .ver{position:absolute;top:8px;right:8px;font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:999px;color:#fff;background:#000000aa;backdrop-filter:blur(4px);letter-spacing:.02em;}
   .cardbody{padding:10px 11px 11px;display:flex;flex-direction:column;gap:6px;flex:1;}
   .cardbody .t{font-size:.82rem;font-weight:600;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
   .cardbody .foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:6px;padding-top:4px;}
@@ -493,7 +496,7 @@ const ICONS = {
 function svg(name){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[name]||'')+'</svg>';}
 const COLOR = {}; const ICON = {};
 CATS.forEach(c=>{COLOR[c.name]=c.color;ICON[c.name]=c.icon;});
-let R2 = {};
+let R2 = {}, VER = {};
 const listEl=document.getElementById('list'), q=document.getElementById('q');
 var activeCat=null;var filtersEl=document.getElementById('filters');
 document.getElementById('logo').innerHTML=svg('cross');
@@ -508,7 +511,7 @@ function card(g){
     +'<div class="thumb">'
       +'<div class="ph">'+svg('file')+'</div>'
       +'<img loading="lazy" src="/thumb/'+encodeURIComponent(g.id)+'" alt="" onload="this.style.opacity=1" onerror="this.remove()" style="opacity:0;transition:.3s">'
-      +'<span class="tag" style="background:'+col+'cc">'+svg(ICON[g.cat]||'help')+esc(g.cat)+'</span>'
+      +'<span class="tag" style="background:'+col+'cc">'+svg(ICON[g.cat]||'help')+esc(g.cat)+'</span>'+(VER[g.id]?'<span class="ver" title="'+esc((VER[g.id].d||''))+'">v'+esc(VER[g.id].v)+'</span>':'')
     +'</div>'
     +'<div class="cardbody"><div class="t">'+esc(g.name)+'</div>'
       +'<div class="foot">'+r2html
@@ -552,7 +555,7 @@ async function refreshCookie(){
 }
 async function refreshR2(){
   const el=document.getElementById('r2Status');
-  try{const s=await(await fetch('/api/r2-status')).json();R2=s.cached||{};
+  try{const s=await(await fetch('/api/r2-status')).json();R2=s.cached||{};VER=s.versions||{};
     el.className='chip';el.textContent='📦 R2 快取 '+s.count+' / '+s.total+' 份（cron 每日 '+s.perDay+' 份）';render();
   }catch(e){el.textContent='📦 R2 狀態未知';}
 }
