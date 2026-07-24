@@ -34,7 +34,7 @@ const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
 const PER_DAY = 3;
-const BUILD_TIME = "2026-07-24 13:59 CST"; // stamped by deploy.sh
+const BUILD_TIME = "2026-07-24 14:07 CST"; // stamped by deploy.sh
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8" } });
@@ -438,9 +438,11 @@ function renderPage(request) {
   .cat .ci{display:grid;place-items:center;width:26px;height:26px;border-radius:8px;font-size:15px;}
   .cat h2{font-size:1rem;margin:0;font-weight:650;letter-spacing:-.01em;}
   .cat .count{font-size:.74rem;color:hsl(var(--muted-foreground));background:hsl(var(--muted));padding:2px 8px;border-radius:999px;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(184px,1fr));gap:14px;}
   .card{position:relative;display:flex;flex-direction:column;border:1px solid hsl(var(--border));
     border-radius:var(--radius);background:hsl(var(--card));overflow:hidden;transition:.15s;text-decoration:none;color:inherit;}
+  .card{animation:fadeIn .2s ease both;}
   .card:hover{border-color:hsl(var(--ring));transform:translateY(-2px);box-shadow:0 8px 24px -12px rgba(0,0,0,.4);}
   .thumb{position:relative;aspect-ratio:16/9;background:hsl(var(--muted));overflow:hidden;}
   .thumb img{width:100%;height:100%;object-fit:cover;object-position:top;display:block;}
@@ -523,7 +525,7 @@ const ICONS = {
 function svg(name){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[name]||'')+'</svg>';}
 const COLOR = {}; const ICON = {};
 CATS.forEach(c=>{COLOR[c.name]=c.color;ICON[c.name]=c.icon;});
-let R2 = {}, VER = {};
+let R2 = {}, VER = {}, r2sig='';try{var _c=JSON.parse(localStorage.getItem('nccnr2')||'null');if(_c){R2=_c.cached||{};VER=_c.versions||{};r2sig=(_c.count||0)+':'+Object.keys(_c.versions||{}).length;}}catch(e){}
 const listEl=document.getElementById('list'), q=document.getElementById('q');
 var activeCat=null;var filtersEl=document.getElementById('filters');
 document.getElementById('logo').innerHTML=svg('cross');
@@ -534,7 +536,7 @@ function card(g){
   const col=COLOR[g.cat]||'#64748b';
   const dt=c&&c.uploaded?new Date(c.uploaded).toLocaleDateString():'';
   const r2html=c?'<span class="r2"><span class="d"></span>'+(dt||'R2')+'</span>':'<span class="r2 miss"><span class="d"></span>未快取</span>';
-  return '<a class="card" href="/preview/'+encodeURIComponent(g.id)+'">'
+  return '<a class="card" data-h="'+esc((g.name+' '+g.id+' '+g.cat).toLowerCase())+'" href="/preview/'+encodeURIComponent(g.id)+'">'
     +'<div class="thumb">'
             +'<img loading="lazy" src="/thumb/'+encodeURIComponent(g.id)+'" alt="" onload="this.style.opacity=1" onerror="this.remove()" style="opacity:0;transition:.3s">'
       +'<span class="tag" style="background:'+col+'cc">'+svg(ICON[g.cat]||'help')+esc(g.cat)+'</span>'+(VER[g.id]?'<span class="ver" title="'+esc((VER[g.id].d||''))+'">v'+esc(VER[g.id].v)+'</span>':'')
@@ -544,29 +546,35 @@ function card(g){
         +'<span class="dlbtn" title="下載 PDF" data-dl="'+encodeURIComponent(g.id)+'">'+svg('download')+'</span>'
       +'</div></div></a>';
 }
-function render(){
-  const f=q.value.trim().toLowerCase();
-  const byCat={};
-  for(const g of DATA){
-    if(f && !g.name.toLowerCase().includes(f) && !g.id.toLowerCase().includes(f) && !g.cat.toLowerCase().includes(f)) continue;
-    (byCat[g.cat]||=[]).push(g);
-  }
-  let html='';
+function buildGrid(){
+  var html='';
   for(const c of CATS){
-    if(activeCat && c.name!==activeCat) continue;
-    const items=byCat[c.name]; if(!items||!items.length) continue;
-    html+='<div class="cat"><span class="ci" style="background:'+c.color+'22;color:'+c.color+'">'+svg(c.icon)+'</span>'
-      +'<h2>'+esc(c.name)+'</h2><span class="count">'+items.length+'</span></div>'
-      +'<div class="grid">'+items.map(card).join('')+'</div>';
+    const items=DATA.filter(function(g){return g.cat===c.name;});
+    if(!items.length)continue;
+    html+='<div class="catsec" data-cat="'+esc(c.name)+'"><div class="cat"><span class="ci" style="background:'+c.color+'22;color:'+c.color+'">'+svg(c.icon)+'</span><h2>'+esc(c.name)+'</h2><span class="count">'+items.length+'</span></div><div class="grid">'+items.map(card).join('')+'</div></div>';
   }
-  listEl.innerHTML=html||'<div class="empty">沒有符合「'+esc(q.value)+'」的項目</div>';
+  listEl.innerHTML=html+'<div class="empty" id="emptyMsg" style="display:none">沒有符合的項目</div>';
 }
-q.addEventListener('input',render);
+function applyFilter(){
+  var f=q.value.trim().toLowerCase();var any=false;
+  var secs=listEl.querySelectorAll('.catsec');
+  for(var i=0;i<secs.length;i++){var sec=secs[i];
+    if(activeCat && sec.getAttribute('data-cat')!==activeCat){sec.style.display='none';continue;}
+    var vis=false;var cards=sec.querySelectorAll('.card');
+    for(var j=0;j<cards.length;j++){var cd=cards[j];
+      var show=!f||(cd.getAttribute('data-h')||'').indexOf(f)>=0;
+      cd.style.display=show?'':'none';if(show){vis=true;any=true;}
+    }
+    sec.style.display=vis?'':'none';
+  }
+  var em=document.getElementById('emptyMsg');if(em)em.style.display=any?'none':'';
+}
+q.addEventListener('input',applyFilter);
 var sresEl=document.getElementById('searchResults');var sTimer=null;
 function doSearch(){var qq=q.value.trim();if(qq.length<2){sresEl.innerHTML='';return;}fetch('/api/search?q='+encodeURIComponent(qq)).then(function(r){return r.json();}).then(function(d){if((d.q||'')!==q.value.trim())return;var rs=d.results||[];if(!rs.length){sresEl.innerHTML='<div class="shdr">內容搜尋「'+esc(qq)+'」：無命中</div>';return;}sresEl.innerHTML='<div class="shdr">內容命中 '+rs.length+' 頁（點擊跳到該頁）</div>'+rs.map(function(x){var snip=esc(x.snip||'').split('&lt;mark&gt;').join('<mark>').split('&lt;/mark&gt;').join('</mark>');return '<a class="sitem" href="/preview/'+encodeURIComponent(x.gid)+'?page='+x.page+'">'+'<span class="sdot" style="background:'+(COLOR[x.cat]||'#64748b')+'"></span>'+'<div class="sbody"><div class="stitle">'+esc(x.name)+' <span class="spage">p.'+x.page+'</span></div>'+'<div class="snip">'+snip+'</div></div></a>';}).join('');}).catch(function(){});}
 q.addEventListener('input',function(){clearTimeout(sTimer);sTimer=setTimeout(doSearch,250);});
 listEl.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.dlbtn');if(b){e.preventDefault();e.stopPropagation();location.href='/dl/'+b.getAttribute('data-dl');}});
-function buildFilters(){var counts={};DATA.forEach(function(g){counts[g.cat]=(counts[g.cat]||0)+1;});var h='<button class="fchip act" data-cat="">全部 <b>'+DATA.length+'</b></button>';CATS.forEach(function(c){if(!counts[c.name])return;h+='<button class="fchip" data-cat="'+c.name+'" style="--cc:'+c.color+'">'+svg(c.icon)+'<span>'+esc(c.name)+'</span> <b>'+counts[c.name]+'</b></button>';});filtersEl.innerHTML=h;filtersEl.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.fchip');if(!b)return;activeCat=b.getAttribute('data-cat')||null;[].forEach.call(filtersEl.children,function(x){x.className='fchip'+(x===b?' act':'');});render();});}
+function buildFilters(){var counts={};DATA.forEach(function(g){counts[g.cat]=(counts[g.cat]||0)+1;});var h='<button class="fchip act" data-cat="">全部 <b>'+DATA.length+'</b></button>';CATS.forEach(function(c){if(!counts[c.name])return;h+='<button class="fchip" data-cat="'+c.name+'" style="--cc:'+c.color+'">'+svg(c.icon)+'<span>'+esc(c.name)+'</span> <b>'+counts[c.name]+'</b></button>';});filtersEl.innerHTML=h;filtersEl.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.fchip');if(!b)return;activeCat=b.getAttribute('data-cat')||null;[].forEach.call(filtersEl.children,function(x){x.className='fchip'+(x===b?' act':'');});applyFilter();});}
 
 const themeBtn=document.getElementById('theme');
 function curTheme(){return document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');}
@@ -583,8 +591,12 @@ async function refreshCookie(){
   }catch(e){el.textContent='🔑 cookie 狀態未知';}
 }
 async function refreshR2(){
-  try{const s=await(await fetch('/api/r2-status')).json();R2=s.cached||{};VER=s.versions||{};
-    var sub=document.getElementById('sub');if(sub)sub.textContent=s.count+' / '+s.total+' 份 · R2 · PWA';render();
+  try{const s=await(await fetch('/api/r2-status')).json();
+    var sig=(s.count||0)+':'+Object.keys(s.versions||{}).length;
+    try{localStorage.setItem('nccnr2',JSON.stringify({cached:s.cached,versions:s.versions,count:s.count,total:s.total}));}catch(e){}
+    R2=s.cached||{};VER=s.versions||{};
+    var sub=document.getElementById('sub');if(sub)sub.textContent=s.count+' / '+s.total+' 份 · R2 · PWA';
+    if(sig!==r2sig){r2sig=sig;buildGrid();applyFilter();}
   }catch(e){}
 }
 document.getElementById('saveCookie').addEventListener('click',async()=>{
@@ -598,7 +610,7 @@ document.getElementById('saveCookie').addEventListener('click',async()=>{
   }catch(e){msg.textContent='儲存失敗';}
   btn.disabled=false;
 });
-buildFilters();render();refreshCookie();refreshR2();
+buildFilters();buildGrid();applyFilter();refreshCookie();refreshR2();
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}
 </script>
 </body>
@@ -698,6 +710,7 @@ var PDF_URL='/pdf/${encodeURIComponent(id)}';
 var GID=${JSON.stringify(id)};var GNAME=${JSON.stringify(name)};
 (function(){
 window.addEventListener('error',function(ev){var m=document.getElementById('msg');if(m){m.style.display='';m.textContent='執行錯誤：'+(ev.message||(ev.error&&ev.error.message)||ev);}});
+if('scrollRestoration' in history){try{history.scrollRestoration='manual';}catch(e){}}
 var pdfjsLib=window['pdfjs-dist/build/pdf']||window.pdfjsLib;
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 var ICONS={
@@ -744,7 +757,7 @@ function renderPage(i){ var p=pages[i]; if(!p||p.done)return; p.done=true;
 }
 function relayout(){ var sc=activeScale(); pages.forEach(function(p){ p.done=false; p.el.style.width=(p.w*sc)+'px'; p.el.style.height=(p.h*sc)+'px'; p.el.innerHTML=''; io.unobserve(p.el); io.observe(p.el); }); setZpct(); }
 function scrollToPage(n){ if(pages[n-1]) pages[n-1].el.scrollIntoView({block:'start'}); }
-function jumpTo(n,rec){ if(n<1||n>pages.length)return; if(rec){hBack.push(cur);hFwd=[];} cur=n; $('pageNum').value=n; scrollToPage(n); updateHist(); }
+function jumpTo(n,rec){ if(n<1||n>pages.length)return; if(rec){hBack.push(cur);hFwd=[];} cur=n; $('pageNum').value=n; scrollToPage(n); try{localStorage.setItem('nccnpg:'+GID,n);}catch(e){} updateHist(); }
 function updateHist(){ $('histBack').classList.toggle('off',!hBack.length); $('histFwd').classList.toggle('off',!hFwd.length); }
 function markRail(){ var items=rail.children; for(var k=0;k<items.length;k++){ items[k].className='thumb'+(k===cur-1?' cur':''); } var c=items[cur-1]; if(c) c.scrollIntoView({block:'nearest'}); }
 function updateCur(){ if(!pages.length)return; var vr=viewer.getBoundingClientRect(); var line=vr.top+vr.height*0.3; var best=1;
@@ -783,6 +796,8 @@ document.addEventListener('keydown',function(e){ if(e.target&&e.target.tagName==
   else if(e.key==='ArrowLeft'||e.key==='ArrowUp'||e.key==='PageUp'){ e.preventDefault(); if(cur>1)scrollToPage(cur-1); }
   else if(e.key==='+'||e.key==='='){ $('zin').onclick(); } else if(e.key==='-'){ $('zout').onclick(); } });
 var rt; window.addEventListener('resize',function(){ clearTimeout(rt); rt=setTimeout(function(){ if(fit) relayout(); },200); });
+function savePage(){try{localStorage.setItem('nccnpg:'+GID,cur);}catch(e){}}
+window.addEventListener('pagehide',savePage);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')savePage();});
 var NL=String.fromCharCode(10);
 function makeSnapCanvas(){var pg=pages[cur-1];if(!pg)return null;var src=pg.el.querySelector('canvas');if(!src)return null;var maxW=1100;var sc=Math.min(1,maxW/src.width);var c=document.createElement('canvas');c.width=Math.round(src.width*sc);c.height=Math.round(src.height*sc);c.getContext('2d').drawImage(src,0,0,c.width,c.height);return c;}
 function dl2(u,nm){var a=document.createElement('a');a.href=u;a.download=nm;document.body.appendChild(a);a.click();a.remove();}
