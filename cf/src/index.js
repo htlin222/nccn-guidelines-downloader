@@ -34,7 +34,7 @@ const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
 const PER_DAY = 3;
-const BUILD_TIME = "2026-07-24 16:22 CST"; // stamped by deploy.sh
+const BUILD_TIME = "2026-07-24 16:38 CST"; // stamped by deploy.sh
 
 // Oncology drug brand<->generic synonyms so "keytruda" also finds "pembrolizumab".
 const DRUG_GROUPS = [
@@ -678,6 +678,7 @@ document.getElementById('saveCookie').addEventListener('click',async()=>{
   btn.disabled=false;
 });
 buildFilters();buildGrid();applyFilter();refreshCookie();refreshR2();
+document.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&(e.key==='f'||e.key==='F')){e.preventDefault();q.focus();q.select();}});
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}
 </script>
 </body>
@@ -899,6 +900,7 @@ $('findInput').addEventListener('input',function(){clearTimeout(fTimer);fTimer=s
 $('findInput').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();if(fHits.length){fIdx=(fIdx+(e.shiftKey?-1:1)+fHits.length)%fHits.length;gotoHit();}}});
 $('findPrev').onclick=function(){if(fHits.length){fIdx=(fIdx-1+fHits.length)%fHits.length;gotoHit();}};
 $('findNext').onclick=function(){if(fHits.length){fIdx=(fIdx+1)%fHits.length;gotoHit();}};
+document.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&(e.key==='f'||e.key==='F')){e.preventDefault();var fb=$('findbar');fb.hidden=false;$('findInput').focus();$('findInput').select();}else if(e.key==='Escape'&&!$('findbar').hidden){$('findbar').hidden=true;setHL([]);}});
 })();
 </script>
 </body>
