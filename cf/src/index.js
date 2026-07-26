@@ -34,7 +34,7 @@ const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
 const PER_DAY = 3;
-const BUILD_TIME = "2026-07-26 21:02 CST"; // stamped by deploy.sh
+const BUILD_TIME = "2026-07-26 21:57 CST"; // stamped by deploy.sh
 
 // Oncology drug brand<->generic synonyms so "keytruda" also finds "pembrolizumab".
 const DRUG_GROUPS = [
@@ -746,7 +746,11 @@ function renderViewer(id) {
   .gcell .pn{position:absolute;bottom:4px;right:5px;font-size:.66rem;background:#000a;color:#fff;padding:0 6px;border-radius:6px;line-height:1.5;}
   .gcell:hover{border-color:hsl(var(--ring));}
   .gcell.cur{border-color:#3b82f6;}
-  .tocpane{width:290px;flex-shrink:0;overflow-y:auto;background:hsl(var(--bar));border-left:1px solid hsl(var(--border));padding:6px;}
+  .tocpane{width:290px;flex-shrink:0;overflow-y:auto;background:hsl(var(--bar));padding:6px;}
+  .tocgrip{flex-shrink:0;width:10px;cursor:col-resize;display:flex;align-items:center;justify-content:center;color:hsl(var(--muted-fg));background:hsl(var(--bar));border-left:1px solid hsl(var(--border));}
+  .tocgrip[hidden]{display:none;}
+  .tocgrip:hover{background:hsl(var(--accent));color:hsl(var(--fg));}
+  .tocgrip svg{width:14px;height:14px;pointer-events:none;}
   .tocpane[hidden]{display:none;}
   .tochdr{font-size:.68rem;font-weight:700;color:hsl(var(--muted-fg));padding:8px 8px 6px;text-transform:uppercase;letter-spacing:.05em;}
   .tocitem{display:flex;gap:8px;align-items:baseline;justify-content:space-between;padding:5px 8px;border-radius:7px;text-decoration:none;color:hsl(var(--fg));font-size:.8rem;cursor:pointer;line-height:1.3;}
@@ -798,7 +802,6 @@ function renderViewer(id) {
   <a href="/" class="btn" id="back" title="回清單"></a>
   <button class="btn" id="railBtn" title="縮圖側欄"></button>
   <button class="btn" id="gridBtn" title="總覽所有頁面"></button>
-  <button class="btn" id="tocBtn" title="目錄（Discussion）" hidden></button>
   <span class="title">${escapeHtml(name)}</span><span class="tver" id="tver" hidden></span>
   <div class="grp"><button class="btn" id="histBack" title="回上一個位置"></button><button class="btn" id="histFwd" title="前往下一個位置"></button></div>
   <div class="grp"><button class="btn" id="prev" title="上一頁"></button>
@@ -810,6 +813,7 @@ function renderViewer(id) {
     <button class="btn" id="fit" title="符合寬度"></button></div>
   <button class="btn" id="findBtn" title="在本檔搜尋內文"></button>
   <button class="btn" id="snap" title="截圖成筆記"></button>
+  <button class="btn" id="tocBtn" title="目錄（Discussion）" hidden></button>
   <button class="btn" id="theme" title="切換主題"></button>
   <a class="btn dl" href="/dl/${encodeURIComponent(id)}"><span id="dlic"></span>下載</a>
 </div>
@@ -817,6 +821,7 @@ function renderViewer(id) {
 <div class="body">
   <aside class="rail" id="rail"></aside>
   <div class="viewer" id="viewer"><div id="msg"><img id="preview" class="preview" src="/thumb/${encodeURIComponent(id)}" alt="" onerror="this.remove()"><div class="ldot">載入完整版 PDF…</div></div></div>
+  <div class="tocgrip" id="tocgrip" hidden></div>
   <aside class="tocpane" id="tocpane" hidden></aside>
   <div id="gridView" class="gridview" hidden></div>
 </div>
@@ -831,6 +836,7 @@ if('scrollRestoration' in history){try{history.scrollRestoration='manual';}catch
 var pdfjsLib=window['pdfjs-dist/build/pdf']||window.pdfjsLib;
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 var ICONS={
+  gripv:'<circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>',
   list:'<line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/>',
   grid:'<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
   find:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
@@ -864,7 +870,9 @@ var hBack=[],hFwd=[],hlTerms=[],TOC=[];var VERSION='';fetch('/api/r2-status').th
 fetch('/api/toc?id='+encodeURIComponent(GID)).then(function(r){return r.json();}).then(function(d){TOC=(d&&d.length)?d:[];if(TOC.length){buildTOC();$('tocBtn').hidden=false;}}).catch(function(){});
 function buildTOC(){var el=$('tocpane');el.innerHTML='<div class="tochdr">目錄 · Discussion</div>'+TOC.map(function(e){return '<a class="tocitem l'+(e.l||0)+'" data-p="'+e.p+'">'+esc(e.t)+'<span class="tms">MS-'+e.ms+'</span></a>';}).join('');el.addEventListener('click',function(ev){var a=ev.target.closest&&ev.target.closest('.tocitem');if(a){jumpTo(+a.getAttribute('data-p'),true);markTOC();}});}
 function markTOC(){if(!TOC.length)return;var it=$('tocpane').querySelectorAll('.tocitem');var best=-1;for(var i=0;i<it.length;i++){if((+it[i].getAttribute('data-p'))<=cur)best=i;}for(var j=0;j<it.length;j++)it[j].className='tocitem l'+(TOC[j].l||0)+(j===best?' cur':'');var c=it[best];if(c)c.scrollIntoView({block:'nearest'});}
-$('tocBtn').onclick=function(){var t=$('tocpane');t.hidden=!t.hidden;$('tocBtn').classList.toggle('on',!t.hidden);if(!t.hidden)markTOC();};
+$('tocBtn').onclick=function(){var t=$('tocpane');var open=t.hidden;t.hidden=!open;$('tocgrip').hidden=!open;$('tocBtn').classList.toggle('on',open);if(open){try{var w=parseInt(localStorage.getItem('nccntocw'),10);if(w>=200&&w<=700)t.style.width=w+'px';}catch(e){}markTOC();}};
+$('tocgrip').innerHTML=svg('gripv');
+(function(){var g=$('tocgrip'),t=$('tocpane'),drag=false,sx=0,sw=0;g.addEventListener('mousedown',function(e){drag=true;sx=e.clientX;sw=t.getBoundingClientRect().width;document.body.style.userSelect='none';document.body.style.cursor='col-resize';e.preventDefault();});document.addEventListener('mousemove',function(e){if(!drag)return;var w=sw+(sx-e.clientX);w=Math.max(200,Math.min(700,w));t.style.width=w+'px';});document.addEventListener('mouseup',function(){if(!drag)return;drag=false;document.body.style.userSelect='';document.body.style.cursor='';try{localStorage.setItem('nccntocw',parseInt(t.style.width,10)||290);}catch(e){}});})();
 function activeScale(){ if(fit&&pages.length){ var w=viewer.clientWidth-40; var pw=(pages[cur-1]||pages[0]).w; return Math.max(0.2,Math.min(w/pw,4)); } return scale; }
 function setZpct(){ $('zpct').textContent=Math.round(activeScale()*100)+'%'; $('fit').className='btn'+(fit?' on':''); }
 
