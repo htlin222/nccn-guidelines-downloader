@@ -34,7 +34,7 @@ const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
 const PER_DAY = 3;
-const BUILD_TIME = "2026-07-26 20:30 CST"; // stamped by deploy.sh
+const BUILD_TIME = "2026-07-26 20:34 CST"; // stamped by deploy.sh
 
 // Oncology drug brand<->generic synonyms so "keytruda" also finds "pembrolizumab".
 const DRUG_GROUPS = [
@@ -841,7 +841,7 @@ function renderPage(i){ var p=pages[i]; if(!p||p.done)return; p.done=true;
   cv.style.width=vp.width+'px';cv.style.height=vp.height+'px'; p.el.appendChild(cv);
   p.pg.render({canvasContext:cv.getContext('2d'),viewport:vp,transform:dpr!==1?[dpr,0,0,dpr,0,0]:null});
   var tl=document.createElement('div'); tl.className='textLayer'; tl.style.setProperty('--scale-factor',sc); p.el.appendChild(tl); p.el.style.setProperty('--scale-factor',sc);
-  p.pg.getTextContent().then(function(tc){ try{ var td=[]; var tk=pdfjsLib.renderTextLayer({textContent:tc,container:tl,viewport:vp,textDivs:td}); (tk&&tk.promise?tk.promise:Promise.resolve()).then(function(){ hlSpans(td); }).catch(function(){}); }catch(e){} }).catch(function(){});
+  p.pg.getTextContent().then(function(tc){ try{ var td=[]; var tk=pdfjsLib.renderTextLayer({textContent:tc,container:tl,viewport:vp,textDivs:td}); (tk&&tk.promise?tk.promise:Promise.resolve()).then(function(){ hlOne(tl); }).catch(function(){}); }catch(e){} }).catch(function(){});
   var al=document.createElement('div'); al.className='annotationLayer'; p.el.appendChild(al);
   p.pg.getAnnotations().then(function(anns){ anns.forEach(function(a){ if(a.subtype!=='Link')return; var v=vp.convertToViewportRectangle(a.rect); var x=Math.min(v[0],v[2]),y=Math.min(v[1],v[3]),w=Math.abs(v[2]-v[0]),h=Math.abs(v[3]-v[1]); var L=document.createElement('a'); L.style.cssText='left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;'; if(a.url){L.href=a.url;L.target='_blank';L.rel='noopener';}else if(a.dest){L.href='#';(function(dest){L.addEventListener('click',function(e){e.preventDefault();var pr=(typeof dest==='string')?pdfDoc.getDestination(dest):Promise.resolve(dest);Promise.resolve(pr).then(function(dd){if(!dd||!dd[0])return;pdfDoc.getPageIndex(dd[0]).then(function(idx){jumpTo(idx+1,true);});});});})(a.dest);} al.appendChild(L); }); }).catch(function(){});
 }
@@ -849,6 +849,7 @@ function relayout(){ var sc=activeScale(); pages.forEach(function(p){ p.done=fal
 function scrollToPage(n){ if(pages[n-1]) pages[n-1].el.scrollIntoView({block:'start'}); }
 function spanHit(t){t=(t||'').toLowerCase();for(var i=0;i<hlTerms.length;i++){if(t.indexOf(hlTerms[i])>=0)return true;}return false;}
 function hlSpans(td){if(!hlTerms.length)return;for(var i=0;i<td.length;i++){if(td[i]&&spanHit(td[i].textContent))td[i].classList.add('hl');}}
+function hlOne(tl){if(!tl)return;var sp=tl.querySelectorAll('span');for(var i=0;i<sp.length;i++){if(hlTerms.length&&spanHit(sp[i].textContent))sp[i].classList.add('hl');else sp[i].classList.remove('hl');}}
 function applyHighlights(){for(var k=0;k<pages.length;k++){if(!pages[k].el)continue;var sp=pages[k].el.querySelectorAll('.textLayer span');for(var j=0;j<sp.length;j++){if(hlTerms.length&&spanHit(sp[j].textContent))sp[j].classList.add('hl');else sp[j].classList.remove('hl');}}}
 function setHL(terms){hlTerms=(terms||[]).map(function(t){return String(t).toLowerCase();});applyHighlights();}
 function jumpTo(n,rec){ if(n<1||n>pages.length)return; if(rec){hBack.push(cur);hFwd=[];} cur=n; $('pageNum').value=n; scrollToPage(n); try{localStorage.setItem('nccnpg:'+GID,n);}catch(e){} updateHist(); }
