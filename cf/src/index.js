@@ -34,7 +34,7 @@ const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
 const PER_DAY = 3;
-const BUILD_TIME = "2026-07-26 20:42 CST"; // stamped by deploy.sh
+const BUILD_TIME = "2026-07-26 20:45 CST"; // stamped by deploy.sh
 
 // Oncology drug brand<->generic synonyms so "keytruda" also finds "pembrolizumab".
 const DRUG_GROUPS = [
@@ -731,13 +731,20 @@ function renderViewer(id) {
   .findbar .fi{color:hsl(var(--muted-fg));font-size:15px;display:inline-flex;}
   .findbar input{flex:1;min-width:0;height:32px;padding:0 10px;border:1px solid hsl(var(--border));border-radius:8px;background:hsl(var(--bg));color:inherit;font:inherit;font-size:.85rem;outline:none;}
   .fcount{font-size:.76rem;color:hsl(var(--muted-fg));min-width:46px;text-align:center;}
+  .gridview{position:absolute;inset:0;overflow:auto;background:hsl(var(--bg));padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;align-content:start;z-index:7;}
+  .gridview[hidden]{display:none;}
+  .gcell{position:relative;cursor:pointer;border:2px solid transparent;border-radius:6px;overflow:hidden;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.3);padding:0;line-height:0;}
+  .gcell canvas{width:100%;display:block;}
+  .gcell .pn{position:absolute;bottom:4px;right:5px;font-size:.66rem;background:#000a;color:#fff;padding:0 6px;border-radius:6px;line-height:1.5;}
+  .gcell:hover{border-color:hsl(var(--ring));}
+  .gcell.cur{border-color:#3b82f6;}
   .btn.dl{background:hsl(var(--primary));color:hsl(var(--primary-fg));border-color:transparent;font-weight:600;font-size:.82rem;padding:6px 11px;}
   .grp{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid hsl(var(--border));border-radius:9px;background:hsl(var(--bar));}
   .grp .btn{border:0;padding:5px 7px;}
   .pageinput{width:36px;text-align:center;font:inherit;font-size:.8rem;border:1px solid hsl(var(--border));border-radius:6px;background:hsl(var(--bg));color:inherit;padding:3px;}
   .pcount{font-size:.76rem;color:hsl(var(--muted-fg));padding:0 4px;}
   .zpct{font-size:.76rem;color:hsl(var(--muted-fg));min-width:40px;text-align:center;}
-  .body{flex:1;display:flex;min-height:0;}
+  .body{flex:1;display:flex;min-height:0;position:relative;}
   .rail{width:150px;flex-shrink:0;overflow-y:auto;background:hsl(var(--bar));border-right:1px solid hsl(var(--border));padding:10px 8px;display:flex;flex-direction:column;gap:8px;}
   .rail.hide{display:none;}
   .thumb{border:2px solid transparent;border-radius:6px;padding:0;background:hsl(var(--muted));cursor:pointer;position:relative;line-height:0;aspect-ratio:17/22;overflow:hidden;flex-shrink:0;width:100%;}
@@ -773,6 +780,7 @@ function renderViewer(id) {
 <div class="tb">
   <a href="/" class="btn" id="back" title="回清單"></a>
   <button class="btn" id="railBtn" title="縮圖側欄"></button>
+  <button class="btn" id="gridBtn" title="總覽所有頁面"></button>
   <span class="title">${escapeHtml(name)}</span><span class="tver" id="tver" hidden></span>
   <div class="grp"><button class="btn" id="histBack" title="回上一個位置"></button><button class="btn" id="histFwd" title="前往下一個位置"></button></div>
   <div class="grp"><button class="btn" id="prev" title="上一頁"></button>
@@ -791,6 +799,7 @@ function renderViewer(id) {
 <div class="body">
   <aside class="rail" id="rail"></aside>
   <div class="viewer" id="viewer"><div id="msg"><img id="preview" class="preview" src="/thumb/${encodeURIComponent(id)}" alt="" onerror="this.remove()"><div class="ldot">載入完整版 PDF…</div></div></div>
+  <div id="gridView" class="gridview" hidden></div>
 </div>
 <div id="snapModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>頁面截圖筆記</b><button class="btn" id="snapClose">✕</button></div><div class="meta" id="snapMeta"></div><img id="snapImg" class="snapimg" alt="page"><textarea id="snapNote" placeholder="在這裡寫你的 Markdown 筆記…"></textarea><div class="sheetfoot"><button class="btn" id="snapPng">下載 PNG</button><button class="btn dl" id="snapMd">下載 Markdown 筆記</button></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -803,6 +812,7 @@ if('scrollRestoration' in history){try{history.scrollRestoration='manual';}catch
 var pdfjsLib=window['pdfjs-dist/build/pdf']||window.pdfjsLib;
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 var ICONS={
+  grid:'<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
   find:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
   histb:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5 5.5 5.5 0 0 1-5.5 5.5H11"/>',
   histf:'<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5 5.5 5.5 0 0 0 9.5 20H13"/>',
@@ -818,7 +828,7 @@ var ICONS={
 };
 function svg(n){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[n]||'')+'</svg>';}
 function $(i){return document.getElementById(i);}
-$('back').innerHTML=svg('back');$('railBtn').innerHTML=svg('panel');
+$('back').innerHTML=svg('back');$('railBtn').innerHTML=svg('panel');$('gridBtn').innerHTML=svg('grid');
 $('prev').innerHTML=svg('cl');$('next').innerHTML=svg('cr');
 $('zout').innerHTML=svg('minus');$('zin').innerHTML=svg('plus');$('fit').innerHTML=svg('fit');$('dlic').innerHTML=svg('dl');$('snap').innerHTML=svg('camera');$('histBack').innerHTML=svg('histb');$('histFwd').innerHTML=svg('histf');
 var themeBtn=$('theme');
@@ -912,6 +922,15 @@ $('findInput').addEventListener('keydown',function(e){if(e.key==='Enter'){e.prev
 $('findPrev').onclick=function(){if(fHits.length){fIdx=(fIdx-1+fHits.length)%fHits.length;gotoHit();}};
 $('findNext').onclick=function(){if(fHits.length){fIdx=(fIdx+1)%fHits.length;gotoHit();}};
 document.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&(e.key==='f'||e.key==='F')){e.preventDefault();var fb=$('findbar');fb.hidden=false;$('findInput').focus();$('findInput').select();}else if(e.key==='Escape'&&!$('findbar').hidden){$('findbar').hidden=true;setHL([]);}});
+var gio=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){gcellRender(+e.target.dataset.i);gio.unobserve(e.target);}});},{root:$('gridView'),rootMargin:'400px 0px'});
+function gcellRender(i){var p=pages[i];if(!p||p.gdone)return;p.gdone=true;var vp=p.pg.getViewport({scale:220/p.w});var cv=document.createElement('canvas');cv.width=vp.width;cv.height=vp.height;var cell=$('gridView').children[i];if(cell)cell.insertBefore(cv,cell.firstChild);p.pg.render({canvasContext:cv.getContext('2d'),viewport:vp});}
+var gridBuilt=false;
+function buildGridView(){var gv=$('gridView');var h='';for(var i=0;i<pages.length;i++){h+='<button class="gcell" data-i="'+i+'"><span class="pn">'+(i+1)+'</span></button>';}gv.innerHTML=h;for(var k=0;k<gv.children.length;k++){var c=gv.children[k];c.style.aspectRatio=pages[k].w+'/'+pages[k].h;gio.observe(c);(function(idx,el){el.onclick=function(){closeGrid();jumpTo(idx+1,true);};})(k,c);}gridBuilt=true;}
+function markGrid(){var ch=$('gridView').children;for(var i=0;i<ch.length;i++){ch[i].className='gcell'+(i===cur-1?' cur':'');}var c=ch[cur-1];if(c)c.scrollIntoView({block:'nearest'});}
+function openGrid(){if(!pages.length)return;if(!gridBuilt)buildGridView();markGrid();$('gridView').hidden=false;$('gridBtn').classList.add('on');}
+function closeGrid(){$('gridView').hidden=true;$('gridBtn').classList.remove('on');}
+$('gridBtn').onclick=function(){if($('gridView').hidden)openGrid();else closeGrid();};
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('gridView').hidden)closeGrid();});
 })();
 </script>
 </body>
