@@ -34,7 +34,7 @@ const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
 const PER_DAY = 3;
-const BUILD_TIME = "2026-07-26 20:34 CST"; // stamped by deploy.sh
+const BUILD_TIME = "2026-07-26 20:40 CST"; // stamped by deploy.sh
 
 // Oncology drug brand<->generic synonyms so "keytruda" also finds "pembrolizumab".
 const DRUG_GROUPS = [
@@ -796,7 +796,7 @@ function renderViewer(id) {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 var PDF_URL='/pdf/${encodeURIComponent(id)}';
-var GID=${JSON.stringify(id)};var GNAME=${JSON.stringify(name)};
+var GID=${JSON.stringify(id)};var GNAME=${JSON.stringify(name)};var VALIDS=${JSON.stringify(Object.fromEntries([...VALID_IDS].map((x)=>[x,1])))};
 (function(){
 window.addEventListener('error',function(ev){var m=document.getElementById('msg');if(m){m.style.display='';m.textContent='執行錯誤：'+(ev.message||(ev.error&&ev.error.message)||ev);}});
 if('scrollRestoration' in history){try{history.scrollRestoration='manual';}catch(e){}}
@@ -843,7 +843,7 @@ function renderPage(i){ var p=pages[i]; if(!p||p.done)return; p.done=true;
   var tl=document.createElement('div'); tl.className='textLayer'; tl.style.setProperty('--scale-factor',sc); p.el.appendChild(tl); p.el.style.setProperty('--scale-factor',sc);
   p.pg.getTextContent().then(function(tc){ try{ var td=[]; var tk=pdfjsLib.renderTextLayer({textContent:tc,container:tl,viewport:vp,textDivs:td}); (tk&&tk.promise?tk.promise:Promise.resolve()).then(function(){ hlOne(tl); }).catch(function(){}); }catch(e){} }).catch(function(){});
   var al=document.createElement('div'); al.className='annotationLayer'; p.el.appendChild(al);
-  p.pg.getAnnotations().then(function(anns){ anns.forEach(function(a){ if(a.subtype!=='Link')return; var v=vp.convertToViewportRectangle(a.rect); var x=Math.min(v[0],v[2]),y=Math.min(v[1],v[3]),w=Math.abs(v[2]-v[0]),h=Math.abs(v[3]-v[1]); var L=document.createElement('a'); L.style.cssText='left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;'; if(a.url){L.href=a.url;L.target='_blank';L.rel='noopener';}else if(a.dest){L.href='#';(function(dest){L.addEventListener('click',function(e){e.preventDefault();var pr=(typeof dest==='string')?pdfDoc.getDestination(dest):Promise.resolve(dest);Promise.resolve(pr).then(function(dd){if(!dd||!dd[0])return;pdfDoc.getPageIndex(dd[0]).then(function(idx){jumpTo(idx+1,true);});});});})(a.dest);} al.appendChild(L); }); }).catch(function(){});
+  p.pg.getAnnotations().then(function(anns){ anns.forEach(function(a){ if(a.subtype!=='Link')return; var v=vp.convertToViewportRectangle(a.rect); var x=Math.min(v[0],v[2]),y=Math.min(v[1],v[3]),w=Math.abs(v[2]-v[0]),h=Math.abs(v[3]-v[1]); var L=document.createElement('a'); L.style.cssText='left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;'; if(a.url){var _u=a.url,_mk='/physician_gls/pdf/',_ix=_u.indexOf(_mk),_id=null;if(_ix>=0){var _r=_u.slice(_ix+_mk.length),_d=_r.indexOf('.pdf');if(_d>=0){var _c=_r.slice(0,_d);if(VALIDS[_c])_id=_c;}}if(_id){L.href='/preview/'+encodeURIComponent(_id);L.title='本站開啟：'+_id;}else{L.href=_u;L.target='_blank';L.rel='noopener';}}else if(a.dest){L.href='#';(function(dest){L.addEventListener('click',function(e){e.preventDefault();var pr=(typeof dest==='string')?pdfDoc.getDestination(dest):Promise.resolve(dest);Promise.resolve(pr).then(function(dd){if(!dd||!dd[0])return;pdfDoc.getPageIndex(dd[0]).then(function(idx){jumpTo(idx+1,true);});});});})(a.dest);} al.appendChild(L); }); }).catch(function(){});
 }
 function relayout(){ var sc=activeScale(); pages.forEach(function(p){ p.done=false; p.el.style.width=(p.w*sc)+'px'; p.el.style.height=(p.h*sc)+'px'; p.el.innerHTML=''; io.unobserve(p.el); io.observe(p.el); }); setZpct(); }
 function scrollToPage(n){ if(pages[n-1]) pages[n-1].el.scrollIntoView({block:'start'}); }
