@@ -34,7 +34,7 @@ const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
 const PER_DAY = 3;
-const BUILD_TIME = "2026-07-24 22:24 CST"; // stamped by deploy.sh
+const BUILD_TIME = "2026-07-26 20:27 CST"; // stamped by deploy.sh
 
 // Oncology drug brand<->generic synonyms so "keytruda" also finds "pembrolizumab".
 const DRUG_GROUPS = [
@@ -505,13 +505,14 @@ function renderPage(request) {
   .cat h2{font-size:1rem;margin:0;font-weight:650;letter-spacing:-.01em;}
   .cat .count{font-size:.74rem;color:hsl(var(--muted-foreground));background:hsl(var(--muted));padding:2px 8px;border-radius:999px;}
   @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @keyframes imgIn{from{opacity:0}to{opacity:1}}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(184px,1fr));gap:14px;}
   .card{position:relative;display:flex;flex-direction:column;border:1px solid hsl(var(--border));
     border-radius:var(--radius);background:hsl(var(--card));overflow:hidden;transition:.15s;text-decoration:none;color:inherit;}
   .card{animation:fadeIn .2s ease both;}
   .card:hover{border-color:hsl(var(--ring));transform:translateY(-2px);box-shadow:0 8px 24px -12px rgba(0,0,0,.4);}
   .thumb{position:relative;aspect-ratio:16/9;background:hsl(var(--muted));overflow:hidden;}
-  .thumb img{width:100%;height:100%;object-fit:cover;object-position:top;display:block;}
+  .thumb img{width:100%;height:100%;object-fit:cover;object-position:top;display:block;animation:imgIn .5s ease both;}
   .thumb .tag{position:absolute;top:8px;left:8px;display:inline-flex;align-items:center;gap:5px;
     font-size:.66rem;font-weight:600;padding:3px 8px;border-radius:999px;color:#fff;backdrop-filter:blur(4px);}
   .thumb .ver{position:absolute;top:8px;right:8px;font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:999px;color:#fff;background:#000000aa;backdrop-filter:blur(4px);letter-spacing:.02em;}
@@ -525,6 +526,16 @@ function renderPage(request) {
     border:1px solid hsl(var(--border));background:hsl(var(--card));color:inherit;cursor:pointer;}
   .dlbtn:hover{background:hsl(var(--accent));}
   .empty{opacity:.55;padding:30px 4px;text-align:center;}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-start;justify-content:center;z-index:60;padding:56px 16px 16px;}
+  .modal[hidden]{display:none;}
+  .sheet{background:hsl(var(--card));color:hsl(var(--foreground));border:1px solid hsl(var(--border));border-radius:14px;width:min(560px,100%);max-height:85vh;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:11px;box-shadow:0 20px 50px -12px rgba(0,0,0,.5);}
+  .sheethead{display:flex;justify-content:space-between;align-items:center;font-size:1.02rem;font-weight:650;}
+  .xbtn{border:0;background:transparent;color:inherit;cursor:pointer;font-size:15px;padding:4px 9px;border-radius:8px;}
+  .xbtn:hover{background:hsl(var(--accent));}
+  .setlabel{font-weight:600;font-size:.9rem;margin-top:4px;}
+  .sethint{opacity:.75;font-size:.82rem;margin:0;}
+  .iconbtn.warn::after{content:"";position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:999px;background:#f59e0b;border:2px solid hsl(var(--background));}
+  .iconbtn{position:relative;}
   footer{max-width:1180px;margin:0 auto;padding:0 20px 50px;color:hsl(var(--muted-foreground));font-size:.74rem;}
   footer a{color:inherit;}
 </style>
@@ -535,6 +546,7 @@ function renderPage(request) {
     <div class="htop">
       <div class="brand"><span class="logo" id="logo"></span><span>NCCN Guidelines<small id="sub">${GUIDELINES.length} 份 · R2 · PWA</small></span></div>
       <div class="spacer"></div>
+      <button class="iconbtn" id="settings" title="設定"></button>
       <button class="iconbtn" id="theme" title="切換主題"></button>
     </div>
     <div class="searchrow">
@@ -546,17 +558,9 @@ function renderPage(request) {
   </div>
 </header>
 <main>
-  <div class="status">
-    <span class="chip" id="cookieStatus">🔑 檢查 cookie…</span>
-  </div>
-  <details id="cookieBox">
-    <summary>更新 NCCN cookie（過期時使用）</summary>
-    <p style="opacity:.75;margin:8px 0 0">登入 <a href="https://www.nccn.org/login" target="_blank" rel="noopener">nccn.org</a>，用 cookie-cook 擴充功能複製 <b>Http Header value</b> 貼在下方存檔。</p>
-    <textarea id="cookieInput" placeholder="ASP.NET_SessionId=…; …"></textarea>
-    <div style="margin-top:8px"><button class="btn" id="saveCookie">儲存 cookie</button> <span id="saveMsg" style="font-size:.8rem;margin-left:6px"></span></div>
-  </details>
   <div id="list"></div>
 </main>
+<div id="setModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>設定</b><button class="xbtn" id="setClose">✕</button></div><span class="chip" id="cookieStatus">🔑 檢查 cookie…</span><div class="setlabel">更新 NCCN cookie（過期時使用）</div><p class="sethint">登入 <a href="https://www.nccn.org/login" target="_blank" rel="noopener">nccn.org</a>，用 cookie-cook 擴充功能複製 <b>Http Header value</b> 貼在下方存檔。</p><textarea id="cookieInput" placeholder="ASP.NET_SessionId=…; …"></textarea><div><button class="btn" id="saveCookie">儲存 cookie</button> <span id="saveMsg" style="font-size:.8rem;margin-left:6px"></span></div></div></div>
 <footer>
   透過你的 NCCN 登入 cookie 代理下載官方 PDF。${user ? "登入身分：" + escapeHtml(user) + " · " : ""}
   每日 cron 輪流更新 ${PER_DAY} 份 · 資料屬 © NCCN，僅供個人臨床使用。<br>部署時間：${BUILD_TIME}
@@ -586,6 +590,7 @@ const ICONS = {
   moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
   download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
   file:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>',
+  settings:'<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
   cross:'<path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2z"/>',
 };
 function svg(name){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[name]||'')+'</svg>';}
@@ -595,7 +600,7 @@ let R2 = {}, VER = {}, r2sig='';try{var _c=JSON.parse(localStorage.getItem('nccn
 const listEl=document.getElementById('list'), q=document.getElementById('q');
 var activeCat=null;try{activeCat=localStorage.getItem('nccncat')||null;}catch(e){}var filtersEl=document.getElementById('filters');
 document.getElementById('logo').innerHTML=svg('cross');
-document.getElementById('searchicon').innerHTML=svg('search');
+document.getElementById('searchicon').innerHTML=svg('search');document.getElementById('settings').innerHTML=svg('settings');
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 function card(g){
   const c=R2[g.id];
@@ -647,14 +652,17 @@ const themeBtn=document.getElementById('theme');
 function curTheme(){return document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');}
 function paintThemeBtn(){themeBtn.innerHTML=svg(curTheme()==='dark'?'sun':'moon');}
 themeBtn.onclick=()=>{const next=curTheme()==='dark'?'light':'dark';document.documentElement.dataset.theme=next;try{localStorage.setItem('theme',next);}catch(e){}paintThemeBtn();
+document.getElementById('settings').onclick=function(){document.getElementById('setModal').hidden=false;};
+document.getElementById('setClose').onclick=function(){document.getElementById('setModal').hidden=true;};
+document.getElementById('setModal').addEventListener('click',function(e){if(e.target===this)this.hidden=true;});
   document.querySelector('meta[name=theme-color]').setAttribute('content',next==='dark'?'#0b0f19':'#ffffff');};
 paintThemeBtn();
 
 async function refreshCookie(){
-  const el=document.getElementById('cookieStatus');
+  const el=document.getElementById('cookieStatus');const gear=document.getElementById('settings');
   try{const s=await(await fetch('/api/cookie-status')).json();
-    if(s.set){el.className='chip';el.textContent='🔑 cookie 已設定'+(s.updated?'（'+new Date(s.updated).toLocaleDateString()+'）':'');}
-    else{el.className='chip warn';el.textContent='⚠ 尚未設定 cookie';document.getElementById('cookieBox').open=true;}
+    if(s.set){el.className='chip';el.textContent='🔑 cookie 已設定'+(s.updated?'（'+new Date(s.updated).toLocaleDateString()+'）':'');if(gear)gear.classList.remove('warn');}
+    else{el.className='chip warn';el.textContent='⚠ 尚未設定 cookie';if(gear)gear.classList.add('warn');}
   }catch(e){el.textContent='🔑 cookie 狀態未知';}
 }
 async function refreshR2(){
