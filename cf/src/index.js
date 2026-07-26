@@ -6,26 +6,249 @@
 //         /thumb/:id, /manifest.webmanifest, /sw.js, /icons/*, /apple-touch-icon.png,
 //         /api/{cookie,cookie-status,r2-status,refresh}.
 
-const GUIDELINES = [{"id":"all","name":"Acute Lymphoblastic Leukemia","cat":"Hematology"},{"id":"aml","name":"Acute Myeloid Leukemia","cat":"Hematology"},{"id":"ampullary","name":"Ampullary Adenocarcinoma","cat":"Gastrointestinal"},{"id":"anal","name":"Anal Carcinoma","cat":"Gastrointestinal"},{"id":"nmsc","name":"Basal Cell Skin Cancer","cat":"Skin & Melanoma"},{"id":"b-cell","name":"B-Cell Lymphomas","cat":"Hematology"},{"id":"btc","name":"Biliary Tract Cancers","cat":"Gastrointestinal"},{"id":"bladder","name":"Bladder Cancer","cat":"Genitourinary"},{"id":"bone","name":"Bone Cancer","cat":"Bone & Sarcoma"},{"id":"breast","name":"Breast Cancer","cat":"Breast"},{"id":"cns","name":"Central Nervous System Cancers","cat":"CNS"},{"id":"cervical","name":"Cervical Cancer","cat":"Gynecologic"},{"id":"cll","name":"Chronic Lymphocytic Leukemia/Small Lymphocytic Lymphoma","cat":"Hematology"},{"id":"cml","name":"Chronic Myeloid Leukemia","cat":"Hematology"},{"id":"colon","name":"Colon Cancer","cat":"Gastrointestinal"},{"id":"dfsp","name":"Dermatofibrosarcoma Protuberans","cat":"Skin & Melanoma"},{"id":"esophageal","name":"Esophageal and Esophagogastric Junction Cancers","cat":"Gastrointestinal"},{"id":"gastric","name":"Gastric Cancer","cat":"Gastrointestinal"},{"id":"gist","name":"Gastrointestinal Stromal Tumors","cat":"Gastrointestinal"},{"id":"gtn","name":"Gestational Trophoblastic Neoplasia","cat":"Gynecologic"},{"id":"hairy_cell","name":"Hairy Cell Leukemia","cat":"Hematology"},{"id":"head-and-neck","name":"Head and Neck Cancers","cat":"Head & Neck"},{"id":"hepatobiliary","name":"Hepatobiliary Cancers","cat":"Gastrointestinal"},{"id":"hcc","name":"Hepatocellular Carcinoma","cat":"Gastrointestinal"},{"id":"histiocytic_neoplasms","name":"Histiocytic Neoplasms","cat":"Hematology"},{"id":"hodgkins","name":"Hodgkin Lymphoma","cat":"Hematology"},{"id":"kaposi","name":"Kaposi Sarcoma","cat":"Skin & Melanoma"},{"id":"kidney","name":"Kidney Cancer","cat":"Genitourinary"},{"id":"cutaneous_melanoma","name":"Melanoma: Cutaneous","cat":"Skin & Melanoma"},{"id":"uveal","name":"Melanoma: Uveal","cat":"Skin & Melanoma"},{"id":"mcc","name":"Merkel Cell Carcinoma","cat":"Skin & Melanoma"},{"id":"meso_peritoneal","name":"Mesothelioma: Peritoneal","cat":"Thoracic"},{"id":"meso_pleural","name":"Mesothelioma: Pleural","cat":"Thoracic"},{"id":"Myeloma","name":"Multiple Myeloma","cat":"Hematology"},{"id":"mds","name":"Myelodysplastic Syndromes","cat":"Hematology"},{"id":"mlne","name":"Myeloid/Lymphoid Neoplasms with Eosinophilia and Tyrosine Kinase Gene Fusions","cat":"Hematology"},{"id":"mpn","name":"Myeloproliferative Neoplasms","cat":"Hematology"},{"id":"neuroendocrine","name":"Neuroendocrine and Adrenal Tumors","cat":"Neuroendocrine"},{"id":"nscl","name":"Non-Small Cell Lung Cancer","cat":"Thoracic"},{"id":"occult","name":"Occult Primary","cat":"Other"},{"id":"ovarian","name":"Ovarian Cancer/Fallopian Tube Cancer/Primary Peritoneal Cancer","cat":"Gynecologic"},{"id":"pancreatic","name":"Pancreatic Adenocarcinoma","cat":"Gastrointestinal"},{"id":"ped_all","name":"Pediatric Acute Lymphoblastic Leukemia","cat":"Pediatric"},{"id":"ped_b-cell","name":"Pediatric Aggressive Mature B-Cell Lymphomas","cat":"Pediatric"},{"id":"ped_cns","name":"Pediatric Central Nervous System Cancers","cat":"Pediatric"},{"id":"ped_hodgkin","name":"Pediatric Hodgkin Lymphoma","cat":"Pediatric"},{"id":"penile","name":"Penile Cancer","cat":"Genitourinary"},{"id":"cutaneous_lymphomas","name":"Primary Cutaneous Lymphomas","cat":"Hematology"},{"id":"prostate","name":"Prostate Cancer","cat":"Genitourinary"},{"id":"rectal","name":"Rectal Cancer","cat":"Gastrointestinal"},{"id":"small_bowel","name":"Small Bowel Adenocarcinoma","cat":"Gastrointestinal"},{"id":"sclc","name":"Small Cell Lung Cancer","cat":"Thoracic"},{"id":"sarcoma","name":"Soft Tissue Sarcoma","cat":"Bone & Sarcoma"},{"id":"squamous","name":"Squamous Cell Skin Cancer","cat":"Skin & Melanoma"},{"id":"amyloidosis","name":"Systemic Light Chain Amyloidosis","cat":"Hematology"},{"id":"mastocytosis","name":"Systemic Mastocytosis","cat":"Hematology"},{"id":"t-cell","name":"T-Cell Lymphomas","cat":"Hematology"},{"id":"testicular","name":"Testicular Cancer","cat":"Genitourinary"},{"id":"thymic","name":"Thymomas and Thymic Carcinomas","cat":"Thoracic"},{"id":"thyroid","name":"Thyroid Carcinoma","cat":"Head & Neck"},{"id":"uterine","name":"Uterine Neoplasms","cat":"Gynecologic"},{"id":"vulvar","name":"Vulvar Cancer","cat":"Gynecologic"},{"id":"waldenstroms","name":"Waldenström Macroglobulinemia / Lymphoplasmacytic Lymphoma","cat":"Hematology"},{"id":"wilms_tumor","name":"Wilms Tumor (Nephroblastoma)","cat":"Pediatric"},{"id":"antiemesis","name":"Antiemesis","cat":"Supportive Care"},{"id":"pain","name":"Adult Cancer Pain","cat":"Supportive Care"},{"id":"vte","name":"Cancer-Associated Venous Thromboembolic Disease","cat":"Supportive Care"},{"id":"fatigue","name":"Cancer-Related Fatigue","cat":"Supportive Care"},{"id":"distress","name":"Distress Management","cat":"Supportive Care"},{"id":"hct","name":"Hematopoietic Cell Transplantation","cat":"Supportive Care"},{"id":"growthfactors","name":"Hematopoietic Growth Factors","cat":"Supportive Care"},{"id":"immunotherapy","name":"Management of Immunotherapy-Related Toxicities","cat":"Supportive Care"},{"id":"palliative","name":"Palliative Care","cat":"Supportive Care"},{"id":"infections","name":"Prevention and Treatment of Cancer-Related Infections","cat":"Supportive Care"},{"id":"smoking","name":"Smoking Cessation","cat":"Supportive Care"},{"id":"survivorship","name":"Survivorship","cat":"Supportive Care"},{"id":"aya","name":"Adolescent and Young Adult (AYA) Oncology","cat":"Special Populations"},{"id":"older_adult","name":"Older Adult Oncology","cat":"Special Populations"},{"id":"hiv","name":"Cancer in People with HIV","cat":"Special Populations"},{"id":"breast_risk","name":"Breast Cancer Risk Reduction","cat":"Screening & Prevention"},{"id":"breast-screening","name":"Breast Cancer Screening and Diagnosis","cat":"Screening & Prevention"},{"id":"colorectal_screening","name":"Colorectal Cancer Screening","cat":"Screening & Prevention"},{"id":"genetics_bopp","name":"Genetic/Familial High-Risk Assessment: Breast, Ovarian, and Pancreatic","cat":"Genetics & Risk"},{"id":"genetics_ceg","name":"Genetic/Familial High-Risk Assessment: Colorectal","cat":"Genetics & Risk"},{"id":"lung_screening","name":"Lung Cancer Screening","cat":"Screening & Prevention"},{"id":"prostate_detection","name":"Prostate Cancer Early Detection","cat":"Screening & Prevention"}];
+const GUIDELINES = [
+	{ id: "all", name: "Acute Lymphoblastic Leukemia", cat: "Hematology" },
+	{ id: "aml", name: "Acute Myeloid Leukemia", cat: "Hematology" },
+	{
+		id: "ampullary",
+		name: "Ampullary Adenocarcinoma",
+		cat: "Gastrointestinal",
+	},
+	{ id: "anal", name: "Anal Carcinoma", cat: "Gastrointestinal" },
+	{ id: "nmsc", name: "Basal Cell Skin Cancer", cat: "Skin & Melanoma" },
+	{ id: "b-cell", name: "B-Cell Lymphomas", cat: "Hematology" },
+	{ id: "btc", name: "Biliary Tract Cancers", cat: "Gastrointestinal" },
+	{ id: "bladder", name: "Bladder Cancer", cat: "Genitourinary" },
+	{ id: "bone", name: "Bone Cancer", cat: "Bone & Sarcoma" },
+	{ id: "breast", name: "Breast Cancer", cat: "Breast" },
+	{ id: "cns", name: "Central Nervous System Cancers", cat: "CNS" },
+	{ id: "cervical", name: "Cervical Cancer", cat: "Gynecologic" },
+	{
+		id: "cll",
+		name: "Chronic Lymphocytic Leukemia/Small Lymphocytic Lymphoma",
+		cat: "Hematology",
+	},
+	{ id: "cml", name: "Chronic Myeloid Leukemia", cat: "Hematology" },
+	{ id: "colon", name: "Colon Cancer", cat: "Gastrointestinal" },
+	{
+		id: "dfsp",
+		name: "Dermatofibrosarcoma Protuberans",
+		cat: "Skin & Melanoma",
+	},
+	{
+		id: "esophageal",
+		name: "Esophageal and Esophagogastric Junction Cancers",
+		cat: "Gastrointestinal",
+	},
+	{ id: "gastric", name: "Gastric Cancer", cat: "Gastrointestinal" },
+	{
+		id: "gist",
+		name: "Gastrointestinal Stromal Tumors",
+		cat: "Gastrointestinal",
+	},
+	{
+		id: "gtn",
+		name: "Gestational Trophoblastic Neoplasia",
+		cat: "Gynecologic",
+	},
+	{ id: "hairy_cell", name: "Hairy Cell Leukemia", cat: "Hematology" },
+	{ id: "head-and-neck", name: "Head and Neck Cancers", cat: "Head & Neck" },
+	{
+		id: "hepatobiliary",
+		name: "Hepatobiliary Cancers",
+		cat: "Gastrointestinal",
+	},
+	{ id: "hcc", name: "Hepatocellular Carcinoma", cat: "Gastrointestinal" },
+	{
+		id: "histiocytic_neoplasms",
+		name: "Histiocytic Neoplasms",
+		cat: "Hematology",
+	},
+	{ id: "hodgkins", name: "Hodgkin Lymphoma", cat: "Hematology" },
+	{ id: "kaposi", name: "Kaposi Sarcoma", cat: "Skin & Melanoma" },
+	{ id: "kidney", name: "Kidney Cancer", cat: "Genitourinary" },
+	{
+		id: "cutaneous_melanoma",
+		name: "Melanoma: Cutaneous",
+		cat: "Skin & Melanoma",
+	},
+	{ id: "uveal", name: "Melanoma: Uveal", cat: "Skin & Melanoma" },
+	{ id: "mcc", name: "Merkel Cell Carcinoma", cat: "Skin & Melanoma" },
+	{ id: "meso_peritoneal", name: "Mesothelioma: Peritoneal", cat: "Thoracic" },
+	{ id: "meso_pleural", name: "Mesothelioma: Pleural", cat: "Thoracic" },
+	{ id: "Myeloma", name: "Multiple Myeloma", cat: "Hematology" },
+	{ id: "mds", name: "Myelodysplastic Syndromes", cat: "Hematology" },
+	{
+		id: "mlne",
+		name: "Myeloid/Lymphoid Neoplasms with Eosinophilia and Tyrosine Kinase Gene Fusions",
+		cat: "Hematology",
+	},
+	{ id: "mpn", name: "Myeloproliferative Neoplasms", cat: "Hematology" },
+	{
+		id: "neuroendocrine",
+		name: "Neuroendocrine and Adrenal Tumors",
+		cat: "Neuroendocrine",
+	},
+	{ id: "nscl", name: "Non-Small Cell Lung Cancer", cat: "Thoracic" },
+	{ id: "occult", name: "Occult Primary", cat: "Other" },
+	{
+		id: "ovarian",
+		name: "Ovarian Cancer/Fallopian Tube Cancer/Primary Peritoneal Cancer",
+		cat: "Gynecologic",
+	},
+	{
+		id: "pancreatic",
+		name: "Pancreatic Adenocarcinoma",
+		cat: "Gastrointestinal",
+	},
+	{
+		id: "ped_all",
+		name: "Pediatric Acute Lymphoblastic Leukemia",
+		cat: "Pediatric",
+	},
+	{
+		id: "ped_b-cell",
+		name: "Pediatric Aggressive Mature B-Cell Lymphomas",
+		cat: "Pediatric",
+	},
+	{
+		id: "ped_cns",
+		name: "Pediatric Central Nervous System Cancers",
+		cat: "Pediatric",
+	},
+	{ id: "ped_hodgkin", name: "Pediatric Hodgkin Lymphoma", cat: "Pediatric" },
+	{ id: "penile", name: "Penile Cancer", cat: "Genitourinary" },
+	{
+		id: "cutaneous_lymphomas",
+		name: "Primary Cutaneous Lymphomas",
+		cat: "Hematology",
+	},
+	{ id: "prostate", name: "Prostate Cancer", cat: "Genitourinary" },
+	{ id: "rectal", name: "Rectal Cancer", cat: "Gastrointestinal" },
+	{
+		id: "small_bowel",
+		name: "Small Bowel Adenocarcinoma",
+		cat: "Gastrointestinal",
+	},
+	{ id: "sclc", name: "Small Cell Lung Cancer", cat: "Thoracic" },
+	{ id: "sarcoma", name: "Soft Tissue Sarcoma", cat: "Bone & Sarcoma" },
+	{ id: "squamous", name: "Squamous Cell Skin Cancer", cat: "Skin & Melanoma" },
+	{
+		id: "amyloidosis",
+		name: "Systemic Light Chain Amyloidosis",
+		cat: "Hematology",
+	},
+	{ id: "mastocytosis", name: "Systemic Mastocytosis", cat: "Hematology" },
+	{ id: "t-cell", name: "T-Cell Lymphomas", cat: "Hematology" },
+	{ id: "testicular", name: "Testicular Cancer", cat: "Genitourinary" },
+	{ id: "thymic", name: "Thymomas and Thymic Carcinomas", cat: "Thoracic" },
+	{ id: "thyroid", name: "Thyroid Carcinoma", cat: "Head & Neck" },
+	{ id: "uterine", name: "Uterine Neoplasms", cat: "Gynecologic" },
+	{ id: "vulvar", name: "Vulvar Cancer", cat: "Gynecologic" },
+	{
+		id: "waldenstroms",
+		name: "Waldenström Macroglobulinemia / Lymphoplasmacytic Lymphoma",
+		cat: "Hematology",
+	},
+	{ id: "wilms_tumor", name: "Wilms Tumor (Nephroblastoma)", cat: "Pediatric" },
+	{ id: "antiemesis", name: "Antiemesis", cat: "Supportive Care" },
+	{ id: "pain", name: "Adult Cancer Pain", cat: "Supportive Care" },
+	{
+		id: "vte",
+		name: "Cancer-Associated Venous Thromboembolic Disease",
+		cat: "Supportive Care",
+	},
+	{ id: "fatigue", name: "Cancer-Related Fatigue", cat: "Supportive Care" },
+	{ id: "distress", name: "Distress Management", cat: "Supportive Care" },
+	{
+		id: "hct",
+		name: "Hematopoietic Cell Transplantation",
+		cat: "Supportive Care",
+	},
+	{
+		id: "growthfactors",
+		name: "Hematopoietic Growth Factors",
+		cat: "Supportive Care",
+	},
+	{
+		id: "immunotherapy",
+		name: "Management of Immunotherapy-Related Toxicities",
+		cat: "Supportive Care",
+	},
+	{ id: "palliative", name: "Palliative Care", cat: "Supportive Care" },
+	{
+		id: "infections",
+		name: "Prevention and Treatment of Cancer-Related Infections",
+		cat: "Supportive Care",
+	},
+	{ id: "smoking", name: "Smoking Cessation", cat: "Supportive Care" },
+	{ id: "survivorship", name: "Survivorship", cat: "Supportive Care" },
+	{
+		id: "aya",
+		name: "Adolescent and Young Adult (AYA) Oncology",
+		cat: "Special Populations",
+	},
+	{
+		id: "older_adult",
+		name: "Older Adult Oncology",
+		cat: "Special Populations",
+	},
+	{ id: "hiv", name: "Cancer in People with HIV", cat: "Special Populations" },
+	{
+		id: "breast_risk",
+		name: "Breast Cancer Risk Reduction",
+		cat: "Screening & Prevention",
+	},
+	{
+		id: "breast-screening",
+		name: "Breast Cancer Screening and Diagnosis",
+		cat: "Screening & Prevention",
+	},
+	{
+		id: "colorectal_screening",
+		name: "Colorectal Cancer Screening",
+		cat: "Screening & Prevention",
+	},
+	{
+		id: "genetics_bopp",
+		name: "Genetic/Familial High-Risk Assessment: Breast, Ovarian, and Pancreatic",
+		cat: "Genetics & Risk",
+	},
+	{
+		id: "genetics_ceg",
+		name: "Genetic/Familial High-Risk Assessment: Colorectal",
+		cat: "Genetics & Risk",
+	},
+	{
+		id: "lung_screening",
+		name: "Lung Cancer Screening",
+		cat: "Screening & Prevention",
+	},
+	{
+		id: "prostate_detection",
+		name: "Prostate Cancer Early Detection",
+		cat: "Screening & Prevention",
+	},
+];
 
 const CATS = [
-  { name: "Hematology", icon: "droplet", color: "#ef4444" },
-  { name: "Gastrointestinal", icon: "utensils", color: "#f59e0b" },
-  { name: "Thoracic", icon: "wind", color: "#0ea5e9" },
-  { name: "Breast", icon: "heart", color: "#ec4899" },
-  { name: "Gynecologic", icon: "venus", color: "#d946ef" },
-  { name: "Genitourinary", icon: "mars", color: "#06b6d4" },
-  { name: "Head & Neck", icon: "scanface", color: "#8b5cf6" },
-  { name: "Skin & Melanoma", icon: "sun", color: "#f97316" },
-  { name: "CNS", icon: "activity", color: "#6366f1" },
-  { name: "Bone & Sarcoma", icon: "bone", color: "#a8a29e" },
-  { name: "Neuroendocrine", icon: "zap", color: "#10b981" },
-  { name: "Pediatric", icon: "baby", color: "#14b8a6" },
-  { name: "Other", icon: "help", color: "#64748b" },
-  { name: "Supportive Care", icon: "buoy", color: "#22c55e" },
-  { name: "Screening & Prevention", icon: "shield", color: "#3b82f6" },
-  { name: "Genetics & Risk", icon: "flask", color: "#a855f7" },
-  { name: "Special Populations", icon: "users", color: "#f43f5e" },
+	{ name: "Hematology", icon: "droplet", color: "#ef4444" },
+	{ name: "Gastrointestinal", icon: "utensils", color: "#f59e0b" },
+	{ name: "Thoracic", icon: "wind", color: "#0ea5e9" },
+	{ name: "Breast", icon: "heart", color: "#ec4899" },
+	{ name: "Gynecologic", icon: "venus", color: "#d946ef" },
+	{ name: "Genitourinary", icon: "mars", color: "#06b6d4" },
+	{ name: "Head & Neck", icon: "scanface", color: "#8b5cf6" },
+	{ name: "Skin & Melanoma", icon: "sun", color: "#f97316" },
+	{ name: "CNS", icon: "activity", color: "#6366f1" },
+	{ name: "Bone & Sarcoma", icon: "bone", color: "#a8a29e" },
+	{ name: "Neuroendocrine", icon: "zap", color: "#10b981" },
+	{ name: "Pediatric", icon: "baby", color: "#14b8a6" },
+	{ name: "Other", icon: "help", color: "#64748b" },
+	{ name: "Supportive Care", icon: "buoy", color: "#22c55e" },
+	{ name: "Screening & Prevention", icon: "shield", color: "#3b82f6" },
+	{ name: "Genetics & Risk", icon: "flask", color: "#a855f7" },
+	{ name: "Special Populations", icon: "users", color: "#f43f5e" },
 ];
 
 const VALID_IDS = new Set(GUIDELINES.map((g) => g.id));
@@ -34,338 +257,545 @@ const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
 const PER_DAY = 3;
-const BUILD_TIME = "2026-07-26 21:57 CST"; // stamped by deploy.sh
+const BUILD_TIME = "2026-07-26 22:30 CST"; // stamped by deploy.sh
 
 // Oncology drug brand<->generic synonyms so "keytruda" also finds "pembrolizumab".
 const DRUG_GROUPS = [
-  ["pembrolizumab","keytruda"],["nivolumab","opdivo"],["atezolizumab","tecentriq"],
-  ["durvalumab","imfinzi"],["ipilimumab","yervoy"],["cemiplimab","libtayo"],["dostarlimab","jemperli"],
-  ["trastuzumab","herceptin"],["pertuzumab","perjeta"],["trastuzumab emtansine","kadcyla","t-dm1"],
-  ["trastuzumab deruxtecan","enhertu","t-dxd"],["bevacizumab","avastin"],["rituximab","rituxan"],
-  ["cetuximab","erbitux"],["panitumumab","vectibix"],["ramucirumab","cyramza"],
-  ["osimertinib","tagrisso"],["erlotinib","tarceva"],["gefitinib","iressa"],["afatinib","gilotrif"],
-  ["dacomitinib","vizimpro"],["alectinib","alecensa"],["crizotinib","xalkori"],["lorlatinib","lorbrena"],
-  ["brigatinib","alunbrig"],["ceritinib","zykadia"],["sotorasib","lumakras"],["adagrasib","krazati"],
-  ["tepotinib","tepmetko"],["capmatinib","tabrecta"],["selpercatinib","retevmo"],["pralsetinib","gavreto"],
-  ["larotrectinib","vitrakvi"],["entrectinib","rozlytrek"],["amivantamab","rybrevant"],["mobocertinib","exkivity"],
-  ["imatinib","gleevec"],["dasatinib","sprycel"],["nilotinib","tasigna"],["bosutinib","bosulif"],["ponatinib","iclusig"],
-  ["ibrutinib","imbruvica"],["acalabrutinib","calquence"],["zanubrutinib","brukinsa"],["venetoclax","venclexta"],
-  ["lenalidomide","revlimid"],["pomalidomide","pomalyst"],["thalidomide","thalomid"],
-  ["bortezomib","velcade"],["carfilzomib","kyprolis"],["ixazomib","ninlaro"],
-  ["daratumumab","darzalex"],["isatuximab","sarclisa"],["elotuzumab","empliciti"],
-  ["palbociclib","ibrance"],["ribociclib","kisqali"],["abemaciclib","verzenio"],
-  ["olaparib","lynparza"],["niraparib","zejula"],["rucaparib","rubraca"],["talazoparib","talzenna"],
-  ["enzalutamide","xtandi"],["abiraterone","zytiga"],["apalutamide","erleada"],["darolutamide","nubeqa"],
-  ["sunitinib","sutent"],["sorafenib","nexavar"],["pazopanib","votrient"],["cabozantinib","cabometyx","cometriq"],
-  ["lenvatinib","lenvima"],["regorafenib","stivarga"],["axitinib","inlyta"],["tivozanib","fotivda"],
-  ["everolimus","afinitor"],["temsirolimus","torisel"],["vemurafenib","zelboraf"],["dabrafenib","tafinlar"],
-  ["trametinib","mekinist"],["encorafenib","braftovi"],["binimetinib","mektovi"],["cobimetinib","cotellic"],
-  ["gemcitabine","gemzar"],["capecitabine","xeloda"],["paclitaxel","taxol"],["nab-paclitaxel","abraxane"],
-  ["docetaxel","taxotere"],["pemetrexed","alimta"],["irinotecan","camptosar"],["oxaliplatin","eloxatin"],
-  ["fluorouracil","5-fu"],["doxorubicin","adriamycin"],["liposomal doxorubicin","doxil"],
-  ["sacituzumab govitecan","trodelvy"],["enfortumab vedotin","padcev"],["brentuximab vedotin","adcetris"],
-  ["polatuzumab vedotin","polivy"],["blinatumomab","blincyto"],["mosunetuzumab","lunsumio"],
-  ["tucatinib","tukysa"],["neratinib","nerlynx"],["lapatinib","tykerb"],["margetuximab","margenza"],
-  ["fam-trastuzumab","enhertu"],["mirvetuximab soravtansine","elahere"],
+	["pembrolizumab", "keytruda"],
+	["nivolumab", "opdivo"],
+	["atezolizumab", "tecentriq"],
+	["durvalumab", "imfinzi"],
+	["ipilimumab", "yervoy"],
+	["cemiplimab", "libtayo"],
+	["dostarlimab", "jemperli"],
+	["trastuzumab", "herceptin"],
+	["pertuzumab", "perjeta"],
+	["trastuzumab emtansine", "kadcyla", "t-dm1"],
+	["trastuzumab deruxtecan", "enhertu", "t-dxd"],
+	["bevacizumab", "avastin"],
+	["rituximab", "rituxan"],
+	["cetuximab", "erbitux"],
+	["panitumumab", "vectibix"],
+	["ramucirumab", "cyramza"],
+	["osimertinib", "tagrisso"],
+	["erlotinib", "tarceva"],
+	["gefitinib", "iressa"],
+	["afatinib", "gilotrif"],
+	["dacomitinib", "vizimpro"],
+	["alectinib", "alecensa"],
+	["crizotinib", "xalkori"],
+	["lorlatinib", "lorbrena"],
+	["brigatinib", "alunbrig"],
+	["ceritinib", "zykadia"],
+	["sotorasib", "lumakras"],
+	["adagrasib", "krazati"],
+	["tepotinib", "tepmetko"],
+	["capmatinib", "tabrecta"],
+	["selpercatinib", "retevmo"],
+	["pralsetinib", "gavreto"],
+	["larotrectinib", "vitrakvi"],
+	["entrectinib", "rozlytrek"],
+	["amivantamab", "rybrevant"],
+	["mobocertinib", "exkivity"],
+	["imatinib", "gleevec"],
+	["dasatinib", "sprycel"],
+	["nilotinib", "tasigna"],
+	["bosutinib", "bosulif"],
+	["ponatinib", "iclusig"],
+	["ibrutinib", "imbruvica"],
+	["acalabrutinib", "calquence"],
+	["zanubrutinib", "brukinsa"],
+	["venetoclax", "venclexta"],
+	["lenalidomide", "revlimid"],
+	["pomalidomide", "pomalyst"],
+	["thalidomide", "thalomid"],
+	["bortezomib", "velcade"],
+	["carfilzomib", "kyprolis"],
+	["ixazomib", "ninlaro"],
+	["daratumumab", "darzalex"],
+	["isatuximab", "sarclisa"],
+	["elotuzumab", "empliciti"],
+	["palbociclib", "ibrance"],
+	["ribociclib", "kisqali"],
+	["abemaciclib", "verzenio"],
+	["olaparib", "lynparza"],
+	["niraparib", "zejula"],
+	["rucaparib", "rubraca"],
+	["talazoparib", "talzenna"],
+	["enzalutamide", "xtandi"],
+	["abiraterone", "zytiga"],
+	["apalutamide", "erleada"],
+	["darolutamide", "nubeqa"],
+	["sunitinib", "sutent"],
+	["sorafenib", "nexavar"],
+	["pazopanib", "votrient"],
+	["cabozantinib", "cabometyx", "cometriq"],
+	["lenvatinib", "lenvima"],
+	["regorafenib", "stivarga"],
+	["axitinib", "inlyta"],
+	["tivozanib", "fotivda"],
+	["everolimus", "afinitor"],
+	["temsirolimus", "torisel"],
+	["vemurafenib", "zelboraf"],
+	["dabrafenib", "tafinlar"],
+	["trametinib", "mekinist"],
+	["encorafenib", "braftovi"],
+	["binimetinib", "mektovi"],
+	["cobimetinib", "cotellic"],
+	["gemcitabine", "gemzar"],
+	["capecitabine", "xeloda"],
+	["paclitaxel", "taxol"],
+	["nab-paclitaxel", "abraxane"],
+	["docetaxel", "taxotere"],
+	["pemetrexed", "alimta"],
+	["irinotecan", "camptosar"],
+	["oxaliplatin", "eloxatin"],
+	["fluorouracil", "5-fu"],
+	["doxorubicin", "adriamycin"],
+	["liposomal doxorubicin", "doxil"],
+	["sacituzumab govitecan", "trodelvy"],
+	["enfortumab vedotin", "padcev"],
+	["brentuximab vedotin", "adcetris"],
+	["polatuzumab vedotin", "polivy"],
+	["blinatumomab", "blincyto"],
+	["mosunetuzumab", "lunsumio"],
+	["tucatinib", "tukysa"],
+	["neratinib", "nerlynx"],
+	["lapatinib", "tykerb"],
+	["margetuximab", "margenza"],
+	["fam-trastuzumab", "enhertu"],
+	["mirvetuximab soravtansine", "elahere"],
 ];
 const SYN = (() => {
-  const m = {};
-  for (const g of DRUG_GROUPS) for (const t of g) {
-    const k = t.toLowerCase();
-    m[k] = (m[k] || []).concat(g.filter((x) => x.toLowerCase() !== k).map((x) => x.toLowerCase()));
-  }
-  return m;
+	const m = {};
+	for (const g of DRUG_GROUPS)
+		for (const t of g) {
+			const k = t.toLowerCase();
+			m[k] = (m[k] || []).concat(
+				g.filter((x) => x.toLowerCase() !== k).map((x) => x.toLowerCase()),
+			);
+		}
+	return m;
 })();
 function buildMatch(q) {
-  const toks = q.replace(/["*()]/g, " ").split(/\s+/).filter(Boolean);
-  return toks.map((t) => {
-    const alts = SYN[t.toLowerCase()];
-    const terms = ['"' + t + '"*'];
-    if (alts) for (const a of alts) terms.push('"' + a + '"*');
-    return terms.length > 1 ? "(" + terms.join(" OR ") + ")" : terms[0];
-  }).join(" ");
+	const toks = q
+		.replace(/["*()]/g, " ")
+		.split(/\s+/)
+		.filter(Boolean);
+	return toks
+		.map((t) => {
+			const alts = SYN[t.toLowerCase()];
+			const terms = ['"' + t + '"*'];
+			if (alts) for (const a of alts) terms.push('"' + a + '"*');
+			return terms.length > 1 ? "(" + terms.join(" OR ") + ")" : terms[0];
+		})
+		.join(" ");
 }
 function queryTerms(q) {
-  const toks = q.replace(/["*()]/g, " ").split(/\s+/).filter(Boolean);
-  const out = [];
-  for (const t of toks) { const k = t.toLowerCase(); if (out.indexOf(k) < 0) out.push(k); const alts = SYN[k]; if (alts) for (const a of alts) if (out.indexOf(a) < 0) out.push(a); }
-  return out;
+	const toks = q
+		.replace(/["*()]/g, " ")
+		.split(/\s+/)
+		.filter(Boolean);
+	const out = [];
+	for (const t of toks) {
+		const k = t.toLowerCase();
+		if (out.indexOf(k) < 0) out.push(k);
+		const alts = SYN[k];
+		if (alts) for (const a of alts) if (out.indexOf(a) < 0) out.push(a);
+	}
+	return out;
 }
 
 const json = (obj, status = 200) =>
-  new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8" } });
+	new Response(JSON.stringify(obj), {
+		status,
+		headers: { "content-type": "application/json; charset=utf-8" },
+	});
 const html = (body) =>
-  new Response(body, { headers: { "content-type": "text/html; charset=utf-8" } });
+	new Response(body, {
+		headers: { "content-type": "text/html; charset=utf-8" },
+	});
 
 async function fetchLive(env, id) {
-  const cookie = await env.NCCN_KV.get(COOKIE_KEY);
-  if (!cookie) return { ok: false, error: "no-cookie" };
-  const upstream = await fetch(
-    `https://www.nccn.org/professionals/physician_gls/pdf/${id}.pdf`,
-    {
-      headers: {
-        authority: "www.nccn.org",
-        accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        "accept-language": "zh-TW,zh;q=0.9",
-        "cache-control": "max-age=0",
-        cookie,
-      },
-    }
-  );
-  const ctype = (upstream.headers.get("content-type") || "").toLowerCase();
-  if (!upstream.ok || !ctype.includes("pdf")) return { ok: false, status: upstream.status, ctype };
-  const buf = await upstream.arrayBuffer();
-  const head = new Uint8Array(buf.slice(0, 4));
-  if (String.fromCharCode(...head) !== "%PDF") return { ok: false, status: upstream.status, ctype, error: "not-pdf" };
-  return { ok: true, buf };
+	const cookie = await env.NCCN_KV.get(COOKIE_KEY);
+	if (!cookie) return { ok: false, error: "no-cookie" };
+	const upstream = await fetch(
+		`https://www.nccn.org/professionals/physician_gls/pdf/${id}.pdf`,
+		{
+			headers: {
+				authority: "www.nccn.org",
+				accept:
+					"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+				"accept-language": "zh-TW,zh;q=0.9",
+				"cache-control": "max-age=0",
+				cookie,
+			},
+		},
+	);
+	const ctype = (upstream.headers.get("content-type") || "").toLowerCase();
+	if (!upstream.ok || !ctype.includes("pdf"))
+		return { ok: false, status: upstream.status, ctype };
+	const buf = await upstream.arrayBuffer();
+	const head = new Uint8Array(buf.slice(0, 4));
+	if (String.fromCharCode(...head) !== "%PDF")
+		return { ok: false, status: upstream.status, ctype, error: "not-pdf" };
+	return { ok: true, buf };
 }
 
 async function refreshOne(env, id) {
-  const r = await fetchLive(env, id);
-  if (!r.ok) return { id, ok: false, error: r.error || `${r.status} ${r.ctype}` };
-  await env.PDFS.put(`${id}.pdf`, r.buf, { httpMetadata: { contentType: "application/pdf" } });
-  return { id, ok: true, size: r.buf.byteLength };
+	const r = await fetchLive(env, id);
+	if (!r.ok)
+		return { id, ok: false, error: r.error || `${r.status} ${r.ctype}` };
+	await env.PDFS.put(`${id}.pdf`, r.buf, {
+		httpMetadata: { contentType: "application/pdf" },
+	});
+	return { id, ok: true, size: r.buf.byteLength };
 }
 
 async function refreshBatch(env, n) {
-  const cursorRaw = await env.NCCN_KV.get(CURSOR_KEY);
-  let cursor = parseInt(cursorRaw || "0", 10);
-  if (!Number.isFinite(cursor) || cursor < 0) cursor = 0;
-  const results = [];
-  for (let i = 0; i < n; i++) {
-    const g = GUIDELINES[cursor % GUIDELINES.length];
-    results.push(await refreshOne(env, g.id));
-    cursor = (cursor + 1) % GUIDELINES.length;
-  }
-  await env.NCCN_KV.put(CURSOR_KEY, String(cursor));
-  return { cursor, results };
+	const cursorRaw = await env.NCCN_KV.get(CURSOR_KEY);
+	let cursor = parseInt(cursorRaw || "0", 10);
+	if (!Number.isFinite(cursor) || cursor < 0) cursor = 0;
+	const results = [];
+	for (let i = 0; i < n; i++) {
+		const g = GUIDELINES[cursor % GUIDELINES.length];
+		results.push(await refreshOne(env, g.id));
+		cursor = (cursor + 1) % GUIDELINES.length;
+	}
+	await env.NCCN_KV.put(CURSOR_KEY, String(cursor));
+	return { cursor, results };
 }
 
 async function servePdf(env, id, { download, request }) {
-  const key = `${id}.pdf`;
-  const today = new Date().toISOString().slice(0, 10);
-  const filename = `NCCN-${id}-${today}.pdf`;
-  const disposition = `${download ? "attachment" : "inline"}; filename="${filename}"`;
-  const rangeHeader = request ? request.headers.get("Range") : null;
+	const key = `${id}.pdf`;
+	const today = new Date().toISOString().slice(0, 10);
+	const filename = `NCCN-${id}-${today}.pdf`;
+	const disposition = `${download ? "attachment" : "inline"}; filename="${filename}"`;
+	const rangeHeader = request ? request.headers.get("Range") : null;
 
-  const head = await env.PDFS.head(key);
-  if (head) {
-    // HTTP Range → 206 so pdf.js can lazily fetch page data (mcq-bank style).
-    if (rangeHeader && !download) {
-      const m = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim());
-      if (m && (m[1] !== "" || m[2] !== "")) {
-        const total = head.size;
-        let start = m[1] === "" ? Math.max(total - parseInt(m[2], 10), 0) : parseInt(m[1], 10);
-        let end = m[2] === "" ? total - 1 : parseInt(m[2], 10);
-        if (end > total - 1) end = total - 1;
-        if (start > end || start >= total)
-          return new Response(null, { status: 416, headers: { "content-range": `bytes */${total}`, "accept-ranges": "bytes" } });
-        const length = end - start + 1;
-        const part = await env.PDFS.get(key, { range: { offset: start, length } });
-        return new Response(part.body, {
-          status: 206,
-          headers: {
-            "content-type": "application/pdf",
-            "content-length": String(length),
-            "content-range": `bytes ${start}-${end}/${total}`,
-            "accept-ranges": "bytes",
-            "content-disposition": disposition,
-            "cache-control": "private, max-age=86400",
-          },
-        });
-      }
-    }
-    const obj = await env.PDFS.get(key);
-    const headers = new Headers();
-    headers.set("content-type", "application/pdf");
-    headers.set("content-length", String(obj.size));
-    headers.set("content-disposition", disposition);
-    headers.set("accept-ranges", "bytes");
-    headers.set("cache-control", "private, max-age=0, must-revalidate");
-    if (obj.uploaded) headers.set("x-r2-uploaded", obj.uploaded.toISOString());
-    return new Response(obj.body, { status: 200, headers });
-  }
+	const head = await env.PDFS.head(key);
+	if (head) {
+		// HTTP Range → 206 so pdf.js can lazily fetch page data (mcq-bank style).
+		if (rangeHeader && !download) {
+			const m = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim());
+			if (m && (m[1] !== "" || m[2] !== "")) {
+				const total = head.size;
+				let start =
+					m[1] === ""
+						? Math.max(total - parseInt(m[2], 10), 0)
+						: parseInt(m[1], 10);
+				let end = m[2] === "" ? total - 1 : parseInt(m[2], 10);
+				if (end > total - 1) end = total - 1;
+				if (start > end || start >= total)
+					return new Response(null, {
+						status: 416,
+						headers: {
+							"content-range": `bytes */${total}`,
+							"accept-ranges": "bytes",
+						},
+					});
+				const length = end - start + 1;
+				const part = await env.PDFS.get(key, {
+					range: { offset: start, length },
+				});
+				return new Response(part.body, {
+					status: 206,
+					headers: {
+						"content-type": "application/pdf",
+						"content-length": String(length),
+						"content-range": `bytes ${start}-${end}/${total}`,
+						"accept-ranges": "bytes",
+						"content-disposition": disposition,
+						"cache-control": "private, max-age=86400",
+					},
+				});
+			}
+		}
+		const obj = await env.PDFS.get(key);
+		const headers = new Headers();
+		headers.set("content-type", "application/pdf");
+		headers.set("content-length", String(obj.size));
+		headers.set("content-disposition", disposition);
+		headers.set("accept-ranges", "bytes");
+		headers.set("cache-control", "private, max-age=0, must-revalidate");
+		if (obj.uploaded) headers.set("x-r2-uploaded", obj.uploaded.toISOString());
+		return new Response(obj.body, { status: 200, headers });
+	}
 
-  const r = await fetchLive(env, id);
-  if (!r.ok) {
-    const msg = r.error === "no-cookie"
-      ? "尚未設定 NCCN cookie，請回首頁貼上 cookie。"
-      : `尚未快取且即時抓取失敗（cookie 可能過期，NCCN 回 ${r.status} ${r.ctype}）。`;
-    return new Response(msg, { status: 502 });
-  }
-  await env.PDFS.put(key, r.buf, { httpMetadata: { contentType: "application/pdf" } });
-  const headers = new Headers();
-  headers.set("content-type", "application/pdf");
-  headers.set("content-length", String(r.buf.byteLength));
-  headers.set("content-disposition", disposition);
-  headers.set("accept-ranges", "bytes");
-  return new Response(r.buf, { status: 200, headers });
+	const r = await fetchLive(env, id);
+	if (!r.ok) {
+		const msg =
+			r.error === "no-cookie"
+				? "尚未設定 NCCN cookie，請回首頁貼上 cookie。"
+				: `尚未快取且即時抓取失敗（cookie 可能過期，NCCN 回 ${r.status} ${r.ctype}）。`;
+		return new Response(msg, { status: 502 });
+	}
+	await env.PDFS.put(key, r.buf, {
+		httpMetadata: { contentType: "application/pdf" },
+	});
+	const headers = new Headers();
+	headers.set("content-type", "application/pdf");
+	headers.set("content-length", String(r.buf.byteLength));
+	headers.set("content-disposition", disposition);
+	headers.set("accept-ranges", "bytes");
+	return new Response(r.buf, { status: 200, headers });
 }
 
 async function serveR2Asset(env, key, contentType, cache) {
-  const obj = await env.PDFS.get(key);
-  if (!obj) return new Response("Not found", { status: 404 });
-  const headers = new Headers();
-  headers.set("content-type", contentType);
-  headers.set("content-length", String(obj.size));
-  headers.set("cache-control", cache);
-  return new Response(obj.body, { status: 200, headers });
+	const obj = await env.PDFS.get(key);
+	if (!obj) return new Response("Not found", { status: 404 });
+	const headers = new Headers();
+	headers.set("content-type", contentType);
+	headers.set("content-length", String(obj.size));
+	headers.set("cache-control", cache);
+	return new Response(obj.body, { status: 200, headers });
 }
 
 export default {
-  async scheduled(event, env, ctx) {
-    const out = await refreshBatch(env, PER_DAY);
-    console.log("cron refresh", JSON.stringify(out));
-  },
+	async scheduled(event, env, ctx) {
+		const out = await refreshBatch(env, PER_DAY);
+		console.log("cron refresh", JSON.stringify(out));
+	},
 
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    const { pathname } = url;
+	async fetch(request, env) {
+		const url = new URL(request.url);
+		const { pathname } = url;
 
-    if (pathname === "/" || pathname === "/index.html") return html(renderPage(request));
-    if (pathname === "/manifest.webmanifest") return manifestResponse();
-    if (pathname === "/favicon.svg" || pathname === "/favicon.ico") return faviconResponse();
-    if (pathname === "/sw.js")
-      return new Response(SW_JS, { headers: { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-cache" } });
+		if (pathname === "/" || pathname === "/index.html")
+			return html(renderPage(request));
+		if (pathname === "/manifest.webmanifest") return manifestResponse();
+		if (pathname === "/favicon.svg" || pathname === "/favicon.ico")
+			return faviconResponse();
+		if (pathname === "/sw.js")
+			return new Response(SW_JS, {
+				headers: {
+					"content-type": "text/javascript; charset=utf-8",
+					"cache-control": "no-cache",
+				},
+			});
 
-    if (pathname === "/icons/icon-192.png") return serveR2Asset(env, "asset/icon-192.png", "image/png", "public, max-age=604800");
-    if (pathname === "/icons/icon-512.png") return serveR2Asset(env, "asset/icon-512.png", "image/png", "public, max-age=604800");
-    if (pathname === "/apple-touch-icon.png") return serveR2Asset(env, "asset/apple-touch.png", "image/png", "public, max-age=604800");
+		if (pathname === "/icons/icon-192.png")
+			return serveR2Asset(
+				env,
+				"asset/icon-192.png",
+				"image/png",
+				"public, max-age=604800",
+			);
+		if (pathname === "/icons/icon-512.png")
+			return serveR2Asset(
+				env,
+				"asset/icon-512.png",
+				"image/png",
+				"public, max-age=604800",
+			);
+		if (pathname === "/apple-touch-icon.png")
+			return serveR2Asset(
+				env,
+				"asset/apple-touch.png",
+				"image/png",
+				"public, max-age=604800",
+			);
 
-    if (pathname.startsWith("/thumb/")) {
-      const id = decodeURIComponent(pathname.slice("/thumb/".length));
-      if (!VALID_IDS.has(id)) return new Response("Unknown id", { status: 404 });
-      return serveR2Asset(env, `thumb/${id}.webp`, "image/webp", "public, max-age=86400");
-    }
+		if (pathname.startsWith("/thumb/")) {
+			const id = decodeURIComponent(pathname.slice("/thumb/".length));
+			if (!VALID_IDS.has(id))
+				return new Response("Unknown id", { status: 404 });
+			return serveR2Asset(
+				env,
+				`thumb/${id}.webp`,
+				"image/webp",
+				"public, max-age=86400",
+			);
+		}
 
-    if (pathname === "/api/cookie-status" && request.method === "GET") {
-      const cookie = await env.NCCN_KV.get(COOKIE_KEY);
-      const meta = await env.NCCN_KV.get(META_KEY, "json");
-      return json({ set: !!cookie, length: cookie ? cookie.length : 0, updated: meta?.updated || null });
-    }
+		if (pathname === "/api/cookie-status" && request.method === "GET") {
+			const cookie = await env.NCCN_KV.get(COOKIE_KEY);
+			const meta = await env.NCCN_KV.get(META_KEY, "json");
+			return json({
+				set: !!cookie,
+				length: cookie ? cookie.length : 0,
+				updated: meta?.updated || null,
+			});
+		}
 
-    if (pathname === "/api/cookie" && request.method === "POST") {
-      let value = "";
-      const ct = request.headers.get("content-type") || "";
-      if (ct.includes("application/json")) {
-        const body = await request.json().catch(() => ({}));
-        value = (body.cookie || "").trim();
-      } else {
-        const form = await request.formData();
-        value = String(form.get("cookie") || "").trim();
-      }
-      if (!value) return json({ ok: false, error: "cookie 內容為空" }, 400);
-      await env.NCCN_KV.put(COOKIE_KEY, value);
-      await env.NCCN_KV.put(META_KEY, JSON.stringify({ updated: new Date().toISOString() }));
-      return json({ ok: true, length: value.length });
-    }
+		if (pathname === "/api/cookie" && request.method === "POST") {
+			let value = "";
+			const ct = request.headers.get("content-type") || "";
+			if (ct.includes("application/json")) {
+				const body = await request.json().catch(() => ({}));
+				value = (body.cookie || "").trim();
+			} else {
+				const form = await request.formData();
+				value = String(form.get("cookie") || "").trim();
+			}
+			if (!value) return json({ ok: false, error: "cookie 內容為空" }, 400);
+			await env.NCCN_KV.put(COOKIE_KEY, value);
+			await env.NCCN_KV.put(
+				META_KEY,
+				JSON.stringify({ updated: new Date().toISOString() }),
+			);
+			return json({ ok: true, length: value.length });
+		}
 
-    if (pathname === "/api/r2-status" && request.method === "GET") {
-      const listed = await env.PDFS.list({ limit: 1000 });
-      const map = {};
-      for (const o of listed.objects) {
-        if (!o.key.endsWith(".pdf")) continue;
-        const id = o.key.replace(/\.pdf$/, "");
-        map[id] = { size: o.size, uploaded: o.uploaded ? o.uploaded.toISOString() : null };
-      }
-      const cursorRaw = await env.NCCN_KV.get(CURSOR_KEY);
-      const vobj = await env.PDFS.get("meta/versions.json");
-      const versions = vobj ? await vobj.json().catch(() => ({})) : {};
-      return json({ cached: map, versions, count: Object.keys(map).length, total: GUIDELINES.length, cursor: parseInt(cursorRaw || "0", 10) || 0, perDay: PER_DAY });
-    }
+		if (pathname === "/api/r2-status" && request.method === "GET") {
+			const listed = await env.PDFS.list({ limit: 1000 });
+			const map = {};
+			for (const o of listed.objects) {
+				if (!o.key.endsWith(".pdf")) continue;
+				const id = o.key.replace(/\.pdf$/, "");
+				map[id] = {
+					size: o.size,
+					uploaded: o.uploaded ? o.uploaded.toISOString() : null,
+				};
+			}
+			const cursorRaw = await env.NCCN_KV.get(CURSOR_KEY);
+			const vobj = await env.PDFS.get("meta/versions.json");
+			const versions = vobj ? await vobj.json().catch(() => ({})) : {};
+			return json({
+				cached: map,
+				versions,
+				count: Object.keys(map).length,
+				total: GUIDELINES.length,
+				cursor: parseInt(cursorRaw || "0", 10) || 0,
+				perDay: PER_DAY,
+			});
+		}
 
-    if (pathname === "/api/search" && request.method === "GET") {
-      const q = (url.searchParams.get("q") || "").trim();
-      const gid = url.searchParams.get("id");
-      const cat = url.searchParams.get("cat");
-      if (q.length < 2) return json({ q, results: [] });
-      const match = buildMatch(q);
-      if (!match) return json({ q, results: [] });
-      let sql = "SELECT gid, page, name, cat, snippet(pages, 4, '<mark>', '</mark>', '…', 12) AS snip FROM pages WHERE pages MATCH ?";
-      const binds = [match];
-      if (gid && VALID_IDS.has(gid)) { sql += " AND gid = ?"; binds.push(gid); }
-      if (cat) { sql += " AND cat = ?"; binds.push(cat); }
-      sql += " ORDER BY rank LIMIT " + (gid ? 300 : 80);
-      try {
-        const { results } = await env.DB.prepare(sql).bind(...binds).all();
-        return json({ q, terms: queryTerms(q), count: results.length, results });
-      } catch (e) {
-        return json({ q, error: String(e), results: [] });
-      }
-    }
+		if (pathname === "/api/search" && request.method === "GET") {
+			const q = (url.searchParams.get("q") || "").trim();
+			const gid = url.searchParams.get("id");
+			const cat = url.searchParams.get("cat");
+			if (q.length < 2) return json({ q, results: [] });
+			const match = buildMatch(q);
+			if (!match) return json({ q, results: [] });
+			let sql =
+				"SELECT gid, page, name, cat, snippet(pages, 4, '<mark>', '</mark>', '…', 12) AS snip FROM pages WHERE pages MATCH ?";
+			const binds = [match];
+			if (gid && VALID_IDS.has(gid)) {
+				sql += " AND gid = ?";
+				binds.push(gid);
+			}
+			if (cat) {
+				sql += " AND cat = ?";
+				binds.push(cat);
+			}
+			sql += " ORDER BY rank LIMIT " + (gid ? 300 : 80);
+			try {
+				const { results } = await env.DB.prepare(sql)
+					.bind(...binds)
+					.all();
+				return json({
+					q,
+					terms: queryTerms(q),
+					count: results.length,
+					results,
+				});
+			} catch (e) {
+				return json({ q, error: String(e), results: [] });
+			}
+		}
 
-    if (pathname === "/api/refresh" && request.method === "POST") {
-      const single = url.searchParams.get("id");
-      if (single) {
-        if (!VALID_IDS.has(single)) return json({ ok: false, error: "unknown id" }, 404);
-        return json(await refreshOne(env, single));
-      }
-      let n = parseInt(url.searchParams.get("n") || "3", 10);
-      if (!Number.isFinite(n) || n < 1) n = 3;
-      n = Math.min(n, 25);
-      return json(await refreshBatch(env, n));
-    }
+		if (pathname === "/api/refresh" && request.method === "POST") {
+			const single = url.searchParams.get("id");
+			if (single) {
+				if (!VALID_IDS.has(single))
+					return json({ ok: false, error: "unknown id" }, 404);
+				return json(await refreshOne(env, single));
+			}
+			let n = parseInt(url.searchParams.get("n") || "3", 10);
+			if (!Number.isFinite(n) || n < 1) n = 3;
+			n = Math.min(n, 25);
+			return json(await refreshBatch(env, n));
+		}
 
-    if (pathname === "/api/toc" && request.method === "GET") {
-      const gid = url.searchParams.get("id");
-      if (!gid || !VALID_IDS.has(gid)) return json([]);
-      const obj = await env.PDFS.get("meta/toc/" + gid + ".json");
-      if (!obj) return json([]);
-      return new Response(obj.body, { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=3600" } });
-    }
+		if (pathname === "/api/toc" && request.method === "GET") {
+			const gid = url.searchParams.get("id");
+			if (!gid || !VALID_IDS.has(gid)) return json([]);
+			const obj = await env.PDFS.get("meta/toc/" + gid + ".json");
+			if (!obj) return json([]);
+			return new Response(obj.body, {
+				headers: {
+					"content-type": "application/json; charset=utf-8",
+					"cache-control": "public, max-age=3600",
+				},
+			});
+		}
 
-    if (pathname.startsWith("/pdf/")) {
-      const id = decodeURIComponent(pathname.slice("/pdf/".length));
-      if (!VALID_IDS.has(id)) return new Response("Unknown id", { status: 404 });
-      return servePdf(env, id, { download: false, request });
-    }
-    if (pathname.startsWith("/dl/")) {
-      const id = decodeURIComponent(pathname.slice("/dl/".length));
-      if (!VALID_IDS.has(id)) return new Response("Unknown id", { status: 404 });
-      return servePdf(env, id, { download: true, request });
-    }
-    if (pathname.startsWith("/preview/")) {
-      const id = decodeURIComponent(pathname.slice("/preview/".length));
-      if (!VALID_IDS.has(id)) return new Response("Unknown id", { status: 404 });
-      return html(renderViewer(id));
-    }
+		if (pathname.startsWith("/pdf/")) {
+			const id = decodeURIComponent(pathname.slice("/pdf/".length));
+			if (!VALID_IDS.has(id))
+				return new Response("Unknown id", { status: 404 });
+			return servePdf(env, id, { download: false, request });
+		}
+		if (pathname.startsWith("/dl/")) {
+			const id = decodeURIComponent(pathname.slice("/dl/".length));
+			if (!VALID_IDS.has(id))
+				return new Response("Unknown id", { status: 404 });
+			return servePdf(env, id, { download: true, request });
+		}
+		if (pathname.startsWith("/preview/")) {
+			const id = decodeURIComponent(pathname.slice("/preview/".length));
+			if (!VALID_IDS.has(id))
+				return new Response("Unknown id", { status: 404 });
+			return html(renderViewer(id));
+		}
 
-    return new Response("Not found", { status: 404 });
-  },
+		return new Response("Not found", { status: 404 });
+	},
 };
 
 function faviconResponse() {
-  // lucide "cross" glyph on a rounded shadcn-dark tile.
-  const svg =
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
-    '<rect width="24" height="24" rx="5" fill="#0b0f19"/>' +
-    '<g transform="translate(4.6 4.6) scale(0.617)" fill="none" stroke="#60a5fa" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">' +
-    '<path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2z"/>' +
-    '</g></svg>';
-  return new Response(svg, { headers: { "content-type": "image/svg+xml; charset=utf-8", "cache-control": "public, max-age=604800" } });
+	// lucide "cross" glyph on a rounded shadcn-dark tile.
+	const svg =
+		'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
+		'<rect width="24" height="24" rx="5" fill="#0b0f19"/>' +
+		'<g transform="translate(4.6 4.6) scale(0.617)" fill="none" stroke="#60a5fa" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">' +
+		'<path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2z"/>' +
+		"</g></svg>";
+	return new Response(svg, {
+		headers: {
+			"content-type": "image/svg+xml; charset=utf-8",
+			"cache-control": "public, max-age=604800",
+		},
+	});
 }
 
 function manifestResponse() {
-  const manifest = {
-    name: "NCCN Guidelines",
-    short_name: "NCCN",
-    description: "NCCN clinical practice guidelines — cached, previewable, downloadable.",
-    start_url: "/",
-    scope: "/",
-    display: "standalone",
-    background_color: "#0b0f19",
-    theme_color: "#0b0f19",
-    categories: ["medical", "health", "education"],
-    icons: [
-      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
-      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
-    ],
-  };
-  return new Response(JSON.stringify(manifest), {
-    headers: { "content-type": "application/manifest+json; charset=utf-8" },
-  });
+	const manifest = {
+		name: "NCCN Guidelines",
+		short_name: "NCCN",
+		description:
+			"NCCN clinical practice guidelines — cached, previewable, downloadable.",
+		start_url: "/",
+		scope: "/",
+		display: "standalone",
+		background_color: "#0b0f19",
+		theme_color: "#0b0f19",
+		categories: ["medical", "health", "education"],
+		icons: [
+			{
+				src: "/icons/icon-192.png",
+				sizes: "192x192",
+				type: "image/png",
+				purpose: "any",
+			},
+			{
+				src: "/icons/icon-512.png",
+				sizes: "512x512",
+				type: "image/png",
+				purpose: "any",
+			},
+			{
+				src: "/icons/icon-512.png",
+				sizes: "512x512",
+				type: "image/png",
+				purpose: "maskable",
+			},
+		],
+	};
+	return new Response(JSON.stringify(manifest), {
+		headers: { "content-type": "application/manifest+json; charset=utf-8" },
+	});
 }
 
 const SW_JS = `
@@ -404,10 +834,10 @@ self.addEventListener('fetch', (e) => {
 `;
 
 function renderPage(request) {
-  const user = request.headers.get("cf-access-authenticated-user-email") || "";
-  const data = JSON.stringify(GUIDELINES);
-  const cats = JSON.stringify(CATS);
-  return `<!doctype html>
+	const user = request.headers.get("cf-access-authenticated-user-email") || "";
+	const data = JSON.stringify(GUIDELINES);
+	const cats = JSON.stringify(CATS);
+	return `<!doctype html>
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
@@ -702,8 +1132,8 @@ if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.se
 }
 
 function renderViewer(id) {
-  const name = NAME_BY_ID[id] || id;
-  return `<!doctype html>
+	const name = NAME_BY_ID[id] || id;
+	return `<!doctype html>
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
@@ -753,6 +1183,7 @@ function renderViewer(id) {
   .tocgrip svg{width:14px;height:14px;pointer-events:none;}
   .tocpane[hidden]{display:none;}
   .tochdr{font-size:.68rem;font-weight:700;color:hsl(var(--muted-fg));padding:8px 8px 6px;text-transform:uppercase;letter-spacing:.05em;}
+  .tochdr2{margin-top:6px;border-top:1px solid hsl(var(--border));}
   .tocitem{display:flex;gap:8px;align-items:baseline;justify-content:space-between;padding:5px 8px;border-radius:7px;text-decoration:none;color:hsl(var(--fg));font-size:.8rem;cursor:pointer;line-height:1.3;}
   .tocitem:hover{background:hsl(var(--accent));}
   .tocitem.l1{padding-left:22px;font-size:.76rem;color:hsl(var(--muted-fg));}
@@ -829,7 +1260,7 @@ function renderViewer(id) {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 var PDF_URL='/pdf/${encodeURIComponent(id)}';
-var GID=${JSON.stringify(id)};var GNAME=${JSON.stringify(name)};var VALIDS=${JSON.stringify(Object.fromEntries([...VALID_IDS].map((x)=>[x,1])))};
+var GID=${JSON.stringify(id)};var GNAME=${JSON.stringify(name)};var VALIDS=${JSON.stringify(Object.fromEntries([...VALID_IDS].map((x) => [x, 1])))};
 (function(){
 window.addEventListener('error',function(ev){var m=document.getElementById('msg');if(m){m.style.display='';m.textContent='執行錯誤：'+(ev.message||(ev.error&&ev.error.message)||ev);}});
 if('scrollRestoration' in history){try{history.scrollRestoration='manual';}catch(e){}}
@@ -866,10 +1297,10 @@ paintTheme();
 
 var viewer=$('viewer'),rail=$('rail'),msg=$('msg');
 var pages=[],scale=1.2,fit=true,cur=1,dpr=window.devicePixelRatio||1,pdfDoc=null;
-var hBack=[],hFwd=[],hlTerms=[],TOC=[];var VERSION='';fetch('/api/r2-status').then(function(r){return r.json();}).then(function(d){var v=(d.versions||{})[GID];if(v){VERSION=v.v;var tv=document.getElementById('tver');if(tv){tv.textContent='v'+v.v;if(v.d)tv.title=v.d;tv.hidden=false;}}}).catch(function(){});
+var hBack=[],hFwd=[],hlTerms=[],TOC=[],TOCR=[];var VERSION='';fetch('/api/r2-status').then(function(r){return r.json();}).then(function(d){var v=(d.versions||{})[GID];if(v){VERSION=v.v;var tv=document.getElementById('tver');if(tv){tv.textContent='v'+v.v;if(v.d)tv.title=v.d;tv.hidden=false;}}}).catch(function(){});
 fetch('/api/toc?id='+encodeURIComponent(GID)).then(function(r){return r.json();}).then(function(d){TOC=(d&&d.length)?d:[];if(TOC.length){buildTOC();$('tocBtn').hidden=false;}}).catch(function(){});
-function buildTOC(){var el=$('tocpane');el.innerHTML='<div class="tochdr">目錄 · Discussion</div>'+TOC.map(function(e){return '<a class="tocitem l'+(e.l||0)+'" data-p="'+e.p+'">'+esc(e.t)+'<span class="tms">MS-'+e.ms+'</span></a>';}).join('');el.addEventListener('click',function(ev){var a=ev.target.closest&&ev.target.closest('.tocitem');if(a){jumpTo(+a.getAttribute('data-p'),true);markTOC();}});}
-function markTOC(){if(!TOC.length)return;var it=$('tocpane').querySelectorAll('.tocitem');var best=-1;for(var i=0;i<it.length;i++){if((+it[i].getAttribute('data-p'))<=cur)best=i;}for(var j=0;j<it.length;j++)it[j].className='tocitem l'+(TOC[j].l||0)+(j===best?' cur':'');var c=it[best];if(c)c.scrollIntoView({block:'nearest'});}
+function buildTOC(){var el=$('tocpane');var groups=[['algorithm','演算法 · Algorithm'],['discussion','討論 · Discussion']];var h='';TOCR=[];groups.forEach(function(g,gi){var items=TOC.filter(function(e){return (e.sec||'discussion')===g[0];});if(!items.length)return;h+='<div class="tochdr'+(gi>0?' tochdr2':'')+'">'+g[1]+'</div>';items.forEach(function(e){TOCR.push(e);h+='<a class="tocitem l'+(e.l||0)+'" data-p="'+e.p+'">'+esc(e.t)+'<span class="tms">'+esc(e.ref||('MS-'+e.ms))+'</span></a>';});});el.innerHTML=h;el.addEventListener('click',function(ev){var a=ev.target.closest&&ev.target.closest('.tocitem');if(a){jumpTo(+a.getAttribute('data-p'),true);markTOC();}});}
+function markTOC(){if(!TOCR.length)return;var it=$('tocpane').querySelectorAll('.tocitem');var best=-1;for(var i=0;i<it.length;i++){if((+it[i].getAttribute('data-p'))<=cur)best=i;}for(var j=0;j<it.length;j++)it[j].className='tocitem l'+((TOCR[j]||{}).l||0)+(j===best?' cur':'');var c=it[best];if(c)c.scrollIntoView({block:'nearest'});}
 $('tocBtn').onclick=function(){var t=$('tocpane');var open=t.hidden;t.hidden=!open;$('tocgrip').hidden=!open;$('tocBtn').classList.toggle('on',open);if(open){try{var w=parseInt(localStorage.getItem('nccntocw'),10);if(w>=200&&w<=700)t.style.width=w+'px';}catch(e){}markTOC();}};
 $('tocgrip').innerHTML=svg('gripv');
 (function(){var g=$('tocgrip'),t=$('tocpane'),drag=false,sx=0,sw=0;g.addEventListener('mousedown',function(e){drag=true;sx=e.clientX;sw=t.getBoundingClientRect().width;document.body.style.userSelect='none';document.body.style.cursor='col-resize';e.preventDefault();});document.addEventListener('mousemove',function(e){if(!drag)return;var w=sw+(sx-e.clientX);w=Math.max(200,Math.min(700,w));t.style.width=w+'px';});document.addEventListener('mouseup',function(){if(!drag)return;drag=false;document.body.style.userSelect='';document.body.style.cursor='';try{localStorage.setItem('nccntocw',parseInt(t.style.width,10)||290);}catch(e){}});})();
@@ -895,7 +1326,7 @@ function hlSpans(td){if(!hlTerms.length)return;for(var i=0;i<td.length;i++){if(t
 function hlOne(tl){if(!tl)return;var sp=tl.querySelectorAll('span');for(var i=0;i<sp.length;i++){if(hlTerms.length&&spanHit(sp[i].textContent))sp[i].classList.add('hl');else sp[i].classList.remove('hl');}}
 function applyHighlights(){for(var k=0;k<pages.length;k++){if(!pages[k].el)continue;var sp=pages[k].el.querySelectorAll('.textLayer span');for(var j=0;j<sp.length;j++){if(hlTerms.length&&spanHit(sp[j].textContent))sp[j].classList.add('hl');else sp[j].classList.remove('hl');}}}
 function setHL(terms){hlTerms=(terms||[]).map(function(t){return String(t).toLowerCase();});applyHighlights();}
-function jumpTo(n,rec){ if(n<1||n>pages.length)return; if(rec){hBack.push(cur);hFwd=[];} cur=n; $('pageNum').value=n; scrollToPage(n); try{localStorage.setItem('nccnpg:'+GID,n);}catch(e){} updateHist(); markRail(); }
+function jumpTo(n,rec){ if(n<1||n>pages.length)return; if(rec){hBack.push(cur);hFwd=[];} cur=n; $('pageNum').value=n; scrollToPage(n); try{localStorage.setItem('nccnpg:'+GID,n);}catch(e){} updateHist(); markRail(); if(TOC.length)markTOC(); }
 function updateHist(){ $('histBack').classList.toggle('off',!hBack.length); $('histFwd').classList.toggle('off',!hFwd.length); }
 function markRail(){ var items=rail.children; for(var k=0;k<items.length;k++){ items[k].className='thumb'+(k===cur-1?' cur':''); } var c=items[cur-1]; if(c) c.scrollIntoView({block:'nearest'}); }
 function updateCur(){ if(!pages.length)return; var vr=viewer.getBoundingClientRect(); var line=vr.top+vr.height*0.3; var best=1;
@@ -927,8 +1358,8 @@ $('zin').onclick=function(){ var b=activeScale(); fit=false; scale=Math.min(b+0.
 $('zout').onclick=function(){ var b=activeScale(); fit=false; scale=Math.max(b-0.15,0.3); relayout(); };
 $('fit').onclick=function(){ fit=!fit; if(!fit) scale=activeScale(); relayout(); };
 $('railBtn').onclick=function(){ rail.classList.toggle('hide'); if(fit) relayout(); };
-$('histBack').onclick=function(){ if(!hBack.length)return; hFwd.push(cur); var n=hBack.pop(); cur=n; $('pageNum').value=n; scrollToPage(n); updateHist(); markRail(); };
-$('histFwd').onclick=function(){ if(!hFwd.length)return; hBack.push(cur); var n=hFwd.pop(); cur=n; $('pageNum').value=n; scrollToPage(n); updateHist(); markRail(); };
+$('histBack').onclick=function(){ if(!hBack.length)return; hFwd.push(cur); var n=hBack.pop(); cur=n; $('pageNum').value=n; scrollToPage(n); updateHist(); markRail(); if(TOC.length)markTOC(); };
+$('histFwd').onclick=function(){ if(!hFwd.length)return; hBack.push(cur); var n=hFwd.pop(); cur=n; $('pageNum').value=n; scrollToPage(n); updateHist(); markRail(); if(TOC.length)markTOC(); };
 document.addEventListener('keydown',function(e){ if(e.target&&e.target.tagName==='INPUT')return;
   if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key==='PageDown'){ e.preventDefault(); if(cur<pages.length)scrollToPage(cur+1); }
   else if(e.key==='ArrowLeft'||e.key==='ArrowUp'||e.key==='PageUp'){ e.preventDefault(); if(cur>1)scrollToPage(cur-1); }
@@ -971,5 +1402,11 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('gridVie
 }
 
 function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+	return String(s).replace(
+		/[&<>"']/g,
+		(c) =>
+			({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+				c
+			],
+	);
 }
