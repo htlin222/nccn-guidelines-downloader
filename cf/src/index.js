@@ -34,7 +34,7 @@ const COOKIE_KEY = "cookie";
 const META_KEY = "cookie_meta";
 const CURSOR_KEY = "cron_cursor";
 const PER_DAY = 3;
-const BUILD_TIME = "2026-07-26 20:45 CST"; // stamped by deploy.sh
+const BUILD_TIME = "2026-07-26 21:02 CST"; // stamped by deploy.sh
 
 // Oncology drug brand<->generic synonyms so "keytruda" also finds "pembrolizumab".
 const DRUG_GROUPS = [
@@ -305,6 +305,14 @@ export default {
       if (!Number.isFinite(n) || n < 1) n = 3;
       n = Math.min(n, 25);
       return json(await refreshBatch(env, n));
+    }
+
+    if (pathname === "/api/toc" && request.method === "GET") {
+      const gid = url.searchParams.get("id");
+      if (!gid || !VALID_IDS.has(gid)) return json([]);
+      const obj = await env.PDFS.get("meta/toc/" + gid + ".json");
+      if (!obj) return json([]);
+      return new Response(obj.body, { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=3600" } });
     }
 
     if (pathname.startsWith("/pdf/")) {
@@ -738,6 +746,15 @@ function renderViewer(id) {
   .gcell .pn{position:absolute;bottom:4px;right:5px;font-size:.66rem;background:#000a;color:#fff;padding:0 6px;border-radius:6px;line-height:1.5;}
   .gcell:hover{border-color:hsl(var(--ring));}
   .gcell.cur{border-color:#3b82f6;}
+  .tocpane{width:290px;flex-shrink:0;overflow-y:auto;background:hsl(var(--bar));border-left:1px solid hsl(var(--border));padding:6px;}
+  .tocpane[hidden]{display:none;}
+  .tochdr{font-size:.68rem;font-weight:700;color:hsl(var(--muted-fg));padding:8px 8px 6px;text-transform:uppercase;letter-spacing:.05em;}
+  .tocitem{display:flex;gap:8px;align-items:baseline;justify-content:space-between;padding:5px 8px;border-radius:7px;text-decoration:none;color:hsl(var(--fg));font-size:.8rem;cursor:pointer;line-height:1.3;}
+  .tocitem:hover{background:hsl(var(--accent));}
+  .tocitem.l1{padding-left:22px;font-size:.76rem;color:hsl(var(--muted-fg));}
+  .tocitem.cur{background:hsl(var(--accent));color:#3b82f6;font-weight:600;}
+  .tocitem .tms{flex-shrink:0;font-size:.66rem;color:hsl(var(--muted-fg));font-weight:600;}
+  @media (max-width:640px){ .tocpane{position:absolute;right:0;top:0;height:100%;z-index:9;box-shadow:-2px 0 14px rgba(0,0,0,.35);} }
   .btn.dl{background:hsl(var(--primary));color:hsl(var(--primary-fg));border-color:transparent;font-weight:600;font-size:.82rem;padding:6px 11px;}
   .grp{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid hsl(var(--border));border-radius:9px;background:hsl(var(--bar));}
   .grp .btn{border:0;padding:5px 7px;}
@@ -781,6 +798,7 @@ function renderViewer(id) {
   <a href="/" class="btn" id="back" title="回清單"></a>
   <button class="btn" id="railBtn" title="縮圖側欄"></button>
   <button class="btn" id="gridBtn" title="總覽所有頁面"></button>
+  <button class="btn" id="tocBtn" title="目錄（Discussion）" hidden></button>
   <span class="title">${escapeHtml(name)}</span><span class="tver" id="tver" hidden></span>
   <div class="grp"><button class="btn" id="histBack" title="回上一個位置"></button><button class="btn" id="histFwd" title="前往下一個位置"></button></div>
   <div class="grp"><button class="btn" id="prev" title="上一頁"></button>
@@ -799,6 +817,7 @@ function renderViewer(id) {
 <div class="body">
   <aside class="rail" id="rail"></aside>
   <div class="viewer" id="viewer"><div id="msg"><img id="preview" class="preview" src="/thumb/${encodeURIComponent(id)}" alt="" onerror="this.remove()"><div class="ldot">載入完整版 PDF…</div></div></div>
+  <aside class="tocpane" id="tocpane" hidden></aside>
   <div id="gridView" class="gridview" hidden></div>
 </div>
 <div id="snapModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>頁面截圖筆記</b><button class="btn" id="snapClose">✕</button></div><div class="meta" id="snapMeta"></div><img id="snapImg" class="snapimg" alt="page"><textarea id="snapNote" placeholder="在這裡寫你的 Markdown 筆記…"></textarea><div class="sheetfoot"><button class="btn" id="snapPng">下載 PNG</button><button class="btn dl" id="snapMd">下載 Markdown 筆記</button></div></div></div>
@@ -812,6 +831,7 @@ if('scrollRestoration' in history){try{history.scrollRestoration='manual';}catch
 var pdfjsLib=window['pdfjs-dist/build/pdf']||window.pdfjsLib;
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 var ICONS={
+  list:'<line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/>',
   grid:'<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
   find:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
   histb:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5 5.5 5.5 0 0 1-5.5 5.5H11"/>',
@@ -828,7 +848,8 @@ var ICONS={
 };
 function svg(n){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[n]||'')+'</svg>';}
 function $(i){return document.getElementById(i);}
-$('back').innerHTML=svg('back');$('railBtn').innerHTML=svg('panel');$('gridBtn').innerHTML=svg('grid');
+function esc(s){var _d=document.createElement('div');_d.textContent=(s==null?'':s);return _d.innerHTML;}
+$('back').innerHTML=svg('back');$('railBtn').innerHTML=svg('panel');$('gridBtn').innerHTML=svg('grid');$('tocBtn').innerHTML=svg('list');
 $('prev').innerHTML=svg('cl');$('next').innerHTML=svg('cr');
 $('zout').innerHTML=svg('minus');$('zin').innerHTML=svg('plus');$('fit').innerHTML=svg('fit');$('dlic').innerHTML=svg('dl');$('snap').innerHTML=svg('camera');$('histBack').innerHTML=svg('histb');$('histFwd').innerHTML=svg('histf');
 var themeBtn=$('theme');
@@ -839,7 +860,11 @@ paintTheme();
 
 var viewer=$('viewer'),rail=$('rail'),msg=$('msg');
 var pages=[],scale=1.2,fit=true,cur=1,dpr=window.devicePixelRatio||1,pdfDoc=null;
-var hBack=[],hFwd=[],hlTerms=[];var VERSION='';fetch('/api/r2-status').then(function(r){return r.json();}).then(function(d){var v=(d.versions||{})[GID];if(v){VERSION=v.v;var tv=document.getElementById('tver');if(tv){tv.textContent='v'+v.v;if(v.d)tv.title=v.d;tv.hidden=false;}}}).catch(function(){});
+var hBack=[],hFwd=[],hlTerms=[],TOC=[];var VERSION='';fetch('/api/r2-status').then(function(r){return r.json();}).then(function(d){var v=(d.versions||{})[GID];if(v){VERSION=v.v;var tv=document.getElementById('tver');if(tv){tv.textContent='v'+v.v;if(v.d)tv.title=v.d;tv.hidden=false;}}}).catch(function(){});
+fetch('/api/toc?id='+encodeURIComponent(GID)).then(function(r){return r.json();}).then(function(d){TOC=(d&&d.length)?d:[];if(TOC.length){buildTOC();$('tocBtn').hidden=false;}}).catch(function(){});
+function buildTOC(){var el=$('tocpane');el.innerHTML='<div class="tochdr">目錄 · Discussion</div>'+TOC.map(function(e){return '<a class="tocitem l'+(e.l||0)+'" data-p="'+e.p+'">'+esc(e.t)+'<span class="tms">MS-'+e.ms+'</span></a>';}).join('');el.addEventListener('click',function(ev){var a=ev.target.closest&&ev.target.closest('.tocitem');if(a){jumpTo(+a.getAttribute('data-p'),true);markTOC();}});}
+function markTOC(){if(!TOC.length)return;var it=$('tocpane').querySelectorAll('.tocitem');var best=-1;for(var i=0;i<it.length;i++){if((+it[i].getAttribute('data-p'))<=cur)best=i;}for(var j=0;j<it.length;j++)it[j].className='tocitem l'+(TOC[j].l||0)+(j===best?' cur':'');var c=it[best];if(c)c.scrollIntoView({block:'nearest'});}
+$('tocBtn').onclick=function(){var t=$('tocpane');t.hidden=!t.hidden;$('tocBtn').classList.toggle('on',!t.hidden);if(!t.hidden)markTOC();};
 function activeScale(){ if(fit&&pages.length){ var w=viewer.clientWidth-40; var pw=(pages[cur-1]||pages[0]).w; return Math.max(0.2,Math.min(w/pw,4)); } return scale; }
 function setZpct(){ $('zpct').textContent=Math.round(activeScale()*100)+'%'; $('fit').className='btn'+(fit?' on':''); }
 
@@ -867,7 +892,7 @@ function updateHist(){ $('histBack').classList.toggle('off',!hBack.length); $('h
 function markRail(){ var items=rail.children; for(var k=0;k<items.length;k++){ items[k].className='thumb'+(k===cur-1?' cur':''); } var c=items[cur-1]; if(c) c.scrollIntoView({block:'nearest'}); }
 function updateCur(){ if(!pages.length)return; var vr=viewer.getBoundingClientRect(); var line=vr.top+vr.height*0.3; var best=1;
   for(var k=0;k<pages.length;k++){ if(pages[k].el.getBoundingClientRect().top<=line) best=k+1; else break; }
-  if(best!==cur){ cur=best; $('pageNum').value=cur; markRail(); try{localStorage.setItem('nccnpg:'+GID,cur);}catch(e){} } }
+  if(best!==cur){ cur=best; $('pageNum').value=cur; markRail(); if(TOC.length)markTOC(); try{localStorage.setItem('nccnpg:'+GID,cur);}catch(e){} } }
 var ticking=false;
 viewer.addEventListener('scroll',function(){ if(!ticking){ ticking=true; requestAnimationFrame(function(){ updateCur(); ticking=false; }); } });
 
