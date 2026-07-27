@@ -4,7 +4,7 @@
 # Pulls PDFs from R2 — does NOT hit NCCN. Set LIMIT=N to index only the first N.
 set -u
 cd "$(dirname "$0")"
-[ -f .env ] && set -a && . ./.env && set +a  # load token if present
+[ -f ../.env ] && set -a && . ../.env && set +a  # load token if present
 BUCKET="nccn-pdfs"
 DB="nccn-search"
 LIMIT="${LIMIT:-0}"

@@ -19,7 +19,7 @@
 #   LIMIT=5 bash gen_clean.sh  # only the first 5 ids (smoke test)
 set -u
 cd "$(dirname "$0")"
-[ -f .env ] && set -a && . ./.env && set +a  # load token if present
+[ -f ../.env ] && set -a && . ../.env && set +a  # load token if present
 BUCKET="nccn-pdfs"
 STRIP="../strip_nccn_disclaimer.py"
 FORCE="${FORCE:-0}"
@@ -83,19 +83,30 @@ done
 
 # Republish the manifest so the next run can skip unchanged ids, and so the
 # Worker can tell which guidelines have a clean copy available.
-python3 - "$WORK/rows.tsv" "$WORK/clean.json" <<'PY'
+# MERGE onto the previous manifest rather than rebuilding it: a LIMIT=N run (or
+# one that died partway) only has rows for the ids it touched, and rewriting
+# from those alone would drop the other 80-odd entries — which would both strand
+# their clean/<id>.pdf objects and force a full re-strip next time.
+python3 - "$WORK/prev.json" "$WORK/rows.tsv" "$WORK/clean.json" <<'PY'
 import sys, json, datetime
-rows, out = sys.argv[1], sys.argv[2]
+prev, rows, out = sys.argv[1], sys.argv[2], sys.argv[3]
 now = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
-m = {}
+try:
+    m = json.load(open(prev, encoding="utf-8"))
+    if not isinstance(m, dict):
+        m = {}
+except Exception:
+    m = {}
+fresh = 0
 for line in open(rows, encoding="utf-8"):
     parts = line.rstrip("\n").split("\t")
     if len(parts) != 3 or not parts[0]:
         continue
     gid, src_sha, pages = parts
     m[gid] = {"src_sha": src_sha, "pages": int(pages or 0), "updated": now}
+    fresh += 1
 json.dump(m, open(out, "w"), ensure_ascii=False, separators=(",", ":"), sort_keys=True)
-print("manifest entries", len(m))
+print(f"manifest entries {len(m)} (this run touched {fresh})")
 PY
 
 if wrangler r2 object put "$BUCKET/meta/clean.json" --file="$WORK/clean.json" \

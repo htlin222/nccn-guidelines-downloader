@@ -7,7 +7,7 @@
 # Set ONLY=<id> to process a single guideline (debug).
 set -u
 cd "$(dirname "$0")"
-[ -f .env ] && set -a && . ./.env && set +a
+[ -f ../.env ] && set -a && . ../.env && set +a
 del(){ command rip "$@" 2>/dev/null || find "$@" -delete 2>/dev/null; }
 BUCKET="nccn-pdfs"
 ONLY="${ONLY:-}"

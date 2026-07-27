@@ -39,15 +39,30 @@ id 會比對內建白名單，非清單內的 id 一律 404（防路徑注入）
 
 ```bash
 cd NCCN/cf
+set -a; . ../.env; set +a          # 見下方「認證」
 wrangler kv key put "cookie" --path=../cookie.txt \
   --namespace-id=f1c25d8c3a604b3c9fb56d4ddc5f24bb --remote
 ```
+
+### 認證（手動下 wrangler 指令時要注意）
+
+token 放在 **repo 根目錄的 `NCCN/.env`**（gitignore 中，範本見 `.env.example`）。
+所有腳本都會自己 `. ../.env`，所以 `bash deploy.sh`、`bash gen_clean.sh` 等直接跑就好。
+
+但 **wrangler 只會自動載入跟 `wrangler.jsonc` 同目錄的 `.env`**，而 `.env` 不在 `cf/`，
+所以**手動**下 `wrangler` 指令前要先自己 source：
+
+```bash
+cd NCCN/cf && set -a; . ../.env; set +a
+```
+
+漏掉的話會看到 `Invalid access token` 或 `Authentication error [code: 10000]`。
 
 ### 改程式後重新部署
 
 ```bash
 cd NCCN/cf
-wrangler deploy
+bash deploy.sh          # 會自己載入 ../.env 並戳上建置時間
 ```
 
 ### 初始種子 / 手動全量刷新 R2
@@ -231,6 +246,7 @@ NCCN 的演算法頁是方框加箭頭，`pdftotext` 抽出來會散成沒有句
 
 ```bash
 cd NCCN/cf
+set -a; . ../.env; set +a
 wrangler d1 execute nccn-search --file=sql/insights.sql --remote
 ```
 
