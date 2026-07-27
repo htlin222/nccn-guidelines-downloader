@@ -61,6 +61,27 @@ export function renderViewer(id) {
   .tocitem.cur{background:hsl(var(--accent));color:#3b82f6;font-weight:600;}
   .tocitem .tms{flex-shrink:0;font-size:.66rem;color:hsl(var(--muted-fg));font-weight:600;}
   @media (max-width:640px){ .tocpane{position:absolute;right:0;top:0;height:100%;z-index:9;box-shadow:-2px 0 14px rgba(0,0,0,.35);} }
+  .aipane{width:340px;flex-shrink:0;overflow-y:auto;background:hsl(var(--bar));border-left:1px solid hsl(var(--border));display:flex;flex-direction:column;}
+  .aipane[hidden]{display:none;}
+  .aitabs{display:flex;gap:2px;padding:6px;border-bottom:1px solid hsl(var(--border));position:sticky;top:0;background:hsl(var(--bar));z-index:2;}
+  .aitab{flex:1;font:inherit;font-size:.72rem;font-weight:600;padding:6px 2px;border:1px solid transparent;border-radius:7px;background:none;color:hsl(var(--muted-fg));cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .aitab:hover{background:hsl(var(--accent));}
+  .aitab.on{background:hsl(var(--accent));color:hsl(var(--fg));border-color:hsl(var(--ring));}
+  .aihdr{display:flex;align-items:center;gap:6px;padding:7px 10px;font-size:.7rem;color:hsl(var(--muted-fg));border-bottom:1px solid hsl(var(--border));}
+  .aihdr .sp{flex:1;}
+  .aihdr .btn{padding:3px 6px;font-size:13px;}
+  .aisrc{font-size:.62rem;font-weight:700;padding:1px 6px;border-radius:999px;background:hsl(var(--accent));letter-spacing:.02em;}
+  .aisrc[hidden]{display:none;}
+  .aibody{flex:1;padding:10px 12px;font-size:.82rem;line-height:1.62;}
+  .aibody ul{margin:0;padding-left:1.05em;display:flex;flex-direction:column;gap:9px;}
+  .aibody li{padding-left:2px;}
+  .aibody code{background:hsl(var(--accent));border-radius:4px;padding:0 4px;font-size:.92em;font-family:ui-monospace,monospace;}
+  .aimsg{color:hsl(var(--muted-fg));display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding-top:6px;}
+  .aifoot{padding:7px 10px;border-top:1px solid hsl(var(--border));font-size:.66rem;color:hsl(var(--muted-fg));display:flex;flex-direction:column;gap:5px;}
+  .aibar{height:3px;border-radius:999px;background:hsl(var(--accent));overflow:hidden;}
+  .aibar i{display:block;height:100%;background:#3b82f6;width:0;transition:width .3s;}
+  .aiauto{display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none;}
+  @media (max-width:640px){ .aipane{position:absolute;right:0;top:0;height:100%;z-index:9;width:min(340px,88vw);box-shadow:-2px 0 14px rgba(0,0,0,.35);} }
   .btn.dl{background:hsl(var(--primary));color:hsl(var(--primary-fg));border-color:transparent;font-weight:600;font-size:.82rem;padding:6px 11px;}
   .grp{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid hsl(var(--border));border-radius:9px;background:hsl(var(--bar));}
   .grp .btn{border:0;padding:5px 7px;}
@@ -116,6 +137,8 @@ export function renderViewer(id) {
   <button class="btn" id="findBtn" title="在本檔搜尋內文"></button>
   <button class="btn" id="snap" title="截圖成筆記"></button>
   <button class="btn" id="tocBtn" title="目錄（Discussion）" hidden></button>
+  <button class="btn" id="aiBtn" title="AI 本頁重點"></button>
+  <button class="btn" id="cleanBtn" title="乾淨版（去掉頁首 NCCN 聲明橫幅）" hidden></button>
   <button class="btn" id="theme" title="切換主題"></button>
   <a class="btn dl" href="/dl/${encodeURIComponent(id)}"><span id="dlic"></span>下載</a>
 </div>
@@ -125,12 +148,28 @@ export function renderViewer(id) {
   <div class="viewer" id="viewer"><div id="msg"><img id="preview" class="preview" src="/thumb/${encodeURIComponent(id)}" alt="" onerror="this.remove()"><div class="ldot">載入完整版 PDF…</div></div></div>
   <div class="tocgrip" id="tocgrip" hidden></div>
   <aside class="tocpane" id="tocpane" hidden></aside>
+  <div class="tocgrip" id="aigrip" hidden></div>
+  <aside class="aipane" id="aipane" hidden>
+    <div class="aitabs" id="aitabs"></div>
+    <div class="aihdr"><span id="aipg">p.–</span><span class="aisrc" id="aisrc" hidden></span><span class="sp"></span>
+      <button class="btn" id="aiCopy" title="複製條列"></button>
+      <button class="btn" id="aiRedo" title="重新產生（覆蓋快取）"></button></div>
+    <div class="aibody" id="aibody"></div>
+    <div class="aifoot">
+      <label class="aiauto"><input type="checkbox" id="aiAuto"> 翻頁時自動產生</label>
+      <div class="aibar"><i id="aibarfill"></i></div>
+      <span id="aiquota">額度 –</span>
+      <span>AI 生成，僅供快速參考，臨床決策請以原文為準。</span>
+    </div>
+  </aside>
   <div id="gridView" class="gridview" hidden></div>
 </div>
 <div id="snapModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>頁面截圖筆記</b><button class="btn" id="snapClose">✕</button></div><div class="meta" id="snapMeta"></div><img id="snapImg" class="snapimg" alt="page"><textarea id="snapNote" placeholder="在這裡寫你的 Markdown 筆記…"></textarea><div class="sheetfoot"><button class="btn" id="snapPng">下載 PNG</button><button class="btn dl" id="snapMd">下載 Markdown 筆記</button></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
-var PDF_URL='/pdf/${encodeURIComponent(id)}';
+// ?clean=1 loads the banner-free copy, so 截圖成筆記／grid 匯出的圖也不帶橫幅。
+var CLEAN=new URLSearchParams(location.search).get('clean')==='1';
+var PDF_URL='/pdf/${encodeURIComponent(id)}'+(CLEAN?'?clean=1':'');
 var GID=${JSON.stringify(id)};var GNAME=${JSON.stringify(name)};var VALIDS=${JSON.stringify(Object.fromEntries([...VALID_IDS].map((x) => [x, 1])))};
 (function(){
 window.addEventListener('error',function(ev){var m=document.getElementById('msg');if(m){m.style.display='';m.textContent='執行錯誤：'+(ev.message||(ev.error&&ev.error.message)||ev);}});
@@ -152,7 +191,11 @@ var ICONS={
   fit:'<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
   moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
-  dl:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>'
+  dl:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+  spark:'<path d="M9.9 2.6 8.5 6.9 4.2 8.3l4.3 1.4 1.4 4.3 1.4-4.3 4.3-1.4-4.3-1.4z"/><path d="M18 13.5 17.2 16l-2.5.8 2.5.8.8 2.5.8-2.5 2.5-.8-2.5-.8z"/>',
+  redo:'<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',
+  copy:'<rect width="13" height="13" x="9" y="9" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  eraser:'<path d="m7 21-4.3-4.3a1 1 0 0 1 0-1.4L15 3a1 1 0 0 1 1.4 0l4.6 4.6a1 1 0 0 1 0 1.4L12 18"/><path d="M22 21H7"/><path d="m5 11 9 9"/>'
 };
 function svg(n){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[n]||'')+'</svg>';}
 function $(i){return document.getElementById(i);}
@@ -168,16 +211,23 @@ paintTheme();
 
 var viewer=$('viewer'),rail=$('rail'),msg=$('msg');
 var pages=[],scale=1.2,fit=true,cur=1,dpr=window.devicePixelRatio||1,pdfDoc=null;
-var hBack=[],hFwd=[],hlTerms=[],TOC=[],TOCR=[];var VERSION='';fetch('/api/r2-status').then(function(r){return r.json();}).then(function(d){var v=(d.versions||{})[GID];if(v){VERSION=v.v;var tv=document.getElementById('tver');if(tv){tv.textContent='v'+v.v;if(v.d)tv.title=v.d;tv.hidden=false;}}}).catch(function(){});
+var hBack=[],hFwd=[],hlTerms=[],TOC=[],TOCR=[];var VERSION='';fetch('/api/r2-status').then(function(r){return r.json();}).then(function(d){var v=(d.versions||{})[GID];if(v){VERSION=v.v;var tv=document.getElementById('tver');if(tv){tv.textContent='v'+v.v;if(v.d)tv.title=v.d;tv.hidden=false;}}
+  if((d.clean||{})[GID]){var cb=document.getElementById('cleanBtn');cb.hidden=false;cb.classList.toggle('on',CLEAN);}}).catch(function(){});
 fetch('/api/toc?id='+encodeURIComponent(GID)).then(function(r){return r.json();}).then(function(d){TOC=(d&&d.length)?d:[];if(TOC.length){buildTOC();$('tocBtn').hidden=false;}}).catch(function(){});
 // Pure helpers shared with the server + unit tests, injected verbatim.
 var tocGroups=${tocGroups.toString()};
 var tocBestIndex=${tocBestIndex.toString()};
 function buildTOC(){var el=$('tocpane');var h='';TOCR=[];tocGroups(TOC).forEach(function(g,gi){h+='<div class="tochdr'+(gi>0?' tochdr2':'')+'">'+g.label+'</div>';g.items.forEach(function(e){TOCR.push(e);h+='<a class="tocitem l'+(e.l||0)+'" data-p="'+e.p+'">'+esc(e.t)+'<span class="tms">'+esc(e.ref||('MS-'+e.ms))+'</span></a>';});});el.innerHTML=h;el.addEventListener('click',function(ev){var a=ev.target.closest&&ev.target.closest('.tocitem');if(a){jumpTo(+a.getAttribute('data-p'),true);markTOC();}});}
 function markTOC(){if(!TOCR.length)return;var it=$('tocpane').querySelectorAll('.tocitem');var pn=[];for(var i=0;i<it.length;i++)pn.push(+it[i].getAttribute('data-p'));var best=tocBestIndex(pn,cur);for(var j=0;j<it.length;j++)it[j].className='tocitem l'+((TOCR[j]||{}).l||0)+(j===best?' cur':'');var c=it[best];if(c)c.scrollIntoView({block:'nearest'});}
-$('tocBtn').onclick=function(){var t=$('tocpane');var open=t.hidden;t.hidden=!open;$('tocgrip').hidden=!open;$('tocBtn').classList.toggle('on',open);if(open){try{var w=parseInt(localStorage.getItem('nccntocw'),10);if(w>=200&&w<=700)t.style.width=w+'px';}catch(e){}markTOC();}};
-$('tocgrip').innerHTML=svg('gripv');
-(function(){var g=$('tocgrip'),t=$('tocpane'),drag=false,sx=0,sw=0;g.addEventListener('mousedown',function(e){drag=true;sx=e.clientX;sw=t.getBoundingClientRect().width;document.body.style.userSelect='none';document.body.style.cursor='col-resize';e.preventDefault();});document.addEventListener('mousemove',function(e){if(!drag)return;var w=sw+(sx-e.clientX);w=Math.max(200,Math.min(700,w));t.style.width=w+'px';});document.addEventListener('mouseup',function(){if(!drag)return;drag=false;document.body.style.userSelect='';document.body.style.cursor='';try{localStorage.setItem('nccntocw',parseInt(t.style.width,10)||290);}catch(e){}});})();
+$('tocBtn').onclick=function(){var t=$('tocpane');var open=t.hidden;t.hidden=!open;$('tocgrip').hidden=!open;$('tocBtn').classList.toggle('on',open);if(open){aiClose();try{var w=parseInt(localStorage.getItem('nccntocw'),10);if(w>=200&&w<=700)t.style.width=w+'px';}catch(e){}markTOC();}if(fit)relayout();};
+// 右側 pane 的拖曳把手（目錄與 AI 重點共用）。
+function gripDrag(g,t,key,min,max){var drag=false,sx=0,sw=0;
+  g.innerHTML=svg('gripv');
+  g.addEventListener('mousedown',function(e){drag=true;sx=e.clientX;sw=t.getBoundingClientRect().width;document.body.style.userSelect='none';document.body.style.cursor='col-resize';e.preventDefault();});
+  document.addEventListener('mousemove',function(e){if(!drag)return;var w=Math.max(min,Math.min(max,sw+(sx-e.clientX)));t.style.width=w+'px';});
+  document.addEventListener('mouseup',function(){if(!drag)return;drag=false;document.body.style.userSelect='';document.body.style.cursor='';try{localStorage.setItem(key,parseInt(t.style.width,10)||min);}catch(e){}if(fit)relayout();});}
+gripDrag($('tocgrip'),$('tocpane'),'nccntocw',200,700);
+gripDrag($('aigrip'),$('aipane'),'nccnaiw',240,760);
 function activeScale(){ if(fit&&pages.length){ var w=viewer.clientWidth-40; var pw=(pages[cur-1]||pages[0]).w; return Math.max(0.2,Math.min(w/pw,4)); } return scale; }
 function setZpct(){ $('zpct').textContent=Math.round(activeScale()*100)+'%'; $('fit').className='btn'+(fit?' on':''); }
 
@@ -200,12 +250,12 @@ function hlSpans(td){if(!hlTerms.length)return;for(var i=0;i<td.length;i++){if(t
 function hlOne(tl){if(!tl)return;var sp=tl.querySelectorAll('span');for(var i=0;i<sp.length;i++){if(hlTerms.length&&spanHit(sp[i].textContent))sp[i].classList.add('hl');else sp[i].classList.remove('hl');}}
 function applyHighlights(){for(var k=0;k<pages.length;k++){if(!pages[k].el)continue;var sp=pages[k].el.querySelectorAll('.textLayer span');for(var j=0;j<sp.length;j++){if(hlTerms.length&&spanHit(sp[j].textContent))sp[j].classList.add('hl');else sp[j].classList.remove('hl');}}}
 function setHL(terms){hlTerms=(terms||[]).map(function(t){return String(t).toLowerCase();});applyHighlights();}
-function jumpTo(n,rec){ if(n<1||n>pages.length)return; if(rec){hBack.push(cur);hFwd=[];} cur=n; $('pageNum').value=n; scrollToPage(n); try{localStorage.setItem('nccnpg:'+GID,n);}catch(e){} updateHist(); markRail(); if(TOC.length)markTOC(); }
+function jumpTo(n,rec){ if(n<1||n>pages.length)return; if(rec){hBack.push(cur);hFwd=[];} cur=n; $('pageNum').value=n; scrollToPage(n); try{localStorage.setItem('nccnpg:'+GID,n);}catch(e){} updateHist(); markRail(); if(TOC.length)markTOC(); aiOnPage(); }
 function updateHist(){ $('histBack').classList.toggle('off',!hBack.length); $('histFwd').classList.toggle('off',!hFwd.length); }
 function markRail(){ var items=rail.children; for(var k=0;k<items.length;k++){ items[k].className='thumb'+(k===cur-1?' cur':''); } var c=items[cur-1]; if(c) c.scrollIntoView({block:'nearest'}); }
 function updateCur(){ if(!pages.length)return; var vr=viewer.getBoundingClientRect(); var line=vr.top+vr.height*0.3; var best=1;
   for(var k=0;k<pages.length;k++){ if(pages[k].el.getBoundingClientRect().top<=line) best=k+1; else break; }
-  if(best!==cur){ cur=best; $('pageNum').value=cur; markRail(); if(TOC.length)markTOC(); try{localStorage.setItem('nccnpg:'+GID,cur);}catch(e){} } }
+  if(best!==cur){ cur=best; $('pageNum').value=cur; markRail(); if(TOC.length)markTOC(); aiOnPage(); try{localStorage.setItem('nccnpg:'+GID,cur);}catch(e){} } }
 var ticking=false;
 viewer.addEventListener('scroll',function(){ if(!ticking){ ticking=true; requestAnimationFrame(function(){ updateCur(); ticking=false; }); } });
 
@@ -269,6 +319,86 @@ function openGrid(){if(!pages.length)return;if(!gridBuilt)buildGridView();markGr
 function closeGrid(){$('gridView').hidden=true;$('gridBtn').classList.remove('on');}
 $('gridBtn').onclick=function(){if($('gridView').hidden)openGrid();else closeGrid();};
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('gridView').hidden)closeGrid();});
+
+// ── AI 本頁重點 ───────────────────────────────────────────────────────────────
+// 右側 pane 跟著目前頁走，四種格式各自獨立生成與快取（/api/insight）。
+// GET 只讀快取所以翻頁時可以無限打；真正花 Workers AI 額度的生成走 POST，
+// 預設要按鈕確認（「翻頁時自動產生」打開才會跟著翻頁自動跑）。
+// 演算法流程圖頁後端會回 vision:true，前端就把該頁 rasterize 成 JPEG 一起送，
+// 讓多模態模型直接讀圖——比抽字穩，方框與箭頭的決策路徑才讀得出來。
+var AIKINDS=[['key','重點整理'],['hy','High Yield'],['phrase','病歷片語'],['sdm','SDM']];
+var aiKind='key',aiSeq=0,aiTimer=null,aiPage=0,aiAuto=false;
+$('aiBtn').innerHTML=svg('spark');$('aiRedo').innerHTML=svg('redo');$('aiCopy').innerHTML=svg('copy');
+try{var _sk=localStorage.getItem('nccnaikind');if(_sk)aiKind=_sk;aiAuto=localStorage.getItem('nccnaiauto')==='1';}catch(e){}
+$('aiAuto').checked=aiAuto;
+function aiLabel(k){for(var i=0;i<AIKINDS.length;i++)if(AIKINDS[i][0]===k)return AIKINDS[i][1];return k;}
+function aiSet(h){$('aibody').innerHTML=h;}
+function aiMd(s){return esc(s).split('**').map(function(x,i){return i%2?'<b>'+x+'</b>':x;}).join('').replace(/\`([^\`]+)\`/g,'<code>$1</code>');}
+(function(){var h='';for(var i=0;i<AIKINDS.length;i++)h+='<button class="aitab" data-k="'+AIKINDS[i][0]+'">'+AIKINDS[i][1]+'</button>';$('aitabs').innerHTML=h;
+  $('aitabs').addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.aitab');if(!b)return;aiKind=b.getAttribute('data-k');try{localStorage.setItem('nccnaikind',aiKind);}catch(e){}aiMarkTabs();aiLoad(false);});})();
+function aiMarkTabs(){var t=$('aitabs').children;for(var i=0;i<t.length;i++)t[i].className='aitab'+(t[i].getAttribute('data-k')===aiKind?' on':'');}
+aiMarkTabs();
+function aiQuota(q){if(!q||!q.cap)return;var pct=Math.min(100,Math.round(q.used/q.cap*100));
+  $('aibarfill').style.width=pct+'%';
+  $('aiquota').textContent='今日額度 '+q.used+' / '+q.cap+' neurons（'+pct+'%）· UTC 00:00 重置';}
+function aiShow(d){var b=d.bullets||[];var s=$('aisrc');s.hidden=false;s.textContent=(d.src==='vision'?'讀圖':'文字')+(d.cached?' · 快取':'');
+  if(!b.length){aiSet('<div class="aimsg">（這一頁沒有可整理的內容）</div>');return;}
+  var h='<ul>';for(var i=0;i<b.length;i++)h+='<li>'+aiMd(b[i])+'</li>';aiSet(h+'</ul>');}
+// 直接從 pdf.js 的 page object 離屏重繪，不依賴畫面上那張 canvas 有沒有渲染好。
+function rasterPage(n,maxW){return new Promise(function(res,rej){
+  var p=pages[n-1];if(!p||!p.pg)return rej(new Error('page not ready'));
+  var vp=p.pg.getViewport({scale:Math.min(2.5,(maxW||1100)/p.w)});
+  var cv=document.createElement('canvas');cv.width=Math.floor(vp.width);cv.height=Math.floor(vp.height);
+  var ctx=cv.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);
+  var t=p.pg.render({canvasContext:ctx,viewport:vp});
+  (t&&t.promise?t.promise:Promise.resolve()).then(function(){var u=cv.toDataURL('image/jpeg',.82);res(u.slice(u.indexOf(',')+1));}).catch(rej);});}
+// 不設 busy 鎖：翻頁翻很快時舊的請求靠 aiSeq 判斷過期直接忽略，而它的結果後端
+// 還是會寫進快取，所以不算白花——加鎖反而會讓新頁卡在「產生中」的畫面出不來。
+function aiGen(page,kind,seq,force,vision){
+  aiSet('<div class="aimsg"><span class="ldot">'+(vision?'把這頁轉成圖，請 AI 讀…':'AI 產生中…')+'</span></div>');
+  (vision?rasterPage(page,1100).catch(function(){return null;}):Promise.resolve(null))
+    .then(function(img){return fetch('/api/insight',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({id:GID,page:page,kind:kind,image:img,force:!!force})}).then(function(r){return r.json();});})
+    .then(function(d){if(seq!==aiSeq)return;if(d.quota)aiQuota(d.quota);
+      if(!d.ok){aiSet('<div class="aimsg"><span>'+esc(d.error||'產生失敗')+'</span><button class="btn" id="aiGo">再試一次</button></div>');$('aiGo').onclick=function(){aiGen(page,kind,seq,force,vision);};return;}
+      aiShow(d);})
+    .catch(function(e){if(seq===aiSeq)aiSet('<div class="aimsg">產生失敗：'+esc(String(e&&e.message||e))+'</div>');});}
+function aiLoad(force){
+  if($('aipane').hidden)return;
+  var page=cur,kind=aiKind,seq=++aiSeq;
+  aiPage=page;$('aipg').textContent='p.'+page;$('aisrc').hidden=true;
+  aiSet('<div class="aimsg"><span class="ldot">讀取中…</span></div>');
+  fetch('/api/insight?id='+encodeURIComponent(GID)+'&page='+page+'&kind='+kind)
+    .then(function(r){return r.json();}).then(function(d){
+      if(seq!==aiSeq)return;
+      if(d.quota)aiQuota(d.quota);
+      if(d.cached&&!force){aiShow(d);return;}
+      // 重做已快取的頁時沿用上次的來源；沒快取就照後端的判斷。
+      var vision=d.cached?(d.src==='vision'):!!d.vision;
+      if(force||aiAuto){aiGen(page,kind,seq,force,vision);return;}
+      aiSet('<div class="aimsg"><span>這一頁還沒有「'+esc(aiLabel(kind))+'」。</span><button class="btn dl" id="aiGo">產生本頁'+(vision?'（讀圖）':'')+'</button></div>');
+      $('aiGo').onclick=function(){aiGen(page,kind,seq,false,vision);};})
+    .catch(function(e){if(seq===aiSeq)aiSet('<div class="aimsg">讀取失敗：'+esc(String(e&&e.message||e))+'</div>');});}
+function aiOnPage(){if($('aipane').hidden)return;clearTimeout(aiTimer);if(cur===aiPage)return;aiTimer=setTimeout(function(){aiLoad(false);},700);}
+function aiClose(){$('aipane').hidden=true;$('aigrip').hidden=true;$('aiBtn').classList.remove('on');}
+$('aiBtn').onclick=function(){var a=$('aipane');
+  if(!a.hidden){aiClose();if(fit)relayout();return;}
+  $('tocpane').hidden=true;$('tocgrip').hidden=true;$('tocBtn').classList.remove('on'); // 右邊一次只留一個 pane
+  try{var w=parseInt(localStorage.getItem('nccnaiw'),10);if(w>=240&&w<=760)a.style.width=w+'px';}catch(e){}
+  a.hidden=false;$('aigrip').hidden=false;$('aiBtn').classList.add('on');
+  if(fit)relayout();aiPage=0;aiLoad(false);};
+$('aiRedo').onclick=function(){aiLoad(true);};
+// 切換乾淨版要重新載入整份 PDF，所以直接換頁（帶著目前頁碼與搜尋字回來）。
+$('cleanBtn').innerHTML=svg('eraser');
+$('cleanBtn').onclick=function(){var p=new URLSearchParams(location.search);
+  if(CLEAN)p.delete('clean');else p.set('clean','1');
+  p.set('page',cur);location.search=p.toString();};
+$('aiAuto').onchange=function(){aiAuto=this.checked;try{localStorage.setItem('nccnaiauto',aiAuto?'1':'0');}catch(e){}if(aiAuto)aiLoad(false);};
+$('aiCopy').onclick=function(){var li=$('aibody').querySelectorAll('li');if(!li.length)return;
+  var out=[];for(var i=0;i<li.length;i++)out.push('- '+li[i].textContent);
+  var txt=GNAME+' p.'+aiPage+' — '+aiLabel(aiKind)+NL+out.join(NL);
+  if(navigator.clipboard)navigator.clipboard.writeText(txt).catch(function(){});
+  $('aiCopy').classList.add('on');setTimeout(function(){$('aiCopy').classList.remove('on');},900);};
 })();
 </script>
 </body>

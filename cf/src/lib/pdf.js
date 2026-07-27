@@ -61,10 +61,18 @@ export async function refreshBatch(env, n) {
 	return { cursor: plan.next, results };
 }
 
-export async function servePdf(env, id, { download, request }) {
-	const key = `${id}.pdf`;
+export async function servePdf(env, id, { download, request, clean }) {
+	// clean/<id>.pdf is the banner-free copy built by gen_clean.sh in CI. It may
+	// lag the raw PDF by up to a week, and won't exist at all until the workflow
+	// has run once — so fall back to the raw object rather than 404.
+	let key = `${id}.pdf`;
+	let isClean = false;
+	if (clean && (await env.PDFS.head(`clean/${id}.pdf`))) {
+		key = `clean/${id}.pdf`;
+		isClean = true;
+	}
 	const today = new Date().toISOString().slice(0, 10);
-	const filename = `NCCN-${id}-${today}.pdf`;
+	const filename = `NCCN-${id}${isClean ? "-clean" : ""}-${today}.pdf`;
 	const disposition = `${download ? "attachment" : "inline"}; filename="${filename}"`;
 	const rangeHeader = request ? request.headers.get("Range") : null;
 
@@ -113,6 +121,7 @@ export async function servePdf(env, id, { download, request }) {
 		headers.set("content-disposition", disposition);
 		headers.set("accept-ranges", "bytes");
 		headers.set("cache-control", "private, max-age=0, must-revalidate");
+		headers.set("x-nccn-clean", isClean ? "1" : "0");
 		if (obj.uploaded) headers.set("x-r2-uploaded", obj.uploaded.toISOString());
 		return new Response(obj.body, { status: 200, headers });
 	}

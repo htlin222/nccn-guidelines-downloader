@@ -56,6 +56,21 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
         run: bash build_toc.sh
 
+      # Banner-free copies for slide-making. Deterministic: strips only the two
+      # content streams NCCN stamps on each page, keeps the source /ID, and skips
+      # ids whose source PDF hasn't changed (sha256 tracked in meta/clean.json).
+      - name: Build banner-free PDFs → R2
+        working-directory: cf
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+        run: |
+          python3 -m pip install --quiet --upgrade pymupdf
+          bash gen_clean.sh
+
       - name: Show result
         working-directory: cf
-        run: tail -3 gen_versions.log || true
+        if: always()
+        run: |
+          tail -3 gen_versions.log || true
+          tail -3 gen_clean.log || true

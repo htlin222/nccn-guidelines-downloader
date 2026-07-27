@@ -4,8 +4,8 @@
 // into one Worker. See test/* for unit tests of the pure lib helpers.
 // Routes: / (grid), /preview/:id (pdf.js), /pdf/:id (inline), /dl/:id (download),
 //         /thumb/:id, /manifest.webmanifest, /sw.js, /icons/*, /apple-touch-icon.png,
-//         /api/{cookie,cookie-status,r2-status,search,refresh,toc}.
-import { GUIDELINES, VALID_IDS } from "./data/guidelines.js";
+//         /api/{cookie,cookie-status,r2-status,search,refresh,toc,insight}.
+import { GUIDELINES, NAME_BY_ID, VALID_IDS } from "./data/guidelines.js";
 import { COOKIE_KEY, META_KEY, CURSOR_KEY, PER_DAY } from "./lib/constants.js";
 import { json, html } from "./lib/http.js";
 import { buildMatch, queryTerms } from "./lib/search.js";
@@ -16,6 +16,14 @@ import {
 	servePdf,
 	serveR2Asset,
 } from "./lib/pdf.js";
+import {
+	KINDS,
+	generateAndCache,
+	needsVision,
+	pageText,
+	readCache,
+	readUsage,
+} from "./lib/insight.js";
 import { renderPage } from "./views/home.js";
 import { renderViewer } from "./views/viewer.js";
 import { faviconResponse, manifestResponse, SW_JS } from "./views/static.js";
@@ -120,9 +128,13 @@ export default {
 			const cursorRaw = await env.NCCN_KV.get(CURSOR_KEY);
 			const vobj = await env.PDFS.get("meta/versions.json");
 			const versions = vobj ? await vobj.json().catch(() => ({})) : {};
+			// Which ids have a banner-free copy (built by gen_clean.sh in CI).
+			const cobj = await env.PDFS.get("meta/clean.json");
+			const clean = cobj ? await cobj.json().catch(() => ({})) : {};
 			return json({
 				cached: map,
 				versions,
+				clean,
 				count: Object.keys(map).length,
 				total: GUIDELINES.length,
 				cursor: parseInt(cursorRaw || "0", 10) || 0,
@@ -190,17 +202,90 @@ export default {
 			});
 		}
 
+		// AI 逐頁重點。GET 只讀快取（免費、可隨翻頁自動打），真正花額度的生成一律走 POST。
+		if (pathname === "/api/insight") {
+			const params =
+				request.method === "POST"
+					? await request.json().catch(() => ({}))
+					: Object.fromEntries(url.searchParams);
+			const gid = String(params.id || "");
+			const page = parseInt(params.page, 10);
+			const kind = String(params.kind || "key");
+			if (!VALID_IDS.has(gid)) return json({ ok: false, error: "unknown id" }, 404);
+			if (!(page >= 1)) return json({ ok: false, error: "bad page" }, 400);
+			if (KINDS.indexOf(kind) < 0)
+				return json({ ok: false, error: "bad kind" }, 400);
+
+			if (request.method === "GET") {
+				const hit = await readCache(env, gid, page, kind);
+				if (hit) return json({ ok: true, cached: true, kind, page, ...hit });
+				const text = await pageText(env, gid, page);
+				return json({
+					ok: true,
+					cached: false,
+					kind,
+					page,
+					// 演算法流程圖頁抽字會散掉，請前端把該頁 rasterize 成 JPEG 一起送上來。
+					vision: needsVision(text),
+					hasText: !!text,
+					quota: await readUsage(env),
+				});
+			}
+
+			if (request.method === "POST") {
+				if (!params.force) {
+					const hit = await readCache(env, gid, page, kind);
+					if (hit) return json({ ok: true, cached: true, kind, page, ...hit });
+				}
+				const text = await pageText(env, gid, page);
+				const image =
+					typeof params.image === "string" && params.image.length > 64
+						? params.image
+						: null;
+				try {
+					const out = await generateAndCache(env, {
+						gid,
+						page,
+						kind,
+						name: NAME_BY_ID[gid] || gid,
+						text,
+						image,
+					});
+					return json({ ok: true, cached: false, kind, page, ...out });
+				} catch (e) {
+					return json(
+						{ ok: false, error: String(e.message || e), quota: e.quota },
+						e.status || 500,
+					);
+				}
+			}
+			return new Response("Method not allowed", { status: 405 });
+		}
+
+		// ?clean=1 serves the banner-free copy (clean/<id>.pdf) when CI has built
+		// one, falling back to the raw PDF otherwise.
+		const wantClean = url.searchParams.get("clean") === "1";
 		if (pathname.startsWith("/pdf/")) {
 			const id = decodeURIComponent(pathname.slice("/pdf/".length));
 			if (!VALID_IDS.has(id))
 				return new Response("Unknown id", { status: 404 });
-			return servePdf(env, id, { download: false, request });
+			return servePdf(env, id, {
+				download: false,
+				request,
+				clean: wantClean,
+			});
 		}
 		if (pathname.startsWith("/dl/")) {
 			const id = decodeURIComponent(pathname.slice("/dl/".length));
 			if (!VALID_IDS.has(id))
 				return new Response("Unknown id", { status: 404 });
-			return servePdf(env, id, { download: true, request });
+			return servePdf(env, id, { download: true, request, clean: wantClean });
+		}
+		if (pathname.startsWith("/clean/")) {
+			const id = decodeURIComponent(pathname.slice("/clean/".length));
+			if (!VALID_IDS.has(id))
+				return new Response("Unknown id", { status: 404 });
+			return servePdf(env, id, { download: true, request, clean: true });
 		}
 		if (pathname.startsWith("/preview/")) {
 			const id = decodeURIComponent(pathname.slice("/preview/".length));

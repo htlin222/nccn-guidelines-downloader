@@ -132,7 +132,16 @@ def strip_pdf(input_path: Path, output_path: Path) -> dict:
         streams_removed += removed_count
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    doc.save(str(output_path), garbage=4, deflate=True, clean=True)
+    # no_new_id=True keeps the source /ID instead of minting a fresh one, so the
+    # same input produces byte-identical output on every run. Without it the CI
+    # job would re-upload all 86 PDFs every week even when nothing changed.
+    doc.save(
+        str(output_path),
+        garbage=4,
+        deflate=True,
+        clean=True,
+        no_new_id=True,
+    )
     doc.close()
 
     return {
@@ -242,6 +251,7 @@ def main():
     print()
 
     all_stats = []
+    failed = []
     for pdf_path in pdf_files:
         if args.in_place:
             backup_path = pdf_path.with_suffix(".pdf.bak")
@@ -261,6 +271,8 @@ def main():
             ok = verify_pdf(output_path)
             status = "✓ clean" if ok else "✗ MARKERS REMAIN"
             print(f"    verify: {status}")
+            if not ok:
+                failed.append(pdf_path.name)
 
         all_stats.append(stats)
 
@@ -274,6 +286,12 @@ def main():
           f"{total_pages} pages, "
           f"{total_mods} modified, "
           f"{total_streams} disclaimer streams removed.")
+
+    # Non-zero exit on any verification failure so CI stops instead of shipping
+    # a PDF that still carries the banner.
+    if failed:
+        print(f"FAILED verification: {', '.join(failed)}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
