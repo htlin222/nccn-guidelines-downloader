@@ -288,7 +288,12 @@ function renderPage(i){ var p=pages[i]; if(!p||p.done)return; p.done=true;
   var al=document.createElement('div'); al.className='annotationLayer'; p.el.appendChild(al);
   p.pg.getAnnotations().then(function(anns){ anns.forEach(function(a){ if(a.subtype!=='Link')return; var v=vp.convertToViewportRectangle(a.rect); var x=Math.min(v[0],v[2]),y=Math.min(v[1],v[3]),w=Math.abs(v[2]-v[0]),h=Math.abs(v[3]-v[1]); var L=document.createElement('a'); L.style.cssText='left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;'; if(a.url){var _u=a.url,_mk='/physician_gls/pdf/',_ix=_u.indexOf(_mk),_id=null;if(_ix>=0){var _r=_u.slice(_ix+_mk.length),_d=_r.indexOf('.pdf');if(_d>=0){var _c=_r.slice(0,_d);if(VALIDS[_c])_id=_c;}}if(_id){L.href='/preview/'+encodeURIComponent(_id);L.title='本站開啟：'+_id;}else{L.href=_u;L.target='_blank';L.rel='noopener';}}else if(a.dest){L.href='#';(function(dest){L.addEventListener('click',function(e){e.preventDefault();var pr=(typeof dest==='string')?pdfDoc.getDestination(dest):Promise.resolve(dest);Promise.resolve(pr).then(function(dd){if(!dd||!dd[0])return;pdfDoc.getPageIndex(dd[0]).then(function(idx){jumpTo(idx+1,true);});});});})(a.dest);} al.appendChild(L); }); }).catch(function(){});
 }
-function relayout(){ var sc=activeScale(); pages.forEach(function(p){ p.done=false; p.el.style.width=(p.w*sc)+'px'; p.el.style.height=(p.h*sc)+'px'; p.el.innerHTML=''; io.unobserve(p.el); io.observe(p.el); }); setZpct(); }
+// 符合寬度時，開關右側 pane 會改變頁面尺寸，總高度一變，px 的 scrollTop 就落到
+// 別頁去了——所以重算前先記住目前頁與頁內的相對位置，重算後貼回原處。
+function relayout(){ var ap=pages[cur-1], anchor=null;
+  if(ap&&ap.el&&ap.el.offsetHeight) anchor=Math.max(0,Math.min(1,(viewer.scrollTop-ap.el.offsetTop)/ap.el.offsetHeight));
+  var sc=activeScale(); pages.forEach(function(p){ p.done=false; p.el.style.width=(p.w*sc)+'px'; p.el.style.height=(p.h*sc)+'px'; p.el.innerHTML=''; io.unobserve(p.el); io.observe(p.el); }); setZpct();
+  if(anchor!==null) viewer.scrollTop=Math.max(0,ap.el.offsetTop+anchor*ap.el.offsetHeight); }
 function scrollToPage(n){ if(pages[n-1]) pages[n-1].el.scrollIntoView({block:'start'}); }
 function spanHit(t){t=(t||'').toLowerCase();for(var i=0;i<hlTerms.length;i++){if(t.indexOf(hlTerms[i])>=0)return true;}return false;}
 function hlSpans(td){if(!hlTerms.length)return;for(var i=0;i<td.length;i++){if(td[i]&&spanHit(td[i].textContent))td[i].classList.add('hl');}}
