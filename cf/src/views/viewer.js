@@ -47,14 +47,20 @@ export function renderViewer(id) {
   .gcell .pn{position:absolute;bottom:4px;right:5px;font-size:.66rem;background:#000a;color:#fff;padding:0 6px;border-radius:6px;line-height:1.5;}
   .gcell:hover{border-color:hsl(var(--ring));}
   .gcell.cur{border-color:#3b82f6;}
-  .tocpane{width:290px;flex-shrink:0;overflow-y:auto;background:hsl(var(--bar));padding:6px;}
+  .tocpane{width:290px;flex-shrink:0;min-height:0;background:hsl(var(--bar));display:flex;flex-direction:column;}
+  .toctabs{display:flex;gap:2px;padding:6px;border-bottom:1px solid hsl(var(--border));flex-shrink:0;}
+  .toctabs[hidden]{display:none;}
+  .toctab{flex:1;font:inherit;font-size:.72rem;font-weight:600;padding:6px 2px;border:1px solid transparent;border-radius:7px;background:none;color:hsl(var(--muted-fg));cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .toctab:hover{background:hsl(var(--accent));}
+  .toctab.on{background:hsl(var(--accent));color:hsl(var(--fg));border-color:hsl(var(--ring));}
+  .toctab .n{font-weight:700;opacity:.55;margin-left:5px;}
+  .toclist{flex:1;overflow-y:auto;padding:6px;}
   .tocgrip{flex-shrink:0;width:10px;cursor:col-resize;display:flex;align-items:center;justify-content:center;color:hsl(var(--muted-fg));background:hsl(var(--bar));border-left:1px solid hsl(var(--border));}
   .tocgrip[hidden]{display:none;}
   .tocgrip:hover{background:hsl(var(--accent));color:hsl(var(--fg));}
   .tocgrip svg{width:14px;height:14px;pointer-events:none;}
   .tocpane[hidden]{display:none;}
   .tochdr{font-size:.68rem;font-weight:700;color:hsl(var(--muted-fg));padding:8px 8px 6px;text-transform:uppercase;letter-spacing:.05em;}
-  .tochdr2{margin-top:6px;border-top:1px solid hsl(var(--border));}
   .tocitem{display:flex;gap:8px;align-items:baseline;justify-content:space-between;padding:5px 8px;border-radius:7px;text-decoration:none;color:hsl(var(--fg));font-size:.8rem;cursor:pointer;line-height:1.3;}
   .tocitem:hover{background:hsl(var(--accent));}
   .tocitem.l1{padding-left:22px;font-size:.76rem;color:hsl(var(--muted-fg));}
@@ -156,7 +162,10 @@ export function renderViewer(id) {
   <aside class="rail" id="rail"></aside>
   <div class="viewer" id="viewer"><div id="msg"><img id="preview" class="preview" src="/thumb/${encodeURIComponent(id)}" alt="" onerror="this.remove()"><div class="ldot">載入完整版 PDF…</div></div></div>
   <div class="tocgrip" id="tocgrip" hidden></div>
-  <aside class="tocpane" id="tocpane" hidden></aside>
+  <aside class="tocpane" id="tocpane" hidden>
+    <div class="toctabs" id="toctabs" hidden></div>
+    <div class="toclist" id="toclist"></div>
+  </aside>
   <div class="tocgrip" id="aigrip" hidden></div>
   <aside class="aipane" id="aipane" hidden>
     <div class="aitabs" id="aitabs"></div>
@@ -225,8 +234,36 @@ fetch('/api/toc?id='+encodeURIComponent(GID)).then(function(r){return r.json();}
 // Pure helpers shared with the server + unit tests, injected verbatim.
 var tocGroups=${tocGroups.toString()};
 var tocBestIndex=${tocBestIndex.toString()};
-function buildTOC(){var el=$('tocpane');var h='';TOCR=[];tocGroups(TOC).forEach(function(g,gi){h+='<div class="tochdr'+(gi>0?' tochdr2':'')+'">'+g.label+'</div>';g.items.forEach(function(e){TOCR.push(e);h+='<a class="tocitem l'+(e.l||0)+'" data-p="'+e.p+'">'+esc(e.t)+'<span class="tms">'+esc(e.ref||('MS-'+e.ms))+'</span></a>';});});el.innerHTML=h;el.addEventListener('click',function(ev){var a=ev.target.closest&&ev.target.closest('.tocitem');if(a){jumpTo(+a.getAttribute('data-p'),true);markTOC();}});}
-function markTOC(){if(!TOCR.length)return;var it=$('tocpane').querySelectorAll('.tocitem');var pn=[];for(var i=0;i<it.length;i++)pn.push(+it[i].getAttribute('data-p'));var best=tocBestIndex(pn,cur);for(var j=0;j<it.length;j++)it[j].className='tocitem l'+((TOCR[j]||{}).l||0)+(j===best?' cur':'');var c=it[best];if(c)c.scrollIntoView({block:'nearest'});}
+// 目錄分成「演算法／討論」兩個分頁，一次只渲染一段，免得討論要滾很久才看得到。
+var TOCG=[],tocSec='',tocPageSec='';
+try{var _ts=localStorage.getItem('nccntocsec');if(_ts)tocSec=_ts;}catch(e){}
+function tocGroup(s){for(var i=0;i<TOCG.length;i++)if(TOCG[i].sec===s)return TOCG[i];return null;}
+// 目前頁屬於哪一段：把各段依序攤平後，取最後一個 page<=cur 的項目所屬段。
+function tocSecOfPage(p){var pn=[],ss=[];for(var i=0;i<TOCG.length;i++)for(var j=0;j<TOCG[i].items.length;j++){pn.push(TOCG[i].items[j].p);ss.push(TOCG[i].sec);}var b=tocBestIndex(pn,p);return b<0?'':ss[b];}
+function buildTOC(){
+  TOCG=tocGroups(TOC);
+  var tb=$('toctabs');
+  if(TOCG.length>1){var h='';for(var i=0;i<TOCG.length;i++)h+='<button class="toctab" data-s="'+TOCG[i].sec+'">'+TOCG[i].label+'<span class="n">'+TOCG[i].items.length+'</span></button>';tb.innerHTML=h;tb.hidden=false;}
+  else{tb.innerHTML='';tb.hidden=true;}
+  if(!tocGroup(tocSec))tocSec=(TOCG[0]||{}).sec||'';
+  tocPageSec=tocSecOfPage(cur)||tocSec;
+  renderTOC();
+  tb.addEventListener('click',function(ev){var b=ev.target.closest&&ev.target.closest('.toctab');if(!b)return;
+    tocSec=b.getAttribute('data-s');try{localStorage.setItem('nccntocsec',tocSec);}catch(e){}renderTOC();});
+  $('toclist').addEventListener('click',function(ev){var a=ev.target.closest&&ev.target.closest('.tocitem');if(a){jumpTo(+a.getAttribute('data-p'),true);markTOC();}});}
+function renderTOC(){
+  var g=tocGroup(tocSec);TOCR=g?g.items:[];
+  var h=TOCG.length>1?'':'<div class="tochdr">'+((g&&g.label)||'')+'</div>';
+  for(var i=0;i<TOCR.length;i++){var e=TOCR[i];h+='<a class="tocitem l'+(e.l||0)+'" data-p="'+e.p+'">'+esc(e.t)+'<span class="tms">'+esc(e.ref||('MS-'+e.ms))+'</span></a>';}
+  $('toclist').innerHTML=h;
+  var t=$('toctabs').children;for(var k=0;k<t.length;k++)t[k].className='toctab'+(t[k].getAttribute('data-s')===tocSec?' on':'');
+  paintTOC();}
+function paintTOC(){if(!TOCR.length)return;var it=$('toclist').querySelectorAll('.tocitem');var pn=[];for(var i=0;i<it.length;i++)pn.push(+it[i].getAttribute('data-p'));var best=tocBestIndex(pn,cur);for(var j=0;j<it.length;j++)it[j].className='tocitem l'+((TOCR[j]||{}).l||0)+(j===best?' cur':'');var c=it[best];if(c)c.scrollIntoView({block:'nearest'});}
+// 只有在「跨段」時才自動換分頁；同一段內捲動不會蓋掉使用者手動選的分頁。
+function markTOC(){if(!TOCG.length)return;
+  var s=tocSecOfPage(cur);
+  if(s&&s!==tocPageSec){tocPageSec=s;if(s!==tocSec){tocSec=s;renderTOC();return;}}
+  paintTOC();}
 $('tocBtn').onclick=function(){var t=$('tocpane');var open=t.hidden;t.hidden=!open;$('tocgrip').hidden=!open;$('tocBtn').classList.toggle('on',open);if(open){aiClose();try{var w=parseInt(localStorage.getItem('nccntocw'),10);if(w>=200&&w<=700)t.style.width=w+'px';}catch(e){}markTOC();}if(fit)relayout();};
 // 右側 pane 的拖曳把手（目錄與 AI 重點共用）。
 function gripDrag(g,t,key,min,max){var drag=false,sx=0,sw=0;
