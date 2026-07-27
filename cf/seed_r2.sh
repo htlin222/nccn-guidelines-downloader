@@ -35,3 +35,7 @@ for id in $IDS; do
   sleep 2
 done
 echo "DONE ok=$ok fail=$fail / $total" | tee -a "$LOG"
+# Guard against a wholly-failed run reporting success: individual misses are
+# normal, but ok=0 means auth/network is broken and CI must go red. (An unset
+# CLOUDFLARE_API_TOKEN silently no-op'd this workflow for weeks.)
+[ "$ok" -gt 0 ]

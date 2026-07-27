@@ -46,6 +46,11 @@ jobs:
         working-directory: cf
         run: pnpm install --frozen-lockfile
 
+      # wrangler is a global tool here, not a project dependency (cf/package.json
+      # only carries vitest) — same as the weekly workflow does it.
+      - name: Install wrangler
+        run: npm install -g wrangler
+
       - name: Unit tests
         working-directory: cf
         run: pnpm test
@@ -54,6 +59,19 @@ jobs:
       # then runs `wrangler deploy`. There is no ../.env in CI, so it falls
       # through to CLOUDFLARE_API_TOKEN from the environment. The stamped file
       # is intentionally left uncommitted — committing from CI would loop.
+      # Fail loudly on a missing secret. The weekly workflow silently "succeeded"
+      # for weeks with an unset CLOUDFLARE_API_TOKEN because its scripts swallow
+      # per-file errors and still exit 0 — don't repeat that here.
+      - name: Check secret is set
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::repo secret CLOUDFLARE_API_TOKEN is not set — add it under Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+          echo "CLOUDFLARE_API_TOKEN is set (${#CLOUDFLARE_API_TOKEN} chars)"
+
       - name: Deploy
         working-directory: cf
         env:

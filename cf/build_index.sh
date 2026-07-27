@@ -53,14 +53,21 @@ PY
 n=$(ls "$WORK"/chunk_*.sql 2>/dev/null | wc -l | tr -d ' ')
 echo "reset table + load $n chunks" | tee -a "$LOG"
 wrangler d1 execute "$DB" --file=sql/schema.sql --remote >/dev/null 2>&1 && echo "schema reset" | tee -a "$LOG"
-i=0
+i=0; bad=0
 for f in "$WORK"/chunk_*.sql; do
   i=$((i+1))
   if wrangler d1 execute "$DB" --file="$f" --remote >/dev/null 2>&1; then
     echo "chunk $i/$n ok" | tee -a "$LOG"
   else
-    echo "chunk $i/$n FAIL" | tee -a "$LOG"
+    bad=$((bad+1)); echo "chunk $i/$n FAIL" | tee -a "$LOG"
   fi
 done
-echo "DONE loaded $n chunks" | tee -a "$LOG"
+echo "DONE loaded $((n - bad))/$n chunks" | tee -a "$LOG"
 del "$WORK" 2>/dev/null
+# This script DROPs and repopulates the pages table, so a partial load leaves
+# search quietly broken. Any failed chunk — or no chunks at all, which is what
+# a bad token looks like — has to surface as a non-zero exit.
+if [ "$n" -eq 0 ]; then
+  echo "FAIL: no chunks were produced (could not read PDFs from R2?)" | tee -a "$LOG"; exit 1
+fi
+[ "$bad" -eq 0 ]

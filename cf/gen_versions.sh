@@ -46,3 +46,7 @@ wrangler r2 object put "$BUCKET/meta/versions.json" --file="$OUT" \
   && echo "uploaded meta/versions.json" | tee -a "$LOG" || echo "UPLOAD-FAIL" | tee -a "$LOG"
 echo "DONE ok=$ok miss=$miss / $total" | tee -a "$LOG"
 del "$WORK" 2>/dev/null
+# Guard against a wholly-failed run reporting success: individual misses are
+# normal, but ok=0 means auth/network is broken and CI must go red. (An unset
+# CLOUDFLARE_API_TOKEN silently no-op'd this workflow for weeks.)
+[ "$ok" -gt 0 ]
