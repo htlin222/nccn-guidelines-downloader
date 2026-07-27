@@ -1,0 +1,62 @@
+name: Deploy Worker
+
+# Auto-deploy on push to main. Runs the unit tests first so a red suite blocks
+# the deploy rather than shipping past it.
+#
+# Requires the repo secret CLOUDFLARE_API_TOKEN (same one the weekly workflow
+# uses). On top of the R2/D1/KV/AI permissions the helper scripts need, it must
+# carry:
+#   Account → Workers Scripts → Edit      (upload the script)
+#   Zone    → Workers Routes  → Edit      (reconcile the nccn.hsiehting.com
+#                                          custom domain; without it the upload
+#                                          succeeds but wrangler still exits
+#                                          non-zero and the run goes red)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "cf/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch: {}
+
+# Never let two deploys race; queue them instead of cancelling, so the last
+# push on main is always the one that ends up live.
+concurrency:
+  group: deploy-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: cf/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: cf
+        run: pnpm install --frozen-lockfile
+
+      - name: Unit tests
+        working-directory: cf
+        run: pnpm test
+
+      # deploy.sh stamps the Taipei build time into src/lib/constants.js and
+      # then runs `wrangler deploy`. There is no ../.env in CI, so it falls
+      # through to CLOUDFLARE_API_TOKEN from the environment. The stamped file
+      # is intentionally left uncommitted — committing from CI would loop.
+      - name: Deploy
+        working-directory: cf
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+        run: bash deploy.sh
