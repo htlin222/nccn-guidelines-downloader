@@ -3,7 +3,9 @@ import { servePdf } from "../src/lib/pdf.js";
 
 // Minimal R2 stand-in: `keys` maps object key → body string.
 function fakeEnv(keys) {
+	const puts = [];
 	return {
+		puts,
 		PDFS: {
 			async head(k) {
 				return k in keys ? { size: keys[k].length } : null;
@@ -16,51 +18,62 @@ function fakeEnv(keys) {
 					uploaded: new Date("2026-07-01T00:00:00Z"),
 				};
 			},
-			async put() {},
+			async put(k, v) {
+				puts.push(k);
+				keys[k] = v;
+			},
 		},
 	};
 }
 
-const RAW = { "aml.pdf": "RAW-PDF-BYTES" };
-const BOTH = { "aml.pdf": "RAW-PDF-BYTES", "clean/aml.pdf": "CLEAN-PDF" };
+// Post-migration layout: the root object is the banner-free copy, raw/ holds
+// the untouched original the cron pulls from NCCN.
+const BOTH = { "aml.pdf": "CLEAN-PDF", "raw/aml.pdf": "RAW-PDF-BYTES" };
+const ONLY_RAW = { "raw/aml.pdf": "RAW-PDF-BYTES" };
 
-describe("servePdf clean selection", () => {
-	it("serves the banner-free copy when one exists", async () => {
-		const res = await servePdf(fakeEnv(BOTH), "aml", {
-			download: true,
-			clean: true,
-		});
+describe("servePdf raw/clean selection", () => {
+	it("serves the banner-free root copy by default", async () => {
+		const res = await servePdf(fakeEnv(BOTH), "aml", { download: false });
 		expect(await res.text()).toBe("CLEAN-PDF");
 		expect(res.headers.get("x-nccn-clean")).toBe("1");
-		expect(res.headers.get("content-disposition")).toContain("NCCN-aml-clean-");
-		expect(res.headers.get("content-disposition")).toContain("attachment");
+		expect(res.headers.get("content-disposition")).toContain("NCCN-aml-2026");
+		expect(res.headers.get("content-disposition")).not.toContain("-raw-");
 	});
 
-	it("falls back to the raw PDF when CI has not built a clean copy yet", async () => {
-		const res = await servePdf(fakeEnv(RAW), "aml", {
-			download: false,
-			clean: true,
+	it("serves the untouched original on ?raw=1", async () => {
+		const res = await servePdf(fakeEnv(BOTH), "aml", {
+			download: true,
+			raw: true,
 		});
 		expect(await res.text()).toBe("RAW-PDF-BYTES");
 		expect(res.headers.get("x-nccn-clean")).toBe("0");
-		// 沒有 clean 版時檔名不該騙人說是 clean
-		expect(res.headers.get("content-disposition")).not.toContain("-clean-");
-		expect(res.headers.get("content-disposition")).toContain("inline");
+		expect(res.headers.get("content-disposition")).toContain("NCCN-aml-raw-");
+		expect(res.headers.get("content-disposition")).toContain("attachment");
 	});
 
-	it("never reaches for the clean copy unless asked", async () => {
-		const res = await servePdf(fakeEnv(BOTH), "aml", { download: false });
+	it("falls back to raw when a guideline has never been cleaned", async () => {
+		const res = await servePdf(fakeEnv(ONLY_RAW), "aml", { download: false });
 		expect(await res.text()).toBe("RAW-PDF-BYTES");
+		// 沒有乾淨版時不能謊稱是乾淨的
 		expect(res.headers.get("x-nccn-clean")).toBe("0");
 	});
 
 	it("serves a Range request out of whichever copy was selected", async () => {
 		const res = await servePdf(fakeEnv(BOTH), "aml", {
 			download: false,
-			clean: true,
 			request: { headers: { get: () => "bytes=0-4" } },
 		});
 		expect(res.status).toBe(206);
-		expect(res.headers.get("content-range")).toBe("bytes 0-4/9"); // CLEAN-PDF = 9 bytes
+		expect(res.headers.get("content-range")).toBe("bytes 0-4/9"); // CLEAN-PDF = 9
+	});
+
+	it("never writes a live NCCN fetch over the clean root object", async () => {
+		// Nothing cached at all: the live-fetch fallback must land under raw/,
+		// otherwise a cache miss would put the banner back at the root key.
+		const env = fakeEnv({});
+		env.NCCN_KV = { async get() { return null; } }; // no cookie -> 502, no put
+		const res = await servePdf(env, "aml", { download: false });
+		expect(res.status).toBe(502);
+		expect(env.puts).toEqual([]);
 	});
 });

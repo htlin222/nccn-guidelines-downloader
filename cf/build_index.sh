@@ -26,6 +26,25 @@ def flush():
         "\n".join(chunk) + "\n")
     chunk = []
 def esc(s): return s.replace("'", "''")
+
+# The per-page NCCN banner is stripped from the TEXT, not trusted to be absent
+# from the PDF. Two reasons: the root objects only became banner-free after the
+# raw/ migration, and `wrangler r2 object get` reads through a 4-hour CDN cache
+# that can hand back a stale (still-bannered) copy right after a rewrite. Doing
+# it here makes the index correct either way.
+# It also matters for recall. Bodies are capped at 2000 chars and ~90% of pages
+# hit that cap, so the boilerplate was pushing real text past the cut. Measured
+# on breast v5.2026 (278 pages): stripping first indexes 19.4% more real content,
+# +332 chars on each of 266 pages.
+BOILER = [re.compile(p, re.I) for p in (
+    r"PLEASE NOTE that use of this NCCN Content.{0,300}?artificial intelligence model or tool\.",
+    r"Printed by .{0,60}?\d{1,2}/\d{1,2}/\d{4}.{0,40}?\.",
+    r"Copyright\s*©\s*\d{4} National Comprehensive Cancer Network.{0,120}?All Rights Reserved\.",
+    r"NCCN Guidelines Index Table of Contents Discussion",
+)]
+def strip_boiler(s):
+    for r in BOILER: s = r.sub(' ', s)
+    return re.sub(r'\s+', ' ', s).strip()
 for gi, g in enumerate(guides, 1):
     gid, name, cat = g['id'], g['name'], g['cat']
     pdf = os.path.join(work, 'x.pdf')
@@ -39,7 +58,7 @@ for gi, g in enumerate(guides, 1):
     npg = 0
     for pno, body in enumerate(pages, 1):
         body = body.replace('\x00',' ')
-        body = re.sub(r'\s+', ' ', body).strip()
+        body = strip_boiler(body)
         if len(body) < 15: continue
         body = body[:2000]
         chunk.append(f"INSERT INTO pages(gid,page,name,cat,body) VALUES('{esc(gid)}',{pno},'{esc(name)}','{esc(cat)}','{esc(body)}');")

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build banner-free copies of every cached PDF and upload to R2 as clean/<id>.pdf.
+# Strip the NCCN disclaimer banner off every cached PDF, in place at the R2 root.
 #
 # NCCN stamps two 6pt lines onto the top of every page as *separate content
 # stream objects* appended to the page's /Contents array:
@@ -9,7 +9,9 @@
 # ../strip_nccn_disclaimer.py drops exactly those streams — the page's own
 # content stream is untouched, so nothing under the banner gets clipped.
 #
-# Pulls PDFs from R2 (already seeded) — does NOT hit NCCN.
+# Reads raw/<id>.pdf (the untouched original the cron pulls from NCCN) and writes
+# the stripped result to the ROOT <id>.pdf, which is what the viewer, downloads,
+# thumbnails and the D1 search index all read. Never hits NCCN itself.
 # Skips ids whose source PDF is unchanged since the last run, tracked by sha256
 # in meta/clean.json; the strip is byte-deterministic (no_new_id=True) so an
 # unchanged input really does mean an unchanged output.
@@ -44,7 +46,7 @@ ok=0; skip=0; fail=0; i=0; total=$(echo "$IDS" | wc -l | tr -d ' ')
 for id in $IDS; do
   i=$((i+1))
   pdf="$WORK/$id.pdf"
-  if ! wrangler r2 object get "$BUCKET/$id.pdf" --file="$pdf" --remote >/dev/null 2>&1; then
+  if ! wrangler r2 object get "$BUCKET/raw/$id.pdf" --file="$pdf" --remote >/dev/null 2>&1; then
     fail=$((fail+1)); echo "[$i/$total] GET-FAIL $id" | tee -a "$LOG"; continue
   fi
   # A failed/expired-cookie fetch lands as an HTML login page, not a PDF.
@@ -70,7 +72,7 @@ import json;d=json.load(open('$WORK/prev.json'));print(d.get('$id',{}).get('page
   fi
   pages=$(grep -oE 'pages: [0-9]+' "$WORK/strip.log" | head -1 | grep -oE '[0-9]+')
 
-  if wrangler r2 object put "$BUCKET/clean/$id.pdf" --file="$out" \
+  if wrangler r2 object put "$BUCKET/$id.pdf" --file="$out" \
        --content-type="application/pdf" --remote >/dev/null 2>&1; then
     printf '%s\t%s\t%s\n' "$id" "$src_sha" "${pages:-0}" >> "$WORK/rows.tsv"
     ok=$((ok+1))
@@ -85,8 +87,8 @@ done
 # Worker can tell which guidelines have a clean copy available.
 # MERGE onto the previous manifest rather than rebuilding it: a LIMIT=N run (or
 # one that died partway) only has rows for the ids it touched, and rewriting
-# from those alone would drop the other 80-odd entries — which would both strand
-# their clean/<id>.pdf objects and force a full re-strip next time.
+# from those alone would drop the other 80-odd entries and force a full re-strip
+# next time.
 python3 - "$WORK/prev.json" "$WORK/rows.tsv" "$WORK/clean.json" <<'PY'
 import sys, json, datetime
 prev, rows, out = sys.argv[1], sys.argv[2], sys.argv[3]

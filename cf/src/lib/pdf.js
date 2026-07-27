@@ -29,11 +29,15 @@ export async function fetchLive(env, id) {
 	return { ok: true, buf };
 }
 
+// Freshly-fetched NCCN PDFs carry the per-page disclaimer banner, so they land
+// under raw/. The root <id>.pdf is the banner-free copy that gen_clean.sh
+// derives from raw/ in CI — writing the original there would put the banner
+// back on every guideline the cron happened to touch.
 export async function refreshOne(env, id) {
 	const r = await fetchLive(env, id);
 	if (!r.ok)
 		return { id, ok: false, error: r.error || `${r.status} ${r.ctype}` };
-	await env.PDFS.put(`${id}.pdf`, r.buf, {
+	await env.PDFS.put(`raw/${id}.pdf`, r.buf, {
 		httpMetadata: { contentType: "application/pdf" },
 	});
 	return { id, ok: true, size: r.buf.byteLength };
@@ -61,18 +65,19 @@ export async function refreshBatch(env, n) {
 	return { cursor: plan.next, results };
 }
 
-export async function servePdf(env, id, { download, request, clean }) {
-	// clean/<id>.pdf is the banner-free copy built by gen_clean.sh in CI. It may
-	// lag the raw PDF by up to a week, and won't exist at all until the workflow
-	// has run once — so fall back to the raw object rather than 404.
-	let key = `${id}.pdf`;
-	let isClean = false;
-	if (clean && (await env.PDFS.head(`clean/${id}.pdf`))) {
-		key = `clean/${id}.pdf`;
-		isClean = true;
+export async function servePdf(env, id, { download, request, raw }) {
+	// Root <id>.pdf is the banner-free copy (gen_clean.sh derives it from raw/);
+	// raw/<id>.pdf is the untouched original the cron pulls from NCCN. ?raw=1
+	// asks for the original. If a guideline has never been cleaned there is no
+	// root object, so fall back to raw/ rather than 404 on it.
+	let key = raw ? `raw/${id}.pdf` : `${id}.pdf`;
+	let isClean = !raw;
+	if (!raw && !(await env.PDFS.head(key))) {
+		key = `raw/${id}.pdf`;
+		isClean = false;
 	}
 	const today = new Date().toISOString().slice(0, 10);
-	const filename = `NCCN-${id}${isClean ? "-clean" : ""}-${today}.pdf`;
+	const filename = `NCCN-${id}${isClean ? "" : "-raw"}-${today}.pdf`;
 	const disposition = `${download ? "attachment" : "inline"}; filename="${filename}"`;
 	const rangeHeader = request ? request.headers.get("Range") : null;
 
@@ -134,12 +139,15 @@ export async function servePdf(env, id, { download, request, clean }) {
 				: `尚未快取且即時抓取失敗（cookie 可能過期，NCCN 回 ${r.status} ${r.ctype}）。`;
 		return new Response(msg, { status: 502 });
 	}
-	await env.PDFS.put(key, r.buf, {
+	// Anything pulled live from NCCN is an original, banner and all — it belongs
+	// under raw/, never at the root key that is meant to be the clean copy.
+	await env.PDFS.put(`raw/${id}.pdf`, r.buf, {
 		httpMetadata: { contentType: "application/pdf" },
 	});
 	const headers = new Headers();
 	headers.set("content-type", "application/pdf");
 	headers.set("content-length", String(r.buf.byteLength));
+	headers.set("x-nccn-clean", "0");
 	headers.set("content-disposition", disposition);
 	headers.set("accept-ranges", "bytes");
 	return new Response(r.buf, { status: 200, headers });

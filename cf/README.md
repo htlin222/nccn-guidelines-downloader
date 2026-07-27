@@ -166,15 +166,30 @@ NCCN 在每一頁頁首蓋兩行 6pt 小字，做投影片時很干擾：
 有了這個保證，`gen_clean.sh` 才能用來源 PDF 的 sha256 判斷「沒變就跳過」，
 不然每週 CI 都會把 86 份全部重傳一次。
 
+### R2 佈局：根層就是乾淨版
+
+```
+nccn-pdfs/
+  <id>.pdf          ← 乾淨版（沒有橫幅）。viewer / 下載 / 縮圖 / D1 索引都讀這個
+  raw/<id>.pdf      ← 原始檔（含橫幅），Worker cron 從 NCCN 抓回來就放這裡
+  meta/clean.json   ← 每份的來源 sha256 + 頁數
+```
+
+**為什麼原檔要另外放 `raw/`**：Worker 的每日 cron 會從 NCCN 重抓 PDF。如果它寫回根層，
+橫幅就會被一份一份帶回來（每天 3 份、約 29 天輪完全部）。所以 `refreshOne()` 寫入 `raw/`，
+根層只由 `gen_clean.sh` 產生——cron 再也蓋不掉乾淨版。
+
+原檔保留的用途：`gen_clean.sh` 可以隨時從 `raw/` 重新產生乾淨版，不必再打 NCCN。
+
 ### 流程
 
 `gen_clean.sh`（跟 `gen_versions.sh` / `gen_thumbs.sh` 同一套寫法）：
 
-1. 從 R2 拉 `<id>.pdf`（**不打 NCCN**），檢查開頭是 `%PDF`（cookie 過期時抓到的是登入 HTML）
+1. 從 R2 拉 `raw/<id>.pdf`（**不打 NCCN**），檢查開頭是 `%PDF`（cookie 過期時抓到的是登入 HTML）
 2. 算來源 sha256，跟 R2 上的 `meta/clean.json` 比對，一樣就 SKIP
 3. 跑 `strip_nccn_disclaimer.py`，它會自我驗證（抽字 + 掃 raw content stream 兩層），
    **任何一份殘留 marker 就 exit 1**，CI 直接紅燈，不會把沒清乾淨的檔案上架
-4. 上傳到 R2 `clean/<id>.pdf`，最後重新發佈 `meta/clean.json`
+4. 覆寫根層 `<id>.pdf`，最後重新發佈 `meta/clean.json`
 
 ```bash
 cd NCCN/cf
@@ -184,17 +199,22 @@ LIMIT=5 bash gen_clean.sh    # 只跑前 5 份（冒煙測試）
 ```
 
 **雲端自動更新**：已加進 `.github/workflows/update-versions.yml`（每週一 04:17 UTC，
-與版本／縮圖／索引／TOC 同一個 workflow）。Worker 的每日 cron 只負責刷新原始 PDF；
-乾淨版由這個 workflow 補上，最多落後一週。要更即時就把 workflow 的 cron 改成每日 —— 
-因為有 sha256 skip，沒變動的那幾天幾乎不花時間。
+與版本／縮圖／索引／TOC 同一個 workflow）。cron 抓到的新原檔最多落後一週才會被清理，
+但期間根層仍是舊的乾淨版，**不會出現橫幅**。
 
 ### 怎麼用
 
-- `GET /clean/:id` — 直接下載乾淨版（沒有就自動 fallback 回原檔）
-- `GET /pdf/:id?clean=1`、`GET /dl/:id?clean=1` — 同樣支援
-- **閱讀器工具列的橡皮擦鈕**（只在該份有乾淨版時出現）：切換後整份 PDF 用乾淨版重新載入，
-  所以**「截圖成筆記」跟總覽匯出的圖也都不帶橫幅**——這才是做投影片真正需要的
-- 回應帶 `x-nccn-clean: 1|0`，可以確認拿到的是哪一版
+不用做任何事——`/preview/:id`、`/pdf/:id`、`/dl/:id` 預設就是乾淨版，所以
+**「截圖成筆記」和總覽匯出的圖本來就不帶橫幅**。
+
+- `GET /pdf/:id?raw=1`、`GET /dl/:id?raw=1` — 要原始版（含橫幅）時才加參數
+- 回應帶 `x-nccn-clean: 1|0`，可確認拿到哪一版
+- 某份還沒清理過（根層沒有物件）時會自動 fallback 到 `raw/`，不會 404
+
+> ⚠️ 用 `wrangler r2 object get` 或 Cloudflare API 的物件 GET 端點**驗不了剛寫入的東西**：
+> 那條路徑有 4 小時 CDN 快取（`cf-cache-status: HIT`、`max-age=14400`），會回舊內容，
+> 對剛建立的 key 甚至會回被快取的 404。要查真實狀態請用 **LIST 端點**（不快取）或
+> 走 Worker 的 R2 binding。
 
 > 投影片上請自己掛一行 `Source: NCCN Guidelines Version X.YYYY` 當出處。
 

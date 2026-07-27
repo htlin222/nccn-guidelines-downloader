@@ -148,7 +148,6 @@ export function renderViewer(id) {
   <button class="btn" id="snap" title="截圖成筆記"></button>
   <button class="btn" id="tocBtn" title="目錄（Discussion）" hidden></button>
   <button class="btn" id="aiBtn" title="AI 本頁重點"></button>
-  <button class="btn" id="cleanBtn" title="乾淨版（去掉頁首 NCCN 聲明橫幅）" hidden></button>
   <button class="btn" id="theme" title="切換主題"></button>
   <a class="btn dl" href="/dl/${encodeURIComponent(id)}"><span id="dlic"></span>下載</a>
 </div>
@@ -178,9 +177,8 @@ export function renderViewer(id) {
 <div id="snapModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>頁面截圖筆記</b><button class="btn" id="snapClose">✕</button></div><div class="meta" id="snapMeta"></div><img id="snapImg" class="snapimg" alt="page"><textarea id="snapNote" placeholder="在這裡寫你的 Markdown 筆記…"></textarea><div class="sheetfoot"><button class="btn" id="snapPng">下載 PNG</button><button class="btn dl" id="snapMd">下載 Markdown 筆記</button></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
-// ?clean=1 loads the banner-free copy, so 截圖成筆記／grid 匯出的圖也不帶橫幅。
-var CLEAN=new URLSearchParams(location.search).get('clean')==='1';
-var PDF_URL='/pdf/${encodeURIComponent(id)}'+(CLEAN?'?clean=1':'');
+// 根層 <id>.pdf 就是去掉頁首橫幅的版本，所以連截圖成筆記／總覽匯出的圖都不帶橫幅。
+var PDF_URL='/pdf/${encodeURIComponent(id)}';
 var GID=${JSON.stringify(id)};var GNAME=${JSON.stringify(name)};var VALIDS=${JSON.stringify(Object.fromEntries([...VALID_IDS].map((x) => [x, 1])))};
 (function(){
 window.addEventListener('error',function(ev){var m=document.getElementById('msg');if(m){m.style.display='';m.textContent='執行錯誤：'+(ev.message||(ev.error&&ev.error.message)||ev);}});
@@ -206,7 +204,6 @@ var ICONS={
   spark:'<path d="M9.9 2.6 8.5 6.9 4.2 8.3l4.3 1.4 1.4 4.3 1.4-4.3 4.3-1.4-4.3-1.4z"/><path d="M18 13.5 17.2 16l-2.5.8 2.5.8.8 2.5.8-2.5 2.5-.8-2.5-.8z"/>',
   redo:'<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',
   copy:'<rect width="13" height="13" x="9" y="9" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
-  eraser:'<path d="m7 21-4.3-4.3a1 1 0 0 1 0-1.4L15 3a1 1 0 0 1 1.4 0l4.6 4.6a1 1 0 0 1 0 1.4L12 18"/><path d="M22 21H7"/><path d="m5 11 9 9"/>',
   archive:'<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>'
 };
 function svg(n){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[n]||'')+'</svg>';}
@@ -223,8 +220,7 @@ paintTheme();
 
 var viewer=$('viewer'),rail=$('rail'),msg=$('msg');
 var pages=[],scale=1.2,fit=true,cur=1,dpr=window.devicePixelRatio||1,pdfDoc=null;
-var hBack=[],hFwd=[],hlTerms=[],TOC=[],TOCR=[];var VERSION='';fetch('/api/r2-status').then(function(r){return r.json();}).then(function(d){var v=(d.versions||{})[GID];if(v){VERSION=v.v;var tv=document.getElementById('tver');if(tv){tv.textContent='v'+v.v;if(v.d)tv.title=v.d;tv.hidden=false;}}
-  if((d.clean||{})[GID]){var cb=document.getElementById('cleanBtn');cb.hidden=false;cb.classList.toggle('on',CLEAN);}}).catch(function(){});
+var hBack=[],hFwd=[],hlTerms=[],TOC=[],TOCR=[];var VERSION='';fetch('/api/r2-status').then(function(r){return r.json();}).then(function(d){var v=(d.versions||{})[GID];if(v){VERSION=v.v;var tv=document.getElementById('tver');if(tv){tv.textContent='v'+v.v;if(v.d)tv.title=v.d;tv.hidden=false;}}}).catch(function(){});
 fetch('/api/toc?id='+encodeURIComponent(GID)).then(function(r){return r.json();}).then(function(d){TOC=(d&&d.length)?d:[];if(TOC.length){buildTOC();$('tocBtn').hidden=false;}}).catch(function(){});
 // Pure helpers shared with the server + unit tests, injected verbatim.
 var tocGroups=${tocGroups.toString()};
@@ -450,11 +446,6 @@ $('aiSaved').onclick=function(){
   aiSavedOn=!aiSavedOn;$('aiSaved').classList.toggle('on',aiSavedOn);
   if(aiSavedOn)aiSavedLoad(false);else{aiPage=0;aiLoad(false);}};
 $('aiRedo').onclick=function(){aiLoad(true);};
-// 切換乾淨版要重新載入整份 PDF，所以直接換頁（帶著目前頁碼與搜尋字回來）。
-$('cleanBtn').innerHTML=svg('eraser');
-$('cleanBtn').onclick=function(){var p=new URLSearchParams(location.search);
-  if(CLEAN)p.delete('clean');else p.set('clean','1');
-  p.set('page',cur);location.search=p.toString();};
 $('aiAuto').onchange=function(){aiAuto=this.checked;try{localStorage.setItem('nccnaiauto',aiAuto?'1':'0');}catch(e){}if(aiAuto)aiLoad(false);};
 $('aiCopy').onclick=function(){var li=$('aibody').querySelectorAll('li');if(!li.length)return;
   var out=[];for(var i=0;i<li.length;i++)out.push('- '+li[i].textContent);

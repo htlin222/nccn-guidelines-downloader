@@ -274,30 +274,20 @@ export default {
 			return new Response("Method not allowed", { status: 405 });
 		}
 
-		// ?clean=1 serves the banner-free copy (clean/<id>.pdf) when CI has built
-		// one, falling back to the raw PDF otherwise.
-		const wantClean = url.searchParams.get("clean") === "1";
+		// The root <id>.pdf is the banner-free copy, so /pdf and /dl are clean by
+		// default; ?raw=1 asks for the untouched original under raw/.
+		const wantRaw = url.searchParams.get("raw") === "1";
 		if (pathname.startsWith("/pdf/")) {
 			const id = decodeURIComponent(pathname.slice("/pdf/".length));
 			if (!VALID_IDS.has(id))
 				return new Response("Unknown id", { status: 404 });
-			return servePdf(env, id, {
-				download: false,
-				request,
-				clean: wantClean,
-			});
+			return servePdf(env, id, { download: false, request, raw: wantRaw });
 		}
 		if (pathname.startsWith("/dl/")) {
 			const id = decodeURIComponent(pathname.slice("/dl/".length));
 			if (!VALID_IDS.has(id))
 				return new Response("Unknown id", { status: 404 });
-			return servePdf(env, id, { download: true, request, clean: wantClean });
-		}
-		if (pathname.startsWith("/clean/")) {
-			const id = decodeURIComponent(pathname.slice("/clean/".length));
-			if (!VALID_IDS.has(id))
-				return new Response("Unknown id", { status: 404 });
-			return servePdf(env, id, { download: true, request, clean: true });
+			return servePdf(env, id, { download: true, request, raw: wantRaw });
 		}
 		if (pathname.startsWith("/preview/")) {
 			const id = decodeURIComponent(pathname.slice("/preview/".length));
