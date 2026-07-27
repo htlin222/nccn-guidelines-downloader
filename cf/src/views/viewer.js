@@ -77,6 +77,16 @@ export function renderViewer(id) {
   .aibody li{padding-left:2px;}
   .aibody code{background:hsl(var(--accent));border-radius:4px;padding:0 4px;font-size:.92em;font-family:ui-monospace,monospace;}
   .aimsg{color:hsl(var(--muted-fg));display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding-top:6px;}
+  .aisv{display:flex;flex-direction:column;gap:2px;}
+  .aisvbar{display:flex;gap:6px;align-items:center;padding:0 0 8px;flex-wrap:wrap;}
+  .aisvbar .btn{font-size:.72rem;padding:4px 8px;}
+  .aisvit{text-align:left;font:inherit;font-size:.78rem;border:0;background:none;color:inherit;cursor:pointer;
+    padding:7px 8px;border-radius:7px;display:flex;gap:8px;align-items:baseline;line-height:1.35;}
+  .aisvit:hover{background:hsl(var(--accent));}
+  .aisvit .pg{flex-shrink:0;font-weight:700;font-size:.72rem;color:hsl(var(--muted-fg));min-width:44px;}
+  .aisvit .kd{flex-shrink:0;font-size:.62rem;font-weight:700;padding:1px 6px;border-radius:999px;background:hsl(var(--accent));}
+  .aisvit .tx{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:hsl(var(--muted-fg));}
+  .aisvgid{font-size:.66rem;font-weight:700;color:hsl(var(--muted-fg));text-transform:uppercase;letter-spacing:.05em;padding:9px 8px 3px;}
   .aifoot{padding:7px 10px;border-top:1px solid hsl(var(--border));font-size:.66rem;color:hsl(var(--muted-fg));display:flex;flex-direction:column;gap:5px;}
   .aibar{height:3px;border-radius:999px;background:hsl(var(--accent));overflow:hidden;}
   .aibar i{display:block;height:100%;background:#3b82f6;width:0;transition:width .3s;}
@@ -152,6 +162,7 @@ export function renderViewer(id) {
   <aside class="aipane" id="aipane" hidden>
     <div class="aitabs" id="aitabs"></div>
     <div class="aihdr"><span id="aipg">p.–</span><span class="aisrc" id="aisrc" hidden></span><span class="sp"></span>
+      <button class="btn" id="aiSaved" title="已存重點清單"></button>
       <button class="btn" id="aiCopy" title="複製條列"></button>
       <button class="btn" id="aiRedo" title="重新產生（覆蓋快取）"></button></div>
     <div class="aibody" id="aibody"></div>
@@ -195,7 +206,8 @@ var ICONS={
   spark:'<path d="M9.9 2.6 8.5 6.9 4.2 8.3l4.3 1.4 1.4 4.3 1.4-4.3 4.3-1.4-4.3-1.4z"/><path d="M18 13.5 17.2 16l-2.5.8 2.5.8.8 2.5.8-2.5 2.5-.8-2.5-.8z"/>',
   redo:'<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',
   copy:'<rect width="13" height="13" x="9" y="9" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
-  eraser:'<path d="m7 21-4.3-4.3a1 1 0 0 1 0-1.4L15 3a1 1 0 0 1 1.4 0l4.6 4.6a1 1 0 0 1 0 1.4L12 18"/><path d="M22 21H7"/><path d="m5 11 9 9"/>'
+  eraser:'<path d="m7 21-4.3-4.3a1 1 0 0 1 0-1.4L15 3a1 1 0 0 1 1.4 0l4.6 4.6a1 1 0 0 1 0 1.4L12 18"/><path d="M22 21H7"/><path d="m5 11 9 9"/>',
+  archive:'<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>'
 };
 function svg(n){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[n]||'')+'</svg>';}
 function $(i){return document.getElementById(i);}
@@ -335,7 +347,9 @@ function aiLabel(k){for(var i=0;i<AIKINDS.length;i++)if(AIKINDS[i][0]===k)return
 function aiSet(h){$('aibody').innerHTML=h;}
 function aiMd(s){return esc(s).split('**').map(function(x,i){return i%2?'<b>'+x+'</b>':x;}).join('').replace(/\`([^\`]+)\`/g,'<code>$1</code>');}
 (function(){var h='';for(var i=0;i<AIKINDS.length;i++)h+='<button class="aitab" data-k="'+AIKINDS[i][0]+'">'+AIKINDS[i][1]+'</button>';$('aitabs').innerHTML=h;
-  $('aitabs').addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.aitab');if(!b)return;aiKind=b.getAttribute('data-k');try{localStorage.setItem('nccnaikind',aiKind);}catch(e){}aiMarkTabs();aiLoad(false);});})();
+  $('aitabs').addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.aitab');if(!b)return;aiKind=b.getAttribute('data-k');try{localStorage.setItem('nccnaikind',aiKind);}catch(e){}aiMarkTabs();
+    if(aiSavedOn){aiSavedOn=false;$('aiSaved').classList.remove('on');aiPage=0;} // 點分頁就離開清單模式
+    aiLoad(false);});})();
 function aiMarkTabs(){var t=$('aitabs').children;for(var i=0;i<t.length;i++)t[i].className='aitab'+(t[i].getAttribute('data-k')===aiKind?' on':'');}
 aiMarkTabs();
 function aiQuota(q){if(!q||!q.cap)return;var pct=Math.min(100,Math.round(q.used/q.cap*100));
@@ -379,7 +393,7 @@ function aiLoad(force){
       aiSet('<div class="aimsg"><span>這一頁還沒有「'+esc(aiLabel(kind))+'」。</span><button class="btn dl" id="aiGo">產生本頁'+(vision?'（讀圖）':'')+'</button></div>');
       $('aiGo').onclick=function(){aiGen(page,kind,seq,false,vision);};})
     .catch(function(e){if(seq===aiSeq)aiSet('<div class="aimsg">讀取失敗：'+esc(String(e&&e.message||e))+'</div>');});}
-function aiOnPage(){if($('aipane').hidden)return;clearTimeout(aiTimer);if(cur===aiPage)return;aiTimer=setTimeout(function(){aiLoad(false);},700);}
+function aiOnPage(){if($('aipane').hidden||aiSavedOn)return;clearTimeout(aiTimer);if(cur===aiPage)return;aiTimer=setTimeout(function(){aiLoad(false);},700);}
 function aiClose(){$('aipane').hidden=true;$('aigrip').hidden=true;$('aiBtn').classList.remove('on');}
 $('aiBtn').onclick=function(){var a=$('aipane');
   if(!a.hidden){aiClose();if(fit)relayout();return;}
@@ -387,6 +401,54 @@ $('aiBtn').onclick=function(){var a=$('aipane');
   try{var w=parseInt(localStorage.getItem('nccnaiw'),10);if(w>=240&&w<=760)a.style.width=w+'px';}catch(e){}
   a.hidden=false;$('aigrip').hidden=false;$('aiBtn').classList.add('on');
   if(fit)relayout();aiPage=0;aiLoad(false);};
+// 已存重點清單：哪一份、第幾頁、什麼內容。全部來自 D1，翻頁不會掉。
+$('aiSaved').innerHTML=svg('archive');
+var aiSavedOn=false;
+function aiSavedRender(rows,scopeAll){
+  if(!rows.length){aiSet('<div class="aimsg">'+(scopeAll?'目前整站還沒有存過任何重點。':'這一份還沒有存過重點。')+'</div>');return;}
+  var h='<div class="aisvbar"><button class="btn'+(scopeAll?'':' on')+'" id="aiScopeOne">本份</button>'
+    +'<button class="btn'+(scopeAll?' on':'')+'" id="aiScopeAll">全部</button>'
+    +'<span class="sp" style="flex:1"></span><button class="btn" id="aiExport">匯出 .md</button></div><div class="aisv">';
+  var lastGid='';
+  for(var i=0;i<rows.length;i++){var r=rows[i];
+    if(scopeAll&&r.gid!==lastGid){lastGid=r.gid;h+='<div class="aisvgid">'+esc(r.gid)+'</div>';}
+    h+='<button class="aisvit" data-p="'+r.page+'" data-k="'+esc(r.kind)+'" data-g="'+esc(r.gid)+'">'
+      +'<span class="pg">p.'+r.page+'</span><span class="kd">'+esc(aiLabel(r.kind))+'</span>'
+      +'<span class="tx">'+esc((r.bullets||[])[0]||'')+'</span></button>';}
+  aiSet(h+'</div>');
+  $('aiScopeOne').onclick=function(){aiSavedLoad(false);};
+  $('aiScopeAll').onclick=function(){aiSavedLoad(true);};
+  $('aiExport').onclick=function(){aiExport(rows,scopeAll);};
+  var its=$('aibody').querySelectorAll('.aisvit');
+  for(var k=0;k<its.length;k++)(function(b){b.onclick=function(){
+    var g=b.getAttribute('data-g');
+    if(g!==GID){location.href='/preview/'+encodeURIComponent(g)+'?page='+b.getAttribute('data-p');return;}
+    aiKind=b.getAttribute('data-k');try{localStorage.setItem('nccnaikind',aiKind);}catch(e){}
+    aiMarkTabs();aiSavedOn=false;$('aiSaved').classList.remove('on');
+    jumpTo(+b.getAttribute('data-p'),true);aiPage=0;aiLoad(false);};})(its[k]);}
+function aiSavedLoad(scopeAll){
+  aiSet('<div class="aimsg"><span class="ldot">讀取已存清單…</span></div>');
+  fetch('/api/insights?'+(scopeAll?'all=1':'id='+encodeURIComponent(GID)))
+    .then(function(r){return r.json();}).then(function(d){
+      if(!aiSavedOn)return;
+      $('aipg').textContent='已存 '+(d.count||0)+' 則';$('aisrc').hidden=true;
+      aiSavedRender(d.rows||[],scopeAll);})
+    .catch(function(e){aiSet('<div class="aimsg">讀取失敗：'+esc(String(e&&e.message||e))+'</div>');});}
+function aiExport(rows,scopeAll){
+  var out=['# NCCN AI 重點'+(scopeAll?'（全部）':'（'+GNAME+'）'),'','匯出時間：'+new Date().toISOString(),''];
+  var lastKey='';
+  for(var i=0;i<rows.length;i++){var r=rows[i];var key=r.gid+'/'+r.page;
+    if(key!==lastKey){lastKey=key;
+      out.push('','## '+r.gid+' — p.'+r.page,'',
+        location.origin+'/preview/'+encodeURIComponent(r.gid)+'?page='+r.page,'');}
+    out.push('### '+aiLabel(r.kind)+'  ('+(r.src==='vision'?'讀圖':'文字')+')','');
+    for(var j=0;j<(r.bullets||[]).length;j++)out.push('- '+r.bullets[j]);
+    out.push('');}
+  var blob=new Blob([out.join(NL)],{type:'text/markdown;charset=utf-8'});
+  dl2(URL.createObjectURL(blob),'NCCN-AI-'+(scopeAll?'all':GID)+'.md');}
+$('aiSaved').onclick=function(){
+  aiSavedOn=!aiSavedOn;$('aiSaved').classList.toggle('on',aiSavedOn);
+  if(aiSavedOn)aiSavedLoad(false);else{aiPage=0;aiLoad(false);}};
 $('aiRedo').onclick=function(){aiLoad(true);};
 // 切換乾淨版要重新載入整份 PDF，所以直接換頁（帶著目前頁碼與搜尋字回來）。
 $('cleanBtn').innerHTML=svg('eraser');

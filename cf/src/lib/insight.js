@@ -177,6 +177,34 @@ export async function readCache(env, gid, page, kind) {
 	}
 }
 
+/**
+ * 列出已存的重點。gid 有值就只列該份 guideline，否則列全部（給「所有已存」用）。
+ * 帶回完整內容，讓前端不用逐筆再打一次就能直接匯出 Markdown。
+ */
+export async function listInsights(env, gid) {
+	const cols = "gid, page, kind, src, created, md";
+	try {
+		const stmt = gid
+			? env.DB.prepare(
+					`SELECT ${cols} FROM insights WHERE gid = ? ORDER BY page, kind LIMIT 2000`,
+				).bind(gid)
+			: env.DB.prepare(
+					`SELECT ${cols} FROM insights ORDER BY gid, page, kind LIMIT 2000`,
+				);
+		const { results } = await stmt.all();
+		return (results || []).map((r) => ({
+			gid: r.gid,
+			page: r.page,
+			kind: r.kind,
+			src: r.src,
+			created: r.created,
+			bullets: String(r.md || "").split("\n").filter(Boolean),
+		}));
+	} catch (e) {
+		return [];
+	}
+}
+
 async function writeCache(env, gid, page, kind, bullets, model, src) {
 	await env.DB.prepare(
 		"INSERT INTO insights(gid, page, kind, md, model, src, created) VALUES(?,?,?,?,?,?,?) " +

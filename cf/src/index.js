@@ -19,6 +19,7 @@ import {
 import {
 	KINDS,
 	generateAndCache,
+	listInsights,
 	needsVision,
 	pageText,
 	readCache,
@@ -200,6 +201,17 @@ export default {
 					"cache-control": "public, max-age=3600",
 				},
 			});
+		}
+
+		// 已存重點清單（哪一份、第幾頁、什麼內容）。?id= 只列該份，?all=1 列全部。
+		if (pathname === "/api/insights" && request.method === "GET") {
+			const gid = url.searchParams.get("id");
+			const all = url.searchParams.get("all") === "1";
+			const rows = await listInsights(
+				env,
+				all || !VALID_IDS.has(gid) ? null : gid,
+			);
+			return json({ ok: true, count: rows.length, rows });
 		}
 
 		// AI 逐頁重點。GET 只讀快取（免費、可隨翻頁自動打），真正花額度的生成一律走 POST。
