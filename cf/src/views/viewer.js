@@ -1,6 +1,7 @@
 import { NAME_BY_ID, VALID_IDS } from "../data/guidelines.js";
 import { escapeHtml } from "../lib/http.js";
 import { tocGroups, tocBestIndex } from "../lib/toc.js";
+import { citeText, copyText, showToast, TOAST_CSS } from "../lib/cite.js";
 
 export function renderViewer(id) {
 	const name = NAME_BY_ID[id] || id;
@@ -27,8 +28,9 @@ export function renderViewer(id) {
   svg{width:1em;height:1em;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;}
   .tb{display:flex;align-items:center;gap:6px;padding:8px 12px;background:hsl(var(--bar)/.9);
     backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid hsl(var(--border));flex-wrap:wrap;z-index:10;}
-  .tb .title{font-size:.88rem;font-weight:650;flex:1;min-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.01em;}
-  .tver{flex-shrink:0;font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:999px;background:hsl(var(--accent));color:hsl(var(--muted-fg));letter-spacing:.02em;}
+  .tb .title{font-size:.88rem;font-weight:650;flex:1;min-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.01em;cursor:copy;}
+  .tb .title:hover{text-decoration:underline dotted;text-underline-offset:3px;}
+  .tver{flex-shrink:0;font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:999px;background:hsl(var(--accent));color:hsl(var(--muted-fg));letter-spacing:.02em;cursor:copy;}
   .tver[hidden]{display:none;}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font:inherit;text-decoration:none;
     border:1px solid hsl(var(--border));border-radius:8px;padding:6px 8px;font-size:15px;cursor:pointer;background:hsl(var(--bar));color:hsl(var(--fg));}
@@ -141,6 +143,7 @@ export function renderViewer(id) {
   .sheet textarea{width:100%;min-height:120px;border:1px solid hsl(var(--border));border-radius:8px;background:hsl(var(--bg));color:inherit;padding:10px;font-family:ui-monospace,monospace;font-size:.85rem;box-sizing:border-box;}
   .sheetfoot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
   @media (max-width:640px){ .rail{position:absolute;z-index:9;height:100%;box-shadow:2px 0 14px rgba(0,0,0,.35);} }
+${TOAST_CSS}
 </style>
 </head>
 <body>
@@ -148,7 +151,7 @@ export function renderViewer(id) {
   <a href="/" class="btn" id="back" title="回清單"></a>
   <button class="btn" id="railBtn" title="縮圖側欄"></button>
   <button class="btn" id="gridBtn" title="總覽所有頁面"></button>
-  <span class="title">${escapeHtml(name)}</span><span class="tver" id="tver" hidden></span>
+  <span class="title" id="gtitle" title="點一下複製 AMA 引用">${escapeHtml(name)}</span><span class="tver" id="tver" hidden></span>
   <div class="grp"><button class="btn" id="histBack" title="回上一個位置"></button><button class="btn" id="histFwd" title="前往下一個位置"></button></div>
   <div class="grp"><button class="btn" id="prev" title="上一頁"></button>
     <input class="pageinput" id="pageNum" value="1" inputmode="numeric"><span class="pcount">/ <span id="pageCount">–</span></span>
@@ -238,6 +241,13 @@ paintTheme();
 var viewer=$('viewer'),rail=$('rail'),msg=$('msg');
 var pages=[],scale=1.2,fit=true,cur=1,dpr=window.devicePixelRatio||1,pdfDoc=null;
 var hBack=[],hFwd=[],hlTerms=[],TOC=[],TOCR=[];var VERSION='';fetch('/api/r2-status').then(function(r){return r.json();}).then(function(d){var v=(d.versions||{})[GID];if(v){VERSION=v.v;var tv=document.getElementById('tver');if(tv){tv.textContent='v'+v.v;if(v.d)tv.title=v.d;tv.hidden=false;}}}).catch(function(){});
+// 點工具列的書名（或版本徽章）＝抄一份 AMA 引用。版本還沒抓到就先省略 Version 那句。
+var citeText=${citeText.toString()};
+var copyText=${copyText.toString()};
+var showToast=${showToast.toString()};
+function yankCite(){var txt=citeText({name:GNAME,id:GID,version:VERSION});
+  copyText(txt).then(function(ok){showToast(ok?'已複製引用':'複製失敗，請手動選取',txt);});}
+$('gtitle').onclick=yankCite;$('tver').onclick=yankCite;
 fetch('/api/toc?id='+encodeURIComponent(GID)).then(function(r){return r.json();}).then(function(d){TOC=(d&&d.length)?d:[];if(TOC.length){buildTOC();$('tocBtn').hidden=false;}}).catch(function(){});
 // Pure helpers shared with the server + unit tests, injected verbatim.
 var tocGroups=${tocGroups.toString()};

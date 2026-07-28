@@ -2,6 +2,7 @@ import { GUIDELINES } from "../data/guidelines.js";
 import { CATS } from "../data/categories.js";
 import { PER_DAY, BUILD_TIME } from "../lib/constants.js";
 import { escapeHtml } from "../lib/http.js";
+import { citeText, copyText, showToast, TOAST_CSS } from "../lib/cite.js";
 
 export function renderPage(request) {
 	const user = request.headers.get("cf-access-authenticated-user-email") || "";
@@ -125,7 +126,8 @@ export function renderPage(request) {
     font-size:.66rem;font-weight:600;padding:3px 8px;border-radius:999px;color:#fff;backdrop-filter:blur(4px);}
   .thumb .ver{position:absolute;top:8px;right:8px;font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:999px;color:#fff;background:#000000aa;backdrop-filter:blur(4px);letter-spacing:.02em;}
   .cardbody{padding:10px 11px 11px;display:flex;flex-direction:column;gap:6px;flex:1;}
-  .cardbody .t{font-size:.82rem;font-weight:600;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .cardbody .t{font-size:.82rem;font-weight:600;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:copy;}
+  .cardbody .t:hover{text-decoration:underline dotted;text-underline-offset:3px;}
   .cardbody .foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:6px;padding-top:4px;}
   .r2{display:inline-flex;align-items:center;gap:4px;font-size:.66rem;color:hsl(var(--muted-foreground));}
   .r2 .d{width:7px;height:7px;border-radius:999px;background:#22c55e;}
@@ -146,6 +148,7 @@ export function renderPage(request) {
   .iconbtn{position:relative;}
   footer{max-width:1180px;margin:0 auto;padding:0 20px 50px;color:hsl(var(--muted-foreground));font-size:.74rem;}
   footer a{color:inherit;}
+${TOAST_CSS}
 </style>
 </head>
 <body>
@@ -220,7 +223,7 @@ function card(g){
             +'<img loading="lazy" src="/thumb/'+encodeURIComponent(g.id)+'" alt="" onerror="this.remove()">'
       +'<span class="tag" style="background:'+col+'cc">'+svg(ICON[g.cat]||'help')+esc(g.cat)+'</span>'+(VER[g.id]?'<span class="ver" title="'+esc((VER[g.id].d||''))+'">v'+esc(VER[g.id].v)+'</span>':'')
     +'</div>'
-    +'<div class="cardbody"><div class="t">'+esc(g.name)+'</div>'
+    +'<div class="cardbody"><div class="t" data-cite="'+esc(g.id)+'" title="點一下複製 AMA 引用">'+esc(g.name)+'</div>'
       +'<div class="foot">'+r2html
         +'<span class="dlbtn" title="下載 PDF" data-dl="'+encodeURIComponent(g.id)+'">'+svg('download')+'</span>'
       +'</div></div></a>';
@@ -251,9 +254,26 @@ function applyFilter(){
 q.addEventListener('input',applyFilter);
 var sresEl=document.getElementById('searchResults');var sTimer=null;
 function unmark(x){return esc(x||'').split('&lt;mark&gt;').join('<mark>').split('&lt;/mark&gt;').join('</mark>');}
-function doSearch(){var qq=q.value.trim();if(qq.length<2){sresEl.innerHTML='';return;}var u='/api/search?q='+encodeURIComponent(qq)+(activeCat?'&cat='+encodeURIComponent(activeCat):'');fetch(u).then(function(r){return r.json();}).then(function(d){if((d.q||'')!==q.value.trim())return;var rs=d.results||[];if(!rs.length){sresEl.innerHTML='<div class="shdr">內容搜尋「'+esc(qq)+'」：無命中</div>';return;}var order=[],G={};rs.forEach(function(x){if(!G[x.gid]){G[x.gid]={name:x.name,cat:x.cat,hits:[]};order.push(x.gid);}G[x.gid].hits.push(x);});var html='<div class="shdr">命中 '+rs.length+' 頁 · '+order.length+' 份'+(activeCat?'（限 '+esc(activeCat)+'）':'')+'</div>';order.forEach(function(gid){var g=G[gid];html+='<div class="sgroup"><div class="sgh"><span class="sdot" style="background:'+(COLOR[g.cat]||'#64748b')+'"></span><b>'+esc(g.name)+'</b><span class="sgc">'+g.hits.length+' 頁</span></div>';g.hits.slice(0,5).forEach(function(x){html+='<a class="sitem" href="/preview/'+encodeURIComponent(x.gid)+'?page='+x.page+'&q='+encodeURIComponent(qq)+'"><span class="spage">p.'+x.page+'</span><div class="snip">'+unmark(x.snip)+'</div></a>';});if(g.hits.length>5)html+='<a class="smore" href="/preview/'+encodeURIComponent(gid)+'?page='+g.hits[5].page+'&q='+encodeURIComponent(qq)+'">還有 '+(g.hits.length-5)+' 頁…</a>';html+='</div>';});sresEl.innerHTML=html;}).catch(function(){});}
+function doSearch(){var qq=q.value.trim();if(qq.length<2){sresEl.innerHTML='';return;}var u='/api/search?q='+encodeURIComponent(qq)+(activeCat?'&cat='+encodeURIComponent(activeCat):'');fetch(u).then(function(r){return r.json();}).then(function(d){if((d.q||'')!==q.value.trim())return;var rs=d.results||[];if(!rs.length){sresEl.innerHTML='<div class="shdr">內容搜尋「'+esc(qq)+'」：無命中</div>';return;}var order=[],G={};rs.forEach(function(x){if(!G[x.gid]){G[x.gid]={name:x.name,cat:x.cat,hits:[]};order.push(x.gid);}G[x.gid].hits.push(x);});var html='<div class="shdr">命中 '+rs.length+' 頁 · '+order.length+' 份'+(activeCat?'（限 '+esc(activeCat)+'）':'')+'</div>';order.forEach(function(gid){var g=G[gid];html+='<div class="sgroup"><div class="sgh"><span class="sdot" style="background:'+(COLOR[g.cat]||'#64748b')+'"></span><b data-cite="'+esc(gid)+'" title="點一下複製 AMA 引用" style="cursor:copy">'+esc(g.name)+'</b><span class="sgc">'+g.hits.length+' 頁</span></div>';g.hits.slice(0,5).forEach(function(x){html+='<a class="sitem" href="/preview/'+encodeURIComponent(x.gid)+'?page='+x.page+'&q='+encodeURIComponent(qq)+'"><span class="spage">p.'+x.page+'</span><div class="snip">'+unmark(x.snip)+'</div></a>';});if(g.hits.length>5)html+='<a class="smore" href="/preview/'+encodeURIComponent(gid)+'?page='+g.hits[5].page+'&q='+encodeURIComponent(qq)+'">還有 '+(g.hits.length-5)+' 頁…</a>';html+='</div>';});sresEl.innerHTML=html;}).catch(function(){});}
 q.addEventListener('input',function(){clearTimeout(sTimer);sTimer=setTimeout(doSearch,250);});
 listEl.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.dlbtn');if(b){e.preventDefault();e.stopPropagation();location.href='/dl/'+b.getAttribute('data-dl');}});
+// 點標題＝抄一份 AMA 引用，不進 /preview。卡片標題在 <a> 裡面，所以要擋掉預設導覽。
+var citeText=${citeText.toString()};
+var copyText=${copyText.toString()};
+var showToast=${showToast.toString()};
+function yankCite(id){
+  var g=null;for(var i=0;i<DATA.length;i++){if(DATA[i].id===id){g=DATA[i];break;}}
+  if(!g)return;
+  var v=VER[id];
+  var txt=citeText({name:g.name,id:g.id,version:v&&v.v});
+  copyText(txt).then(function(ok){showToast(ok?'已複製引用':'複製失敗，請手動選取',txt);});
+}
+document.addEventListener('click',function(e){
+  var t=e.target.closest&&e.target.closest('[data-cite]');
+  if(!t)return;
+  e.preventDefault();e.stopPropagation();
+  yankCite(t.getAttribute('data-cite'));
+});
 function buildFilters(){var counts={};DATA.forEach(function(g){counts[g.cat]=(counts[g.cat]||0)+1;});var h='<button class="fchip'+(activeCat?'':' act')+'" data-cat="">全部 <b>'+DATA.length+'</b></button>';CATS.forEach(function(c){if(!counts[c.name])return;h+='<button class="fchip'+(activeCat===c.name?' act':'')+'" data-cat="'+c.name+'" style="--cc:'+c.color+'">'+svg(c.icon)+'<span>'+esc(c.name)+'</span> <b>'+counts[c.name]+'</b></button>';});filtersEl.innerHTML=h;filtersEl.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.fchip');if(!b)return;activeCat=b.getAttribute('data-cat')||null;try{localStorage.setItem('nccncat',activeCat||'');}catch(e){}[].forEach.call(filtersEl.children,function(x){x.className='fchip'+(x===b?' act':'');});applyFilter();});}
 
 const themeBtn=document.getElementById('theme');
