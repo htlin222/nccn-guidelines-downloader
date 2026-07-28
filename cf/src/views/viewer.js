@@ -83,6 +83,8 @@ export function renderViewer(id) {
   .aibody li{padding-left:2px;}
   .aibody code{background:hsl(var(--accent));border-radius:4px;padding:0 4px;font-size:.92em;font-family:ui-monospace,monospace;}
   .aimsg{color:hsl(var(--muted-fg));display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding-top:6px;}
+  .aimsg.aiquiet{flex-direction:row;align-items:center;gap:8px;font-size:.78rem;}
+  .aimsg.aiquiet .btn{padding:3px 9px;font-size:.75rem;}
   .aisv{display:flex;flex-direction:column;gap:2px;}
   .aisvbar{display:flex;gap:6px;align-items:center;padding:0 0 8px;flex-wrap:wrap;}
   .aisvbar .btn{font-size:.72rem;padding:4px 8px;}
@@ -306,12 +308,17 @@ function hlSpans(td){if(!hlTerms.length)return;for(var i=0;i<td.length;i++){if(t
 function hlOne(tl){if(!tl)return;var sp=tl.querySelectorAll('span');for(var i=0;i<sp.length;i++){if(hlTerms.length&&spanHit(sp[i].textContent))sp[i].classList.add('hl');else sp[i].classList.remove('hl');}}
 function applyHighlights(){for(var k=0;k<pages.length;k++){if(!pages[k].el)continue;var sp=pages[k].el.querySelectorAll('.textLayer span');for(var j=0;j<sp.length;j++){if(hlTerms.length&&spanHit(sp[j].textContent))sp[j].classList.add('hl');else sp[j].classList.remove('hl');}}}
 function setHL(terms){hlTerms=(terms||[]).map(function(t){return String(t).toLowerCase();});applyHighlights();}
-function jumpTo(n,rec){ if(n<1||n>pages.length)return; if(rec){hBack.push(cur);hFwd=[];} cur=n; $('pageNum').value=n; scrollToPage(n); try{localStorage.setItem('nccnpg:'+GID,n);}catch(e){} updateHist(); markRail(); if(TOC.length)markTOC(); aiOnPage(); }
+// 網址列跟著目前頁走，複製起來就是可以直接回到這一頁的連結（?page=N 開檔時會讀）。
+// 用 replaceState 不是 pushState：翻頁不該把上一頁塞進瀏覽器的返回堆疊。
+var urlT=null;
+function syncURL(){clearTimeout(urlT);urlT=setTimeout(function(){
+  try{var u=new URL(location.href);u.searchParams.set('page',cur);history.replaceState(null,'',u.pathname+u.search+u.hash);}catch(e){}},400);}
+function jumpTo(n,rec){ if(n<1||n>pages.length)return; if(rec){hBack.push(cur);hFwd=[];} cur=n; $('pageNum').value=n; scrollToPage(n); try{localStorage.setItem('nccnpg:'+GID,n);}catch(e){} updateHist(); markRail(); if(TOC.length)markTOC(); aiOnPage(); syncURL(); }
 function updateHist(){ $('histBack').classList.toggle('off',!hBack.length); $('histFwd').classList.toggle('off',!hFwd.length); }
 function markRail(){ var items=rail.children; for(var k=0;k<items.length;k++){ items[k].className='thumb'+(k===cur-1?' cur':''); } var c=items[cur-1]; if(c) c.scrollIntoView({block:'nearest'}); }
 function updateCur(){ if(!pages.length)return; var vr=viewer.getBoundingClientRect(); var line=vr.top+vr.height*0.3; var best=1;
   for(var k=0;k<pages.length;k++){ if(pages[k].el.getBoundingClientRect().top<=line) best=k+1; else break; }
-  if(best!==cur){ cur=best; $('pageNum').value=cur; markRail(); if(TOC.length)markTOC(); aiOnPage(); try{localStorage.setItem('nccnpg:'+GID,cur);}catch(e){} } }
+  if(best!==cur){ cur=best; $('pageNum').value=cur; markRail(); if(TOC.length)markTOC(); aiOnPage(); syncURL(); try{localStorage.setItem('nccnpg:'+GID,cur);}catch(e){} } }
 var ticking=false;
 viewer.addEventListener('scroll',function(){ if(!ticking){ ticking=true; requestAnimationFrame(function(){ updateCur(); ticking=false; }); } });
 
@@ -323,7 +330,7 @@ pdfjsLib.getDocument({url:PDF_URL}).promise.then(function(d){ pdfDoc=d; $('pageC
     var tb=document.createElement('button'); tb.className='thumb'; tb.dataset.i=n-1; tb.style.aspectRatio=vp.width+'/'+vp.height; tb.innerHTML='<span class="pn">'+n+'</span>';
     tb.onclick=function(){ jumpTo(idx+1,true); }; rail.appendChild(tb);
   }); }); })(n); }
-  chain.then(function(){ msg.style.display='none'; relayout(); buildThumbs(); renderPage(0); if(pages[1])renderPage(1); var pp=parseInt(new URLSearchParams(location.search).get('page'),10); if(!(pp>=1)){try{pp=parseInt(localStorage.getItem('nccnpg:'+GID),10);}catch(e){}} if(pp>=2&&pp<=pages.length){cur=pp;$('pageNum').value=pp;scrollToPage(pp);} updateHist(); var _q=new URLSearchParams(location.search).get('q'); if(_q){$('findInput').value=_q;$('findbar').hidden=false;runFind(!(pp>=1));} });
+  chain.then(function(){ msg.style.display='none'; relayout(); buildThumbs(); renderPage(0); if(pages[1])renderPage(1); var pp=parseInt(new URLSearchParams(location.search).get('page'),10); if(!(pp>=1)){try{pp=parseInt(localStorage.getItem('nccnpg:'+GID),10);}catch(e){}} if(pp>=2&&pp<=pages.length){cur=pp;$('pageNum').value=pp;scrollToPage(pp);} syncURL(); updateHist(); var _q=new URLSearchParams(location.search).get('q'); if(_q){$('findInput').value=_q;$('findbar').hidden=false;runFind(!(pp>=1));} });
 }).catch(function(e){ msg.textContent='無法載入 PDF：'+(e&&e.message?e.message:e)+'（可能尚未快取或 cookie 過期）'; });
 
 var tio=new IntersectionObserver(function(es){es.forEach(function(e){ if(e.isIntersecting){ thumbRender(+e.target.dataset.i); tio.unobserve(e.target);} });},{root:rail,rootMargin:'400px 0px'});
@@ -338,8 +345,8 @@ $('zin').onclick=function(){ var b=activeScale(); fit=false; scale=Math.min(b+0.
 $('zout').onclick=function(){ var b=activeScale(); fit=false; scale=Math.max(b-0.15,0.3); relayout(); };
 $('fit').onclick=function(){ fit=!fit; if(!fit) scale=activeScale(); relayout(); };
 $('railBtn').onclick=function(){ rail.classList.toggle('hide'); if(fit) relayout(); };
-$('histBack').onclick=function(){ if(!hBack.length)return; hFwd.push(cur); var n=hBack.pop(); cur=n; $('pageNum').value=n; scrollToPage(n); updateHist(); markRail(); if(TOC.length)markTOC(); };
-$('histFwd').onclick=function(){ if(!hFwd.length)return; hBack.push(cur); var n=hFwd.pop(); cur=n; $('pageNum').value=n; scrollToPage(n); updateHist(); markRail(); if(TOC.length)markTOC(); };
+$('histBack').onclick=function(){ if(!hBack.length)return; hFwd.push(cur); var n=hBack.pop(); cur=n; $('pageNum').value=n; scrollToPage(n); updateHist(); markRail(); if(TOC.length)markTOC(); syncURL(); };
+$('histFwd').onclick=function(){ if(!hFwd.length)return; hBack.push(cur); var n=hFwd.pop(); cur=n; $('pageNum').value=n; scrollToPage(n); updateHist(); markRail(); if(TOC.length)markTOC(); syncURL(); };
 document.addEventListener('keydown',function(e){ if(e.target&&e.target.tagName==='INPUT')return;
   if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key==='PageDown'){ e.preventDefault(); if(cur<pages.length)scrollToPage(cur+1); }
   else if(e.key==='ArrowLeft'||e.key==='ArrowUp'||e.key==='PageUp'){ e.preventDefault(); if(cur>1)scrollToPage(cur-1); }
@@ -400,7 +407,13 @@ aiProvMark();
 // 模型字串在畫面上要短：@cf/meta/llama-4-scout-17b-16e-instruct → llama-4-scout
 function aiShortModel(m){if(!m)return '';m=String(m);if(m.indexOf('@cf/')===0){var t=m.split('/').pop();return t.split('-').slice(0,3).join('-');}return m;}
 function aiLabel(k){for(var i=0;i<AIKINDS.length;i++)if(AIKINDS[i][0]===k)return AIKINDS[i][1];return k;}
-function aiSet(h){$('aibody').innerHTML=h;}
+// 翻頁時右側 pane 每次都重畫成「讀取中…」再變成「還沒有…」，看起來一直在閃。
+// 兩個對策：讀快取這種通常 <100ms 的事，等 250ms 還沒回來才畫載入中；畫面內容
+// 帶一個 key，內容其實沒變（例如連續好幾頁都還沒產生）就完全不動 DOM。
+var aiBodyKey='',aiPend=null;
+function aiSet(h,key){clearTimeout(aiPend);aiPend=null;$('aibody').innerHTML=h;aiBodyKey=key||'';}
+function aiLoading(msg){clearTimeout(aiPend);aiPend=setTimeout(function(){
+  aiSet('<div class="aimsg"><span class="ldot">'+msg+'</span></div>','load');},250);}
 function aiMd(s){return esc(s).split('**').map(function(x,i){return i%2?'<b>'+x+'</b>':x;}).join('').replace(/\`([^\`]+)\`/g,'<code>$1</code>');}
 (function(){var h='';for(var i=0;i<AIKINDS.length;i++)h+='<button class="aitab" data-k="'+AIKINDS[i][0]+'">'+AIKINDS[i][1]+'</button>';$('aitabs').innerHTML=h;
   $('aitabs').addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.aitab');if(!b)return;aiKind=b.getAttribute('data-k');try{localStorage.setItem('nccnaikind',aiKind);}catch(e){}aiMarkTabs();
@@ -444,11 +457,20 @@ function aiGen(page,kind,seq,force,vision){
       if(!d.ok){aiSet('<div class="aimsg"><span>'+esc(d.error||'產生失敗')+'</span><button class="btn" id="aiGo">再試一次</button></div>');$('aiGo').onclick=function(){aiGen(page,kind,seq,force,vision);};return;}
       aiShow(d);})
     .catch(function(e){if(seq===aiSeq)aiSet('<div class="aimsg">產生失敗：'+esc(String(e&&e.message||e))+'</div>');});}
+// 「這一頁還沒有 X」在沒產生過的頁之間是同一句話，所以只有 kind／讀圖與否變了才
+// 重畫；其餘情況只把按鈕的 onclick 換成新的頁碼，畫面完全不動。
+function aiEmpty(page,kind,seq,vision){
+  var k='empty:'+kind+':'+(vision?'v':'t');
+  if(aiBodyKey!==k)
+    aiSet('<div class="aimsg aiquiet"><span>這一頁還沒有「'+esc(aiLabel(kind))+'」</span>'
+      +'<button class="btn" id="aiGo">產生'+(vision?'（讀圖）':'')+'</button></div>',k);
+  else clearTimeout(aiPend);
+  var go=$('aiGo');if(go)go.onclick=function(){aiGen(page,kind,seq,false,vision);};}
 function aiLoad(force){
   if($('aipane').hidden)return;
   var page=cur,kind=aiKind,seq=++aiSeq;
   aiPage=page;$('aipg').textContent='p.'+page;$('aisrc').hidden=true;
-  aiSet('<div class="aimsg"><span class="ldot">讀取中…</span></div>');
+  aiLoading('讀取中…');
   fetch('/api/insight?id='+encodeURIComponent(GID)+'&page='+page+'&kind='+kind+'&provider='+aiProv)
     .then(function(r){return r.json();}).then(function(d){
       if(seq!==aiSeq)return;
@@ -457,8 +479,7 @@ function aiLoad(force){
       // 重做已快取的頁時沿用上次的來源；沒快取就照後端的判斷。
       var vision=d.cached?(d.src==='vision'):!!d.vision;
       if(force||aiAuto){aiGen(page,kind,seq,force,vision);return;}
-      aiSet('<div class="aimsg"><span>這一頁還沒有「'+esc(aiLabel(kind))+'」。</span><button class="btn dl" id="aiGo">用 '+((aiProv==='ag'&&AGOK)?'Antigravity':'Workers AI')+' 產生本頁'+(vision?'（讀圖）':'')+'</button></div>');
-      $('aiGo').onclick=function(){aiGen(page,kind,seq,false,vision);};})
+      aiEmpty(page,kind,seq,vision);})
     .catch(function(e){if(seq===aiSeq)aiSet('<div class="aimsg">讀取失敗：'+esc(String(e&&e.message||e))+'</div>');});}
 function aiOnPage(){if($('aipane').hidden||aiSavedOn)return;clearTimeout(aiTimer);if(cur===aiPage)return;aiTimer=setTimeout(function(){aiLoad(false);},700);}
 function aiClose(){$('aipane').hidden=true;$('aigrip').hidden=true;$('aiBtn').classList.remove('on');}

@@ -305,7 +305,10 @@ export default {
 			return servePdf(env, id, { download: true, request, raw: wantRaw });
 		}
 		if (pathname.startsWith("/preview/")) {
-			const id = decodeURIComponent(pathname.slice("/preview/".length));
+			// 結尾多打一個斜線（/preview/aml/）以前會 404，貼網址時很容易踩到。
+			const id = decodeURIComponent(
+				pathname.slice("/preview/".length).replace(/\/+$/, ""),
+			);
 			if (!VALID_IDS.has(id))
 				return new Response("Unknown id", { status: 404 });
 			return html(renderViewer(id));
