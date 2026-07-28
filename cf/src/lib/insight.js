@@ -1,5 +1,10 @@
 // AI 逐頁重點：把 guideline 的每一頁轉成四種繁體中文條列（重點整理 / High Yield /
-// 病歷片語 / SDM），跑在 Cloudflare Workers AI 上（免費額度 10,000 neurons/day）。
+// 病歷片語 / SDM）。
+//
+// 兩個 provider，前端可以切換：
+//   cf — Cloudflare Workers AI（llama-4-scout），免費額度 10,000 neurons/day
+//   ag — Antigravity（Google Gemini API），走 lib/gemini.js 的模型階梯，
+//        撞到某一階的每日上限就自動往下掉，整條階梯用完再交回 cf
 //
 // 兩種輸入來源：
 //   text   — D1 `pages` 表裡 build_index.sh 用 pdftotext 抽好的該頁文字（散文頁夠用、最省）
@@ -9,7 +14,19 @@
 // 結果寫進 D1 `insights` 永久快取，同一頁同一種格式只會生成一次。
 // neuron 用量逐次累加進 `ai_usage`，超過當日預算就擋下來（免費額度 UTC 00:00 重置）。
 
+import {
+	LADDER,
+	LADDER_CAP,
+	callGemini,
+	ladderModel,
+	pickModels,
+	toParts,
+} from "./gemini.js";
+
 export const MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
+
+export const PROVIDERS = ["ag", "cf"];
+export const PROVIDER_LABEL = { ag: "Antigravity", cf: "Workers AI" };
 
 export const KINDS = ["key", "hy", "phrase", "sdm"];
 export const KIND_LABEL = {
@@ -135,6 +152,66 @@ export async function readUsage(env) {
 	return { day, cap, used: Math.round(row?.neurons || 0), calls: row?.calls || 0 };
 }
 
+export function hasAntigravity(env) {
+	return !!(env && env.ANTIGRAVITY_API_KEY);
+}
+
+/**
+ * Antigravity 的每日計量。免費層是「每模型每天 N 次」，所以逐模型記帳：撞到 429
+ * 就把該模型記到滿（PerDay）或壓一分鐘冷卻（PerMinute），下次直接跳過那一階，
+ * 不用再白花一趟往返去確認它還是滿的。
+ */
+export async function readGeminiUsage(env) {
+	const day = todayKey(Date.now());
+	const state = {};
+	try {
+		const { results } = await env.DB.prepare(
+			"SELECT model, calls, cool FROM ai_calls WHERE day = ?",
+		)
+			.bind(day)
+			.all();
+		for (const r of results || [])
+			state[r.model] = { calls: r.calls || 0, cool: r.cool || "" };
+	} catch (e) {
+		// ai_calls 還沒建表就當作零用量，別讓整個 viewer 掛掉。
+	}
+	const used = LADDER.reduce(
+		(n, m) => n + Math.min(m.rpd, state[m.id]?.calls || 0),
+		0,
+	);
+	const avail = pickModels(state, Date.now());
+	return {
+		day,
+		state,
+		used,
+		cap: LADDER_CAP,
+		next: avail.length ? avail[0].id : "",
+		models: avail.length,
+	};
+}
+
+/** mode: 'used' = 這次用掉一次；'exhaust' = 直接記到滿（撞到 PerDay 或模型下架）。 */
+async function bumpGemini(env, day, model, mode, cool) {
+	const rpd = ladderModel(model)?.rpd || 0;
+	const sql =
+		mode === "exhaust"
+			? "INSERT INTO ai_calls(day, model, calls, cool) VALUES(?,?,?,?) " +
+				"ON CONFLICT(day, model) DO UPDATE SET calls = MAX(ai_calls.calls, excluded.calls), " +
+				"cool = COALESCE(excluded.cool, ai_calls.cool)"
+			: "INSERT INTO ai_calls(day, model, calls, cool) VALUES(?,?,1,?) " +
+				"ON CONFLICT(day, model) DO UPDATE SET calls = ai_calls.calls + 1, " +
+				"cool = COALESCE(excluded.cool, ai_calls.cool)";
+	try {
+		const stmt = env.DB.prepare(sql);
+		await (mode === "exhaust"
+			? stmt.bind(day, model, rpd, cool || null)
+			: stmt.bind(day, model, cool || null)
+		).run();
+	} catch (e) {
+		// 記帳失敗不該讓已經產好的內容消失；下一次 429 會再把狀態補回來。
+	}
+}
+
 async function addUsage(env, day, neurons) {
 	await env.DB.prepare(
 		"INSERT INTO ai_usage(day, neurons, calls) VALUES(?, ?, 1) " +
@@ -223,39 +300,38 @@ async function writeCache(env, gid, page, kind, bullets, model, src) {
 		.run();
 }
 
-/**
- * 生成單一頁、單一種格式。image 有值就走多模態（讀 rasterize 的 JPEG），
- * 沒有就只餵抽出來的文字。回傳 { bullets, src, neurons }。
- */
-export async function generate(env, { gid, page, kind, name, text, image }) {
+/** 兩個 provider 共用的提問文字：抬頭 + 該格式的指令 + 讀圖時的補充說明。 */
+export function buildPrompt({ gid, page, kind, name, text, image }) {
 	const body = cleanPageText(text).slice(0, 4000);
 	const head =
 		`資料來源：NCCN Guidelines《${name || gid}》第 ${page} 頁。\n\n` + ASK[kind];
-
-	let content;
-	let src;
 	if (image) {
-		src = "vision";
-		const parts = [
-			{
-				type: "text",
-				text:
-					head +
-					"\n\n以下附上這一頁的完整版面截圖，請以圖為準讀出方框與箭頭代表的決策流程" +
-					(body ? "；另附文字抽取結果供藥名與拼字對照。" : "。"),
-			},
-			{
-				type: "image_url",
-				image_url: { url: "data:image/jpeg;base64," + image },
-			},
-		];
-		if (body) parts.push({ type: "text", text: "文字抽取結果：\n" + body });
-		content = parts;
-	} else {
-		src = "text";
-		if (!body) throw new Error("這一頁沒有可用的文字，請改用讀圖模式");
-		content = head + "\n\n這一頁的內容：\n" + body;
+		return {
+			src: "vision",
+			body,
+			head:
+				head +
+				"\n\n以下附上這一頁的完整版面截圖，請以圖為準讀出方框與箭頭代表的決策流程" +
+				(body ? "；另附文字抽取結果供藥名與拼字對照。" : "。"),
+			label: body ? "文字抽取結果：\n" + body : "",
+		};
 	}
+	if (!body) throw new Error("這一頁沒有可用的文字，請改用讀圖模式");
+	return { src: "text", body, head, label: "這一頁的內容：\n" + body };
+}
+
+/** Workers AI（llama-4-scout）。回傳 { bullets, src, neurons, model, provider }。 */
+export async function generateCF(env, p, max) {
+	const content = p.image
+		? [
+				{ type: "text", text: p.head },
+				{
+					type: "image_url",
+					image_url: { url: "data:image/jpeg;base64," + p.image },
+				},
+				...(p.label ? [{ type: "text", text: p.label }] : []),
+			]
+		: p.head + "\n\n" + p.label;
 
 	const res = await env.AI.run(MODEL, {
 		messages: [
@@ -266,40 +342,122 @@ export async function generate(env, { gid, page, kind, name, text, image }) {
 		temperature: 0.2,
 	});
 
-	const bullets = toBullets(res?.response, kind === "sdm" ? 7 : 8);
+	const bullets = toBullets(res?.response, max);
 	if (!bullets.length) throw new Error("模型沒有回傳可用的內容");
-	return { bullets, src, neurons: res?.usage?.neurons || 0 };
+	return {
+		bullets,
+		src: p.src,
+		neurons: res?.usage?.neurons || 0,
+		model: MODEL,
+		provider: "cf",
+	};
 }
 
-/** 生成 + 記帳 + 寫快取。額度用完會丟出帶 quota 的錯誤。 */
-export async function generateAndCache(env, opts) {
-	const usage = await readUsage(env);
-	if (usage.used >= usage.cap) {
-		const err = new Error(
-			`今日 Workers AI 額度已用完（${usage.used}/${usage.cap} neurons），UTC 00:00 重置`,
-		);
-		err.quota = usage;
-		err.status = 429;
-		throw err;
+/**
+ * Antigravity：沿著 LADDER 由上往下試，撞到當日上限就換下一階。
+ * 全部用不成回傳 null，讓上層交回 Workers AI。notes 會帶回發生了什麼事。
+ */
+export async function generateAG(env, p, max, notes) {
+	const key = env.ANTIGRAVITY_API_KEY;
+	if (!key) return null;
+	const usage = await readGeminiUsage(env);
+	const models = pickModels(usage.state, Date.now());
+	if (!models.length) {
+		notes.push("Antigravity 今日額度已用完");
+		return null;
 	}
-	const out = await generate(env, opts);
-	await addUsage(env, usage.day, out.neurons);
+	const parts = toParts(p.head, p.label, p.image);
+	for (const m of models) {
+		const r = await callGemini(key, m.id, { system: SYSTEM, parts });
+		if (r.ok) {
+			await bumpGemini(env, usage.day, m.id, "used");
+			const bullets = toBullets(r.text, max);
+			if (bullets.length)
+				return {
+					bullets,
+					src: p.src,
+					neurons: 0,
+					tokens: r.tokens,
+					model: m.id,
+					provider: "ag",
+				};
+			notes.push(`${m.id} 沒有回傳可用內容（${r.finish || "?"}）`);
+			continue;
+		}
+		if (r.kind === "auth") {
+			notes.push(`Antigravity 金鑰被拒：${r.message}`);
+			return null;
+		}
+		if (r.kind === "day" || r.kind === "gone") {
+			await bumpGemini(env, usage.day, m.id, "exhaust");
+			notes.push(
+				r.kind === "day" ? `${m.id} 今日額度已滿` : `${m.id} 已下架`,
+			);
+			continue;
+		}
+		if (r.kind === "minute") {
+			await bumpGemini(
+				env,
+				usage.day,
+				m.id,
+				"used",
+				new Date(Date.now() + 60000).toISOString(),
+			);
+			notes.push(`${m.id} 每分鐘上限，冷卻 60 秒`);
+			continue;
+		}
+		notes.push(`${m.id} 失敗（${r.status}）：${r.message}`);
+	}
+	return null;
+}
+
+/**
+ * 生成 + 記帳 + 寫快取。provider='ag' 會先走 Antigravity 的模型階梯，
+ * 整條用完（或沒設金鑰）才掉回 Workers AI；Workers AI 也沒額度才丟 429。
+ */
+export async function generateAndCache(env, opts) {
+	const max = opts.kind === "sdm" ? 7 : 8;
+	const p = { ...buildPrompt(opts), image: opts.image || null };
+	const notes = [];
+
+	let out = null;
+	if (opts.provider === "ag") out = await generateAG(env, p, max, notes);
+
+	let usage = await readUsage(env);
+	if (!out) {
+		if (usage.used >= usage.cap) {
+			const err = new Error(
+				(notes.length ? notes.join("；") + "；" : "") +
+					`今日 Workers AI 額度也用完了（${usage.used}/${usage.cap} neurons），UTC 00:00 重置`,
+			);
+			err.quota = usage;
+			err.status = 429;
+			throw err;
+		}
+		out = await generateCF(env, p, max);
+		await addUsage(env, usage.day, out.neurons);
+		usage = {
+			...usage,
+			used: Math.round(usage.used + out.neurons),
+			calls: usage.calls + 1,
+		};
+	}
+
 	await writeCache(
 		env,
 		opts.gid,
 		opts.page,
 		opts.kind,
 		out.bullets,
-		MODEL,
+		out.model,
 		out.src,
 	);
 	return {
 		...out,
-		model: MODEL,
-		quota: {
-			...usage,
-			used: Math.round(usage.used + out.neurons),
-			calls: usage.calls + 1,
-		},
+		notes,
+		// 掉回 cf 的時候要讓使用者知道，不然會以為 Antigravity 沒生效。
+		fell: opts.provider === "ag" && out.provider === "cf",
+		quota: usage,
+		agquota: hasAntigravity(env) ? await readGeminiUsage(env) : null,
 	};
 }

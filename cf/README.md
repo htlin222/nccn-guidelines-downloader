@@ -218,7 +218,7 @@ LIMIT=5 bash gen_clean.sh    # 只跑前 5 份（冒煙測試）
 
 > 投影片上請自己掛一行 `Source: NCCN Guidelines Version X.YYYY` 當出處。
 
-## AI 本頁重點（Workers AI）
+## AI 本頁重點（Antigravity / Workers AI）
 
 閱讀器右側可展開一個**跟著目前頁走**的 AI 面板（工具列 ✨），把該頁轉成四種繁體中文條列：
 
@@ -243,10 +243,49 @@ NCCN 的演算法頁是方框加箭頭，`pdftotext` 抽出來會散成沒有句
 門檻是對 breast v5.2026 全 279 頁校準的：演算法頁落在 0.007–0.057，Discussion 頁 0.12–0.20，兩邊都有很大餘裕。
 面板右上的 `讀圖` / `文字` 徽章會顯示這一頁實際走哪條路。
 
+### 兩個 AI 來源可切換
+
+面板底部有一組 **Antigravity / Workers AI** 切換鈕（選擇記在 localStorage），
+兩邊吃同一組 prompt、同一套讀圖判斷、寫同一個快取表：
+
+| | Antigravity | Workers AI |
+| --- | --- | --- |
+| 實際模型 | Google Gemini（見下方階梯） | `@cf/meta/llama-4-scout-17b-16e-instruct` |
+| 憑證 | Worker secret `ANTIGRAVITY_API_KEY` | `env.AI` 綁定，不需金鑰 |
+| 額度單位 | 每模型每天請求數（RPD） | neurons |
+| 每日總量 | 階梯加總 1,080 次 | 10,000 neurons ≈ 100–170 頁次 |
+| 資料流向 | 送到 Google 的 API | 留在自己的 Cloudflare 帳號內 |
+
+沒設 `ANTIGRAVITY_API_KEY` 時後端回 `ag: false`，切換鈕整組不出現，行為與加這個功能之前完全一樣。
+
+#### 模型階梯與自動掉階
+
+免費層的瓶頸不是 token 而是 **RPD（每模型每天幾次請求）**：最好的 Flash 一天只有 20 次，
+Flash Lite 則有 500 次。所以排一條「新世代優先、額度大的墊底」的階梯，撞到上限就自動往下走：
+
+| 順位 | 模型 | 免費層 RPD |
+| --- | --- | --- |
+| 1 | `gemini-3.6-flash` | 20 |
+| 2 | `gemini-3.5-flash` | 20 |
+| 3 | `gemini-3-flash-preview` | 20 |
+| 4 | `gemini-3.5-flash-lite` | 500 |
+| 5 | `gemini-3.1-flash-lite` | 500 |
+| 6 | `gemini-2.5-flash` | 20 |
+
+- 429 會先分類再處理：`PerDay` → 該模型當天記到滿，之後直接跳過不再浪費往返；
+  `PerMinute` → 只壓 60 秒冷卻，不燒掉整天額度；404（模型下架）→ 比照當天不用
+- 逐模型計數存在 D1 `ai_calls`（`day, model` 為主鍵），面板底部顯示「今日 n / 1080 次 · 下一階 <模型>」
+- **整條階梯用完會自動掉回 Workers AI**，並在條列下方註明掉階原因；兩邊都沒額度才回 429
+- 徽章會顯示這一則實際是哪個模型生的（例如 `讀圖 · gemini-3.6-flash`），快取列也存得住
+
+實測（2026-07）兩個踩過的坑，寫在 `src/lib/gemini.js` 的開頭：Gemini 3.x 預設會 thinking 且
+thinking 的 token 也算進 `maxOutputTokens`（用 800 跑 3.6-flash 會 `MAX_TOKENS` 只吐半句話，
+所以送 `thinkingLevel: "low"` 並把上限開到 2400）；而 `thinkingBudget: 0` 在 3.6-flash 會 400、
+`thinkingLevel` 在 2.5-flash 也會 400，兩種寫法都得留著。`gemini-2.5-flash-lite` 已經 404 下架。
+
 ### 額度與快取
 
-- **模型**：`@cf/meta/llama-4-scout-17b-16e-instruct`（原生多模態，一個模型同時吃文字與圖）
-- **免費額度**：Workers AI 每天 10,000 neurons，UTC 00:00 重置。實測一次純文字約 45–50 neurons、
+- **Workers AI 免費額度**：每天 10,000 neurons，UTC 00:00 重置。實測一次純文字約 45–50 neurons、
   一次讀圖約 80–95 neurons，所以一天大約可生成 100–170 頁次
 - **上限**：`wrangler.jsonc` 的 `vars.AI_DAILY_NEURONS`（預設 `8000`，留兩成餘裕）。
   逐次累加實際回報的 neuron 數到 D1 `ai_usage`，超過就回 429，面板底部有進度條顯示今日用量
@@ -266,8 +305,11 @@ NCCN 的演算法頁是方框加箭頭，`pdftotext` 抽出來會散成沒有句
 
 ### 端點
 
-- `GET /api/insight?id=&page=&kind=` — 只讀快取。未命中時回 `vision`（要不要送圖）與 `quota`
-- `POST /api/insight` — `{id, page, kind, image?, force?}`，生成 + 記帳 + 寫快取
+- `GET /api/insight?id=&page=&kind=` — 只讀快取。未命中時回 `vision`（要不要送圖）、
+  `ag`（有沒有設 Antigravity 金鑰）、`quota`（Workers AI）與 `agquota`（Antigravity）
+- `POST /api/insight` — `{id, page, kind, image?, force?, provider?}`，生成 + 記帳 + 寫快取。
+  `provider` = `ag` | `cf`（預設 `cf`；沒設金鑰時 `ag` 會被忽略）。回應帶 `provider` / `model`
+  實際用了誰、`fell` 有沒有掉回 Workers AI、`notes` 掉階原因
 - `GET /api/insights?id=<gid>` 或 `?all=1` — 列出已存的重點（含完整條列，供匯出用）
 
 `kind` = `key` | `hy` | `phrase` | `sdm`。
@@ -278,16 +320,27 @@ NCCN 的演算法頁是方框加箭頭，`pdftotext` 抽出來會散成沒有句
 cd NCCN/cf
 set -a; . ../.env; set +a
 wrangler d1 execute nccn-search --file=sql/insights.sql --remote
+
+# 要用 Antigravity 才需要這一步：把金鑰放進 Worker secret（不是 vars，不會進 git）
+printf '%s' "$ANTIGRAVITY_API_KEY" | wrangler secret put ANTIGRAVITY_API_KEY
 ```
 
 > 刻意跟 `sql/schema.sql` 分開：那支會 `DROP TABLE pages`，是 `build_index.sh` 每次重建全文索引時跑的，
-> AI 快取不能跟著被洗掉。重建索引不會影響 `insights` / `ai_usage`。
+> AI 快取不能跟著被洗掉。重建索引不會影響 `insights` / `ai_usage` / `ai_calls`。
+>
+> secret 不隨 `wrangler deploy` 消失，設一次就好；要停用 Antigravity 就
+> `wrangler secret delete ANTIGRAVITY_API_KEY`，前端的切換鈕會自動收起來。
 
 ### 一個你該知道的前提
 
 NCCN PDF 每頁頁首都印著 *"you MAY NOT distribute this Content or **use it with any artificial intelligence
 model or tool**"*——這是 NCCN EULA 對本帳號的限制，屬於使用者與 NCCN 之間的授權條款問題。
-實作上全部留在自己的 Cloudflare 帳號內（Workers AI 是第一方推論，不外送任何第三方 API），
-站台本身也在 Cloudflare Access 後面，是最收斂的做法；要不要這樣用請自行判斷。
+站台本身在 Cloudflare Access 後面，但**兩個 provider 的資料流向差很多，請自行斟酌**：
+
+- **Workers AI**：第一方推論，頁面內容不離開自己的 Cloudflare 帳號，是最收斂的做法
+- **Antigravity**：該頁的文字（或整頁截圖）會送到 Google 的 Gemini API，是實打實的**第三方外送**。
+  免費層的資料是否被用於改進模型，以 Google 當下的條款為準
+
+要不要開 Antigravity、開了要用在哪些頁，請自行判斷。
 
 面板底部固定顯示「AI 生成，僅供快速參考，臨床決策請以原文為準」。

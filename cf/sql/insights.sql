@@ -17,3 +17,13 @@ CREATE TABLE IF NOT EXISTS ai_usage (
   neurons REAL    NOT NULL DEFAULT 0,
   calls   INTEGER NOT NULL DEFAULT 0
 );
+
+-- Antigravity（Gemini）的額度是「每模型每天 N 次」，所以逐模型記帳，
+-- src/lib/gemini.js 的 LADDER 靠這張表知道哪一階今天還能用。
+CREATE TABLE IF NOT EXISTS ai_calls (
+  day   TEXT    NOT NULL,     -- UTC YYYY-MM-DD
+  model TEXT    NOT NULL,     -- 例如 gemini-3.6-flash
+  calls INTEGER NOT NULL DEFAULT 0,
+  cool  TEXT,                 -- 撞到每分鐘上限後的冷卻到期時間（ISO）
+  PRIMARY KEY (day, model)
+);

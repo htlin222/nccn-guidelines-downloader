@@ -94,6 +94,11 @@ export function renderViewer(id) {
   .aisvit .tx{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:hsl(var(--muted-fg));}
   .aisvgid{font-size:.66rem;font-weight:700;color:hsl(var(--muted-fg));text-transform:uppercase;letter-spacing:.05em;padding:9px 8px 3px;}
   .aifoot{padding:7px 10px;border-top:1px solid hsl(var(--border));font-size:.66rem;color:hsl(var(--muted-fg));display:flex;flex-direction:column;gap:5px;}
+  .aiprov{display:flex;gap:4px;}
+  .aiprov[hidden]{display:none;}
+  .aiprov .btn{flex:1;font-size:.7rem;font-weight:600;padding:4px 6px;color:hsl(var(--muted-fg));}
+  .aiprov .btn.on{color:hsl(var(--fg));}
+  .ainote{margin-top:10px;padding-top:8px;border-top:1px dashed hsl(var(--border));font-size:.7rem;color:hsl(var(--muted-fg));line-height:1.5;}
   .aibar{height:3px;border-radius:999px;background:hsl(var(--accent));overflow:hidden;}
   .aibar i{display:block;height:100%;background:#3b82f6;width:0;transition:width .3s;}
   .aiauto{display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none;}
@@ -175,6 +180,7 @@ export function renderViewer(id) {
       <button class="btn" id="aiRedo" title="重新產生（覆蓋快取）"></button></div>
     <div class="aibody" id="aibody"></div>
     <div class="aifoot">
+      <div class="aiprov" id="aiprov" hidden><button class="btn" data-p="ag">Antigravity</button><button class="btn" data-p="cf">Workers AI</button></div>
       <label class="aiauto"><input type="checkbox" id="aiAuto"> 翻頁時自動產生</label>
       <div class="aibar"><i id="aibarfill"></i></div>
       <span id="aiquota">額度 –</span>
@@ -376,11 +382,23 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('gridVie
 // 預設要按鈕確認（「翻頁時自動產生」打開才會跟著翻頁自動跑）。
 // 演算法流程圖頁後端會回 vision:true，前端就把該頁 rasterize 成 JPEG 一起送，
 // 讓多模態模型直接讀圖——比抽字穩，方框與箭頭的決策路徑才讀得出來。
+// 兩個 AI 來源可切換：Antigravity（Gemini 模型階梯）與 Workers AI。後端沒設
+// ANTIGRAVITY_API_KEY 的話回 ag:false，這時整個切換列就不出現。
 var AIKINDS=[['key','重點整理'],['hy','High Yield'],['phrase','病歷片語'],['sdm','SDM']];
-var aiKind='key',aiSeq=0,aiTimer=null,aiPage=0,aiAuto=false;
+var aiKind='key',aiSeq=0,aiTimer=null,aiPage=0,aiAuto=false,aiProv='ag',AGOK=false;
 $('aiBtn').innerHTML=svg('spark');$('aiRedo').innerHTML=svg('redo');$('aiCopy').innerHTML=svg('copy');
-try{var _sk=localStorage.getItem('nccnaikind');if(_sk)aiKind=_sk;aiAuto=localStorage.getItem('nccnaiauto')==='1';}catch(e){}
+try{var _sk=localStorage.getItem('nccnaikind');if(_sk)aiKind=_sk;aiAuto=localStorage.getItem('nccnaiauto')==='1';
+  var _sp=localStorage.getItem('nccnaiprov');if(_sp==='ag'||_sp==='cf')aiProv=_sp;}catch(e){}
 $('aiAuto').checked=aiAuto;
+function aiProvMark(){var b=$('aiprov').children;for(var i=0;i<b.length;i++)b[i].className='btn'+(b[i].getAttribute('data-p')===aiProv?' on':'');}
+// 後端說有金鑰才顯示切換列；沒有就一律走 Workers AI。
+function aiProvAvail(ok){AGOK=!!ok;$('aiprov').hidden=!AGOK;if(!AGOK)aiProv='cf';aiProvMark();}
+$('aiprov').addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.btn');if(!b)return;
+  var p=b.getAttribute('data-p');if(p===aiProv)return;aiProv=p;try{localStorage.setItem('nccnaiprov',p);}catch(e){}
+  aiProvMark();aiQuotaPaint();});
+aiProvMark();
+// 模型字串在畫面上要短：@cf/meta/llama-4-scout-17b-16e-instruct → llama-4-scout
+function aiShortModel(m){if(!m)return '';m=String(m);if(m.indexOf('@cf/')===0){var t=m.split('/').pop();return t.split('-').slice(0,3).join('-');}return m;}
 function aiLabel(k){for(var i=0;i<AIKINDS.length;i++)if(AIKINDS[i][0]===k)return AIKINDS[i][1];return k;}
 function aiSet(h){$('aibody').innerHTML=h;}
 function aiMd(s){return esc(s).split('**').map(function(x,i){return i%2?'<b>'+x+'</b>':x;}).join('').replace(/\`([^\`]+)\`/g,'<code>$1</code>');}
@@ -390,12 +408,22 @@ function aiMd(s){return esc(s).split('**').map(function(x,i){return i%2?'<b>'+x+
     aiLoad(false);});})();
 function aiMarkTabs(){var t=$('aitabs').children;for(var i=0;i<t.length;i++)t[i].className='aitab'+(t[i].getAttribute('data-k')===aiKind?' on':'');}
 aiMarkTabs();
-function aiQuota(q){if(!q||!q.cap)return;var pct=Math.min(100,Math.round(q.used/q.cap*100));
+var AIQ=null,AGQ=null;
+function aiQuota(d){if(!d)return;if(d.quota&&d.quota.cap)AIQ=d.quota;if(d.agquota&&d.agquota.cap)AGQ=d.agquota;aiQuotaPaint();}
+// 兩邊的計量單位不同：Workers AI 記 neurons，Antigravity 記「每模型每天幾次」。
+function aiQuotaPaint(){var q=(aiProv==='ag'?AGQ:AIQ);if(!q||!q.cap){$('aiquota').textContent='額度 –';return;}
+  var pct=Math.min(100,Math.round(q.used/q.cap*100));
   $('aibarfill').style.width=pct+'%';
-  $('aiquota').textContent='今日額度 '+q.used+' / '+q.cap+' neurons（'+pct+'%）· UTC 00:00 重置';}
-function aiShow(d){var b=d.bullets||[];var s=$('aisrc');s.hidden=false;s.textContent=(d.src==='vision'?'讀圖':'文字')+(d.cached?' · 快取':'');
+  $('aiquota').textContent=aiProv==='ag'
+    ? '今日 '+q.used+' / '+q.cap+' 次（'+pct+'%）· 下一階 '+(q.next||'（都滿了）')
+    : '今日額度 '+q.used+' / '+q.cap+' neurons（'+pct+'%）· UTC 00:00 重置';}
+function aiShow(d){var b=d.bullets||[];var s=$('aisrc');s.hidden=false;
+  s.textContent=(d.src==='vision'?'讀圖':'文字')+(d.cached?' · 快取':'')+(d.model?' · '+aiShortModel(d.model):'');
   if(!b.length){aiSet('<div class="aimsg">（這一頁沒有可整理的內容）</div>');return;}
-  var h='<ul>';for(var i=0;i<b.length;i++)h+='<li>'+aiMd(b[i])+'</li>';aiSet(h+'</ul>');}
+  var h='<ul>';for(var i=0;i<b.length;i++)h+='<li>'+aiMd(b[i])+'</li>';h+='</ul>';
+  // 有掉階或掉回 Workers AI 就講清楚，不然使用者會以為切換沒生效。
+  var n=d.notes||[];if(d.fell||n.length)h+='<div class="ainote">'+(d.fell?'Antigravity 這次沒跑成，已改用 Workers AI。':'')+(n.length?(d.fell?'<br>':'')+esc(n.join('；')):'')+'</div>';
+  aiSet(h);}
 // 直接從 pdf.js 的 page object 離屏重繪，不依賴畫面上那張 canvas 有沒有渲染好。
 function rasterPage(n,maxW){return new Promise(function(res,rej){
   var p=pages[n-1];if(!p||!p.pg)return rej(new Error('page not ready'));
@@ -407,11 +435,12 @@ function rasterPage(n,maxW){return new Promise(function(res,rej){
 // 不設 busy 鎖：翻頁翻很快時舊的請求靠 aiSeq 判斷過期直接忽略，而它的結果後端
 // 還是會寫進快取，所以不算白花——加鎖反而會讓新頁卡在「產生中」的畫面出不來。
 function aiGen(page,kind,seq,force,vision){
-  aiSet('<div class="aimsg"><span class="ldot">'+(vision?'把這頁轉成圖，請 AI 讀…':'AI 產生中…')+'</span></div>');
+  var who=(aiProv==='ag'&&AGOK)?'Antigravity':'Workers AI';
+  aiSet('<div class="aimsg"><span class="ldot">'+(vision?('把這頁轉成圖，請 '+who+' 讀…'):(who+' 產生中…'))+'</span></div>');
   (vision?rasterPage(page,1100).catch(function(){return null;}):Promise.resolve(null))
     .then(function(img){return fetch('/api/insight',{method:'POST',headers:{'content-type':'application/json'},
-      body:JSON.stringify({id:GID,page:page,kind:kind,image:img,force:!!force})}).then(function(r){return r.json();});})
-    .then(function(d){if(seq!==aiSeq)return;if(d.quota)aiQuota(d.quota);
+      body:JSON.stringify({id:GID,page:page,kind:kind,image:img,force:!!force,provider:aiProv})}).then(function(r){return r.json();});})
+    .then(function(d){if(seq!==aiSeq)return;aiQuota(d);if(typeof d.ag!=='undefined')aiProvAvail(d.ag);
       if(!d.ok){aiSet('<div class="aimsg"><span>'+esc(d.error||'產生失敗')+'</span><button class="btn" id="aiGo">再試一次</button></div>');$('aiGo').onclick=function(){aiGen(page,kind,seq,force,vision);};return;}
       aiShow(d);})
     .catch(function(e){if(seq===aiSeq)aiSet('<div class="aimsg">產生失敗：'+esc(String(e&&e.message||e))+'</div>');});}
@@ -420,15 +449,15 @@ function aiLoad(force){
   var page=cur,kind=aiKind,seq=++aiSeq;
   aiPage=page;$('aipg').textContent='p.'+page;$('aisrc').hidden=true;
   aiSet('<div class="aimsg"><span class="ldot">讀取中…</span></div>');
-  fetch('/api/insight?id='+encodeURIComponent(GID)+'&page='+page+'&kind='+kind)
+  fetch('/api/insight?id='+encodeURIComponent(GID)+'&page='+page+'&kind='+kind+'&provider='+aiProv)
     .then(function(r){return r.json();}).then(function(d){
       if(seq!==aiSeq)return;
-      if(d.quota)aiQuota(d.quota);
+      aiQuota(d);if(typeof d.ag!=='undefined')aiProvAvail(d.ag);
       if(d.cached&&!force){aiShow(d);return;}
       // 重做已快取的頁時沿用上次的來源；沒快取就照後端的判斷。
       var vision=d.cached?(d.src==='vision'):!!d.vision;
       if(force||aiAuto){aiGen(page,kind,seq,force,vision);return;}
-      aiSet('<div class="aimsg"><span>這一頁還沒有「'+esc(aiLabel(kind))+'」。</span><button class="btn dl" id="aiGo">產生本頁'+(vision?'（讀圖）':'')+'</button></div>');
+      aiSet('<div class="aimsg"><span>這一頁還沒有「'+esc(aiLabel(kind))+'」。</span><button class="btn dl" id="aiGo">用 '+((aiProv==='ag'&&AGOK)?'Antigravity':'Workers AI')+' 產生本頁'+(vision?'（讀圖）':'')+'</button></div>');
       $('aiGo').onclick=function(){aiGen(page,kind,seq,false,vision);};})
     .catch(function(e){if(seq===aiSeq)aiSet('<div class="aimsg">讀取失敗：'+esc(String(e&&e.message||e))+'</div>');});}
 function aiOnPage(){if($('aipane').hidden||aiSavedOn)return;clearTimeout(aiTimer);if(cur===aiPage)return;aiTimer=setTimeout(function(){aiLoad(false);},700);}

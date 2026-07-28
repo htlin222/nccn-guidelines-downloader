@@ -18,11 +18,14 @@ import {
 } from "./lib/pdf.js";
 import {
 	KINDS,
+	PROVIDERS,
 	generateAndCache,
+	hasAntigravity,
 	listInsights,
 	needsVision,
 	pageText,
 	readCache,
+	readGeminiUsage,
 	readUsage,
 } from "./lib/insight.js";
 import { renderPage } from "./views/home.js";
@@ -228,9 +231,17 @@ export default {
 			if (KINDS.indexOf(kind) < 0)
 				return json({ ok: false, error: "bad kind" }, 400);
 
+			// AI 來源：ag = Antigravity（Gemini 階梯），cf = Workers AI。沒設金鑰就只有 cf。
+			const ag = hasAntigravity(env);
+			const provider =
+				PROVIDERS.indexOf(String(params.provider || "")) >= 0 && ag
+					? String(params.provider)
+					: "cf";
+
 			if (request.method === "GET") {
 				const hit = await readCache(env, gid, page, kind);
-				if (hit) return json({ ok: true, cached: true, kind, page, ...hit });
+				if (hit)
+					return json({ ok: true, cached: true, kind, page, ag, ...hit });
 				const text = await pageText(env, gid, page);
 				return json({
 					ok: true,
@@ -240,14 +251,17 @@ export default {
 					// 演算法流程圖頁抽字會散掉，請前端把該頁 rasterize 成 JPEG 一起送上來。
 					vision: needsVision(text),
 					hasText: !!text,
+					ag,
 					quota: await readUsage(env),
+					agquota: ag ? await readGeminiUsage(env) : null,
 				});
 			}
 
 			if (request.method === "POST") {
 				if (!params.force) {
 					const hit = await readCache(env, gid, page, kind);
-					if (hit) return json({ ok: true, cached: true, kind, page, ...hit });
+					if (hit)
+						return json({ ok: true, cached: true, kind, page, ag, ...hit });
 				}
 				const text = await pageText(env, gid, page);
 				const image =
@@ -262,8 +276,9 @@ export default {
 						name: NAME_BY_ID[gid] || gid,
 						text,
 						image,
+						provider,
 					});
-					return json({ ok: true, cached: false, kind, page, ...out });
+					return json({ ok: true, cached: false, kind, page, ag, ...out });
 				} catch (e) {
 					return json(
 						{ ok: false, error: String(e.message || e), quota: e.quota },
