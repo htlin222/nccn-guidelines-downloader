@@ -307,8 +307,13 @@ thinking 的 token 也算進 `maxOutputTokens`（用 800 跑 3.6-flash 會 `MAX_
   額度用完後**已快取的內容照常可讀**
 - **懶載入**：翻頁只會打 `GET /api/insight`（純讀快取、免費）。真正花額度的生成一律走 `POST`，
   預設要按「產生」；勾選面板底部的「翻頁時自動產生」才會跟著翻頁自動跑（停留 700ms 才觸發）
-- **翻頁時不閃**：讀快取通常 <100ms，所以等 250ms 還沒回來才畫「讀取中…」；而「這一頁還沒有 X」
-  在沒產生過的頁之間是同一句話，只有格式或讀圖與否變了才重畫 DOM，其餘只換按鈕綁的頁碼
+- **翻頁零往返**：開面板時打一次 `GET /api/insight-map?id=<gid>`，把整份的已存內容與
+  「哪些頁要讀圖」一次帶回前端，之後翻頁純查記憶體 —— 不再有「讀取中…」閃一下才變成
+  「這一頁還沒有 X」。逐頁問 D1 的舊做法在跨海往返下每頁都要等 200–400ms，怎麼調延遲門檻都會閃
+- **讀圖清單放 KV**：`needsVision` 要讀該頁全文，逐頁算太貴，所以整份算一次存進 KV `vmap:<gid>`，
+  之後只用 `SELECT COUNT(*)` 對帳，`build_index.sh` 重建（頁數變了）才重算
+- 「這一頁還沒有 X」在沒產生過的頁之間是同一句話，只有格式或讀圖與否變了才重畫 DOM，
+  其餘只換按鈕綁的頁碼；產生完的內容也會就地寫回前端的 map，翻走再翻回來不用重抓
 
 ### 已存清單（不會因為翻頁而不見）
 
@@ -326,6 +331,8 @@ thinking 的 token 也算進 `maxOutputTokens`（用 800 跑 3.6-flash 會 `MAX_
 - `POST /api/insight` — `{id, page, kind, image?, force?, provider?}`，生成 + 記帳 + 寫快取。
   `provider` = `ag` | `cf`（預設 `cf`；沒設金鑰時 `ag` 會被忽略）。回應帶 `provider` / `model`
   實際用了誰、`fell` 有沒有掉回 Workers AI、`notes` 掉階原因
+- `GET /api/insight-map?id=<gid>` — 開面板時打一次：整份的已存內容 + `vision`（要讀圖的頁碼陣列）
+  + 兩邊的額度。之後翻頁都從這份資料查，不再打網路
 - `GET /api/insights?id=<gid>` 或 `?all=1` — 列出已存的重點（含完整條列，供匯出用）
 
 `kind` = `key` | `hy` | `phrase` | `sdm`。

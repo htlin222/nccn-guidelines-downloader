@@ -27,6 +27,7 @@ import {
 	readCache,
 	readGeminiUsage,
 	readUsage,
+	visionMap,
 } from "./lib/insight.js";
 import { renderPage } from "./views/home.js";
 import { renderViewer } from "./views/viewer.js";
@@ -215,6 +216,22 @@ export default {
 				all || !VALID_IDS.has(gid) ? null : gid,
 			);
 			return json({ ok: true, count: rows.length, rows });
+		}
+
+		// 開啟 AI 面板時一次把整份的「已存內容 + 哪些頁要讀圖」拿走，之後翻頁完全
+		// 不用再打網路——否則每翻一頁都要等一次 D1 往返，畫面就一直閃「讀取中…」。
+		if (pathname === "/api/insight-map" && request.method === "GET") {
+			const gid = String(url.searchParams.get("id") || "");
+			if (!VALID_IDS.has(gid))
+				return json({ ok: false, error: "unknown id" }, 404);
+			const ag = hasAntigravity(env);
+			const [rows, vision, quota, agquota] = await Promise.all([
+				listInsights(env, gid),
+				visionMap(env, gid),
+				readUsage(env),
+				ag ? readGeminiUsage(env) : null,
+			]);
+			return json({ ok: true, gid, ag, vision, rows, quota, agquota });
 		}
 
 		// AI 逐頁重點。GET 只讀快取（免費、可隨翻頁自動打），真正花額度的生成一律走 POST。

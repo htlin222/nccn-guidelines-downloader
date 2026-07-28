@@ -235,6 +235,53 @@ export async function pageText(env, gid, page) {
 	}
 }
 
+/**
+ * 這一份每一頁要不要走讀圖，一次算完。
+ *
+ * needsVision 要讀該頁的全文，逐頁問 D1 等於每翻一頁就打一次網路——這是「讀取中…」
+ * 閃個不停的來源。改成整份一次算好放進 KV，之後翻頁純查記憶體。
+ * 先用 COUNT(*) 對帳，只有 build_index.sh 重建過（頁數變了）才重算。
+ */
+export async function visionMap(env, gid) {
+	const key = "vmap:" + gid;
+	let n = 0;
+	try {
+		const c = await env.DB.prepare(
+			"SELECT COUNT(*) AS n FROM pages WHERE gid = ?",
+		)
+			.bind(gid)
+			.first();
+		n = c?.n || 0;
+	} catch (e) {
+		return [];
+	}
+	if (!n) return [];
+	try {
+		const hit = await env.NCCN_KV.get(key, "json");
+		if (hit && hit.n === n) return hit.v || [];
+	} catch (e) {
+		// KV 讀不到就照算，只是慢一點。
+	}
+	const v = [];
+	try {
+		const { results } = await env.DB.prepare(
+			"SELECT page, body FROM pages WHERE gid = ?",
+		)
+			.bind(gid)
+			.all();
+		for (const r of results || []) if (needsVision(r.body)) v.push(r.page);
+	} catch (e) {
+		return [];
+	}
+	v.sort((a, b) => a - b);
+	try {
+		await env.NCCN_KV.put(key, JSON.stringify({ n, v }));
+	} catch (e) {
+		// 寫不進去就下次再算。
+	}
+	return v;
+}
+
 export async function readCache(env, gid, page, kind) {
 	try {
 		const row = await env.DB.prepare(
@@ -259,7 +306,7 @@ export async function readCache(env, gid, page, kind) {
  * 帶回完整內容，讓前端不用逐筆再打一次就能直接匯出 Markdown。
  */
 export async function listInsights(env, gid) {
-	const cols = "gid, page, kind, src, created, md";
+	const cols = "gid, page, kind, src, model, created, md";
 	try {
 		const stmt = gid
 			? env.DB.prepare(
@@ -274,6 +321,7 @@ export async function listInsights(env, gid) {
 			page: r.page,
 			kind: r.kind,
 			src: r.src,
+			model: r.model,
 			created: r.created,
 			bullets: String(r.md || "").split("\n").filter(Boolean),
 		}));

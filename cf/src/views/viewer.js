@@ -455,7 +455,7 @@ function aiGen(page,kind,seq,force,vision){
       body:JSON.stringify({id:GID,page:page,kind:kind,image:img,force:!!force,provider:aiProv})}).then(function(r){return r.json();});})
     .then(function(d){if(seq!==aiSeq)return;aiQuota(d);if(typeof d.ag!=='undefined')aiProvAvail(d.ag);
       if(!d.ok){aiSet('<div class="aimsg"><span>'+esc(d.error||'產生失敗')+'</span><button class="btn" id="aiGo">再試一次</button></div>');$('aiGo').onclick=function(){aiGen(page,kind,seq,force,vision);};return;}
-      aiShow(d);})
+      aiMapPut(page,kind,d);aiShow(d);})
     .catch(function(e){if(seq===aiSeq)aiSet('<div class="aimsg">產生失敗：'+esc(String(e&&e.message||e))+'</div>');});}
 // 「這一頁還沒有 X」在沒產生過的頁之間是同一句話，所以只有 kind／讀圖與否變了才
 // 重畫；其餘情況只把按鈕的 onclick 換成新的頁碼，畫面完全不動。
@@ -466,10 +466,37 @@ function aiEmpty(page,kind,seq,vision){
       +'<button class="btn" id="aiGo">產生'+(vision?'（讀圖）':'')+'</button></div>',k);
   else clearTimeout(aiPend);
   var go=$('aiGo');if(go)go.onclick=function(){aiGen(page,kind,seq,false,vision);};}
+// 整份的已存內容與讀圖清單，開面板時一次抓完（/api/insight-map），之後翻頁只查
+// 這裡，不再打網路——所以不會再有「讀取中…」閃一下才變成「這一頁還沒有…」。
+var AIMAP=null,aiMapPend=null;
+function aiMapKey(page,kind){return page+':'+kind;}
+function aiMapLoad(){
+  if(aiMapPend)return aiMapPend;
+  aiMapPend=fetch('/api/insight-map?id='+encodeURIComponent(GID))
+    .then(function(r){return r.json();}).then(function(d){
+      if(!d||!d.ok)throw new Error(d&&d.error||'map failed');
+      var rows={};for(var i=0;i<(d.rows||[]).length;i++){var r=d.rows[i];rows[aiMapKey(r.page,r.kind)]=r;}
+      var vis={};for(var j=0;j<(d.vision||[]).length;j++)vis[d.vision[j]]=1;
+      AIMAP={rows:rows,vision:vis};
+      aiQuota(d);if(typeof d.ag!=='undefined')aiProvAvail(d.ag);
+      return AIMAP;})
+    .catch(function(){aiMapPend=null;return null;});
+  return aiMapPend;}
+// 產生完就順手更新本地的 map，翻走再翻回來不用重抓。
+function aiMapPut(page,kind,d){if(!AIMAP)return;
+  AIMAP.rows[aiMapKey(page,kind)]={page:page,kind:kind,bullets:d.bullets,src:d.src,model:d.model};}
 function aiLoad(force){
   if($('aipane').hidden)return;
   var page=cur,kind=aiKind,seq=++aiSeq;
   aiPage=page;$('aipg').textContent='p.'+page;$('aisrc').hidden=true;
+  // map 在手就直接畫，零往返、零載入狀態。
+  if(AIMAP&&!force){
+    var hit=AIMAP.rows[aiMapKey(page,kind)];
+    if(hit){aiShow({bullets:hit.bullets,src:hit.src,model:hit.model,cached:true});return;}
+    var vis=!!AIMAP.vision[page];
+    if(aiAuto){aiGen(page,kind,seq,false,vis);return;}
+    aiEmpty(page,kind,seq,vis);return;
+  }
   aiLoading('讀取中…');
   fetch('/api/insight?id='+encodeURIComponent(GID)+'&page='+page+'&kind='+kind+'&provider='+aiProv)
     .then(function(r){return r.json();}).then(function(d){
@@ -481,14 +508,19 @@ function aiLoad(force){
       if(force||aiAuto){aiGen(page,kind,seq,force,vision);return;}
       aiEmpty(page,kind,seq,vision);})
     .catch(function(e){if(seq===aiSeq)aiSet('<div class="aimsg">讀取失敗：'+esc(String(e&&e.message||e))+'</div>');});}
-function aiOnPage(){if($('aipane').hidden||aiSavedOn)return;clearTimeout(aiTimer);if(cur===aiPage)return;aiTimer=setTimeout(function(){aiLoad(false);},700);}
+// 有 map 時畫面是免費的，等 200ms 就好；要自動產生才維持 700ms，免得翻太快亂燒額度。
+function aiOnPage(){if($('aipane').hidden||aiSavedOn)return;clearTimeout(aiTimer);if(cur===aiPage)return;
+  aiTimer=setTimeout(function(){aiLoad(false);},(AIMAP&&!aiAuto)?200:700);}
 function aiClose(){$('aipane').hidden=true;$('aigrip').hidden=true;$('aiBtn').classList.remove('on');}
 $('aiBtn').onclick=function(){var a=$('aipane');
   if(!a.hidden){aiClose();if(fit)relayout();return;}
   $('tocpane').hidden=true;$('tocgrip').hidden=true;$('tocBtn').classList.remove('on'); // 右邊一次只留一個 pane
   try{var w=parseInt(localStorage.getItem('nccnaiw'),10);if(w>=240&&w<=760)a.style.width=w+'px';}catch(e){}
   a.hidden=false;$('aigrip').hidden=false;$('aiBtn').classList.add('on');
-  if(fit)relayout();aiPage=0;aiLoad(false);};
+  if(fit)relayout();aiPage=0;
+  // 開面板時付一次往返把整份抓進來；之後翻頁都是記憶體查表。
+  if(!AIMAP)aiSet('<div class="aimsg"><span class="ldot">讀取中…</span></div>','load');
+  aiMapLoad().then(function(){aiLoad(false);});};
 // 已存重點清單：哪一份、第幾頁、什麼內容。全部來自 D1，翻頁不會掉。
 $('aiSaved').innerHTML=svg('archive');
 var aiSavedOn=false;
