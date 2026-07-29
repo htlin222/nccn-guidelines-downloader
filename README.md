@@ -1,6 +1,9 @@
 # NCCN Guidelines Downloader
 
-![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white) ![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?logo=pwa&logoColor=white) ![pdf.js viewer](https://img.shields.io/badge/pdf.js-reader-b30b00) ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg) ![Guidelines](https://img.shields.io/badge/guidelines-86-0a7ea4)
+[![Deploy Worker](https://github.com/htlin222/nccn-guidelines-downloader/actions/workflows/deploy.yml/badge.svg)](https://github.com/htlin222/nccn-guidelines-downloader/actions/workflows/deploy.yml)
+[![Update versions & search index](https://github.com/htlin222/nccn-guidelines-downloader/actions/workflows/update-versions.yml/badge.svg)](https://github.com/htlin222/nccn-guidelines-downloader/actions/workflows/update-versions.yml)
+
+![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white) ![R2 + D1](https://img.shields.io/badge/R2%20%2B%20D1-FTS5%20search-F38020?logo=cloudflare&logoColor=white) ![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?logo=pwa&logoColor=white) ![pdf.js viewer](https://img.shields.io/badge/pdf.js-reader-b30b00) ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg) ![Guidelines](https://img.shields.io/badge/guidelines-86-0a7ea4)
 
 Two ways to grab [NCCN Clinical Practice Guidelines](https://www.nccn.org/) PDFs with
 **your own** NCCN account:
@@ -65,7 +68,7 @@ Everything for the web app lives in [`cf/`](cf/) and is documented in detail in
 | 🖼️ **Thumbnails** | First-page preview image per guideline (generated with `pdftoppm` → webp, stored in R2). |
 | 👁️ **In-browser preview** | Full **pdf.js** viewer with zoom — no download needed. |
 | ⬇️ **Download** | One click; served from the R2 cache, falls back to a live NCCN fetch. |
-| ♻️ **Auto-refresh** | Daily cron refreshes 3 guidelines round-robin → every guideline renewed ≈ monthly. |
+| ♻️ **Self-healing refresh** | Daily cron re-pulls the 3 stalest copies → every guideline renewed ≈ monthly. A failed fetch stays stalest, so it is retried until it lands instead of being skipped. |
 | 🔑 **Cookie self-service** | Paste a fresh NCCN cookie right in the (gated) page when it expires — stored in KV, no redeploy. |
 
 ### Architecture
@@ -75,7 +78,7 @@ flowchart LR
   U["You (browser / PWA)"] -->|Access login| CF["Cloudflare Access gate"]
   CF --> W["Worker: nccn-download"]
   W -->|list / preview / download| R2[("R2: nccn-pdfs<br/>PDFs · thumbs · icons")]
-  W -->|cookie / cursor| KV[("KV: NCCN_KV")]
+  W -->|cookie / cron health| KV[("KV: NCCN_KV")]
   W -->|cache miss / cron| NCCN["nccn.org<br/>(uses your cookie)"]
   NCCN --> R2
   CRON["Daily cron 03:00 UTC"] --> W
@@ -85,7 +88,7 @@ flowchart LR
   service worker, and a tiny JSON API (`/api/cookie`, `/api/r2-status`, `/api/refresh`).
 - **R2** (`nccn-pdfs`) caches every PDF (`<id>.pdf`), its thumbnail (`thumb/<id>.webp`),
   and the app icons (`asset/*`).
-- **KV** (`NCCN_KV`) holds the NCCN cookie, its update timestamp, and the cron cursor.
+- **KV** (`NCCN_KV`) holds the NCCN cookie, its update timestamp, and the cron's health record.
 - **Access** restricts the hostname; the id of every request is validated against the
   built-in allow-list (no arbitrary path fetch).
 

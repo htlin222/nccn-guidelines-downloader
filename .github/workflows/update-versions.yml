@@ -28,6 +28,29 @@ jobs:
       - name: Install wrangler
         run: npm install -g wrangler
 
+      # Fail on step 1 instead of doing five useless full passes. On 2026-07-27
+      # this secret was empty and the run spent eight minutes reading nothing
+      # from R2 while four of the five steps still reported success.
+      - name: Check the token is set and actually works
+        working-directory: cf
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+        run: |
+          set -e
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::error::repo secret CLOUDFLARE_API_TOKEN is empty — nothing downstream can read R2 or D1"
+            exit 1
+          fi
+          # Presence is not enough: a revoked or wrongly-scoped token looks
+          # identical until every read quietly returns nothing. Prove both
+          # bindings before spending twenty minutes on them.
+          wrangler r2 object get nccn-pdfs/meta/versions.json --remote --file=/dev/null \
+            || { echo "::error::token cannot read R2 (needs Workers R2 Storage: Edit)"; exit 1; }
+          wrangler d1 execute nccn-search --remote --command "SELECT 1" >/dev/null \
+            || { echo "::error::token cannot read D1 (needs D1: Edit)"; exit 1; }
+          echo "token reaches both R2 and D1"
+
       - name: Extract versions → R2
         working-directory: cf
         env:
@@ -68,9 +91,34 @@ jobs:
           python3 -m pip install --quiet --upgrade pymupdf
           bash gen_clean.sh
 
+      # Every step above can pass on its own terms and still leave the site
+      # wrong, so check the things a reader actually sees: a populated index, a
+      # versions manifest covering the whole catalogue, and clean copies for it.
+      - name: Verify the result
+        working-directory: cf
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+        run: |
+          set -e
+          total=$(python3 -c "import json;print(len(json.load(open('guidelines.json'))))")
+          rows=$(wrangler d1 execute nccn-search --remote --json \
+            --command "SELECT COUNT(*) AS n FROM pages" 2>/dev/null \
+            | tr -d ' \n' | sed -n 's/.*"n":\([0-9]*\).*/\1/p')
+          echo "search index rows: ${rows:-0} (catalogue: $total guidelines)"
+          [ "${rows:-0}" -ge 1000 ] || { echo "::error::search index has ${rows:-0} rows — it is broken"; exit 1; }
+          for f in meta/versions.json meta/clean.json; do
+            wrangler r2 object get "nccn-pdfs/$f" --remote --file="/tmp/$(basename "$f")" \
+              || { echo "::error::$f missing from R2"; exit 1; }
+            n=$(python3 -c "import json,sys;print(len(json.load(open(sys.argv[1]))))" "/tmp/$(basename "$f")")
+            echo "$f: $n entries"
+            [ "$n" -ge $((total / 2)) ] || { echo "::error::$f only covers $n/$total guidelines"; exit 1; }
+          done
+
       - name: Show result
         working-directory: cf
         if: always()
         run: |
           tail -3 gen_versions.log || true
+          tail -5 build_index.log || true
           tail -3 gen_clean.log || true

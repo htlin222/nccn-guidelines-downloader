@@ -2,6 +2,7 @@ import { NAME_BY_ID, VALID_IDS } from "../data/guidelines.js";
 import { escapeHtml } from "../lib/http.js";
 import { tocGroups, tocBestIndex } from "../lib/toc.js";
 import { citeText, copyText, showToast, TOAST_CSS } from "../lib/cite.js";
+import { bookmarkMd } from "../lib/marks.js";
 
 export function renderViewer(id) {
 	const name = NAME_BY_ID[id] || id;
@@ -49,7 +50,17 @@ export function renderViewer(id) {
   .gcell .pn{position:absolute;bottom:4px;right:5px;font-size:.66rem;background:#000a;color:#fff;padding:0 6px;border-radius:6px;line-height:1.5;}
   .gcell:hover{border-color:hsl(var(--ring));}
   .gcell.cur{border-color:#3b82f6;}
-  .tocpane{width:290px;flex-shrink:0;min-height:0;background:hsl(var(--bar));display:flex;flex-direction:column;}
+  /* 目錄、書籤、AI 重點三個面板住在同一個容器裡，共用一份寬度與一支拖曳把手。
+     以前它們各是獨立的 aside、各有各的預設寬度與 localStorage key，於是切換面板
+     就會改變檢視區寬度 → relayout() → 整份 PDF 重繪、捲動位置跳掉。同寬之後，
+     切換分頁對版面完全沒有影響，只有「開／關」才需要重排。 */
+  .rightpane{width:340px;flex-shrink:0;min-height:0;display:flex;
+    background:hsl(var(--bar));border-left:1px solid hsl(var(--border));}
+  .rightpane[hidden]{display:none;}
+  .rightpane > *{flex:1;min-width:0;min-height:0;}
+  @media (max-width:640px){ .rightpane{position:absolute;right:0;top:0;height:100%;z-index:9;
+    width:min(340px,88vw);box-shadow:-2px 0 14px rgba(0,0,0,.35);} }
+  .tocpane{min-height:0;background:hsl(var(--bar));display:flex;flex-direction:column;}
   .toctabs{display:flex;gap:2px;padding:6px;border-bottom:1px solid hsl(var(--border));flex-shrink:0;}
   .toctabs[hidden]{display:none;}
   .toctab{flex:1;font:inherit;font-size:.72rem;font-weight:600;padding:6px 2px;border:1px solid transparent;border-radius:7px;background:none;color:hsl(var(--muted-fg));cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -57,10 +68,10 @@ export function renderViewer(id) {
   .toctab.on{background:hsl(var(--accent));color:hsl(var(--fg));border-color:hsl(var(--ring));}
   .toctab .n{font-weight:700;opacity:.55;margin-left:5px;}
   .toclist{flex:1;overflow-y:auto;padding:6px;}
-  .tocgrip{flex-shrink:0;width:10px;cursor:col-resize;display:flex;align-items:center;justify-content:center;color:hsl(var(--muted-fg));background:hsl(var(--bar));border-left:1px solid hsl(var(--border));}
-  .tocgrip[hidden]{display:none;}
-  .tocgrip:hover{background:hsl(var(--accent));color:hsl(var(--fg));}
-  .tocgrip svg{width:14px;height:14px;pointer-events:none;}
+  .panegrip{flex-shrink:0;width:10px;cursor:col-resize;display:flex;align-items:center;justify-content:center;color:hsl(var(--muted-fg));background:hsl(var(--bar));border-left:1px solid hsl(var(--border));}
+  .panegrip[hidden]{display:none;}
+  .panegrip:hover{background:hsl(var(--accent));color:hsl(var(--fg));}
+  .panegrip svg{width:14px;height:14px;pointer-events:none;}
   .tocpane[hidden]{display:none;}
   .tochdr{font-size:.68rem;font-weight:700;color:hsl(var(--muted-fg));padding:8px 8px 6px;text-transform:uppercase;letter-spacing:.05em;}
   .tocitem{display:flex;gap:8px;align-items:baseline;justify-content:space-between;padding:5px 8px;border-radius:7px;text-decoration:none;color:hsl(var(--fg));font-size:.8rem;cursor:pointer;line-height:1.3;}
@@ -68,8 +79,25 @@ export function renderViewer(id) {
   .tocitem.l1{padding-left:22px;font-size:.76rem;color:hsl(var(--muted-fg));}
   .tocitem.cur{background:hsl(var(--accent));color:#3b82f6;font-weight:600;}
   .tocitem .tms{flex-shrink:0;font-size:.66rem;color:hsl(var(--muted-fg));font-weight:600;}
-  @media (max-width:640px){ .tocpane{position:absolute;right:0;top:0;height:100%;z-index:9;box-shadow:-2px 0 14px rgba(0,0,0,.35);} }
-  .aipane{width:340px;flex-shrink:0;overflow-y:auto;background:hsl(var(--bar));border-left:1px solid hsl(var(--border));display:flex;flex-direction:column;}
+  .bkrow{display:flex;flex-direction:column;gap:2px;padding:6px 8px 7px;border-radius:7px;}
+  .bkrow:hover{background:hsl(var(--accent));}
+  .bkhd{display:flex;align-items:baseline;gap:6px;}
+  .bkgo{flex:1;min-width:0;text-align:left;font:inherit;font-size:.8rem;border:0;background:none;color:inherit;
+    cursor:pointer;padding:0;display:flex;gap:8px;align-items:baseline;line-height:1.35;}
+  .bkgo .pg{flex-shrink:0;font-weight:700;font-size:.72rem;color:hsl(var(--muted-fg));min-width:38px;}
+  .bkgo .lb{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .bkgo .lb:empty::before{content:"（無章節）";color:hsl(var(--muted-fg));}
+  .bkrow.cur .bkgo .pg{color:#3b82f6;}
+  .bkx{border:0;background:none;color:hsl(var(--muted-fg));cursor:pointer;font-size:12px;padding:1px 5px;border-radius:6px;flex-shrink:0;}
+  .bkx:hover{background:hsl(var(--bg));color:hsl(var(--fg));}
+  .bknote{width:100%;font:inherit;font-size:.74rem;border:1px solid transparent;border-radius:6px;
+    background:none;color:hsl(var(--muted-fg));padding:2px 5px;outline:none;}
+  .bknote:hover{border-color:hsl(var(--border));}
+  .bknote:focus{border-color:hsl(var(--ring));background:hsl(var(--bg));color:hsl(var(--fg));}
+  .bkgid{font-size:.66rem;font-weight:700;color:hsl(var(--muted-fg));text-transform:uppercase;letter-spacing:.05em;padding:10px 8px 3px;}
+  .bkmsg{color:hsl(var(--muted-fg));font-size:.8rem;padding:16px 8px;line-height:1.6;}
+  .btn.bkon svg{fill:currentColor;}
+  .aipane{overflow-y:auto;background:hsl(var(--bar));display:flex;flex-direction:column;}
   .aipane[hidden]{display:none;}
   .aitabs{display:flex;gap:2px;padding:6px;border-bottom:1px solid hsl(var(--border));position:sticky;top:0;background:hsl(var(--bar));z-index:2;}
   .aitab{flex:1;font:inherit;font-size:.72rem;font-weight:600;padding:6px 2px;border:1px solid transparent;border-radius:7px;background:none;color:hsl(var(--muted-fg));cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -106,7 +134,6 @@ export function renderViewer(id) {
   .aibar{height:3px;border-radius:999px;background:hsl(var(--accent));overflow:hidden;}
   .aibar i{display:block;height:100%;background:#3b82f6;width:0;transition:width .3s;}
   .aiauto{display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none;}
-  @media (max-width:640px){ .aipane{position:absolute;right:0;top:0;height:100%;z-index:9;width:min(340px,88vw);box-shadow:-2px 0 14px rgba(0,0,0,.35);} }
   .btn.dl{background:hsl(var(--primary));color:hsl(var(--primary-fg));border-color:transparent;font-weight:600;font-size:.82rem;padding:6px 11px;}
   .grp{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid hsl(var(--border));border-radius:9px;background:hsl(var(--bar));}
   .grp .btn{border:0;padding:5px 7px;}
@@ -162,6 +189,8 @@ ${TOAST_CSS}
     <button class="btn" id="fit" title="符合寬度"></button></div>
   <button class="btn" id="findBtn" title="在本檔搜尋內文"></button>
   <button class="btn" id="snap" title="截圖成筆記"></button>
+  <button class="btn" id="bkAdd" title="收藏本頁"></button>
+  <button class="btn" id="bkBtn" title="書籤清單"></button>
   <button class="btn" id="tocBtn" title="目錄（Discussion）" hidden></button>
   <button class="btn" id="aiBtn" title="AI 本頁重點"></button>
   <button class="btn" id="theme" title="切換主題"></button>
@@ -171,13 +200,17 @@ ${TOAST_CSS}
 <div class="body">
   <aside class="rail" id="rail"></aside>
   <div class="viewer" id="viewer"><div id="msg"><img id="preview" class="preview" src="/thumb/${encodeURIComponent(id)}" alt="" onerror="this.remove()"><div class="ldot">載入完整版 PDF…</div></div></div>
-  <div class="tocgrip" id="tocgrip" hidden></div>
-  <aside class="tocpane" id="tocpane" hidden>
+  <div class="panegrip" id="panegrip" hidden></div>
+  <aside class="rightpane" id="rightpane" hidden>
+  <section class="tocpane" id="tocpane" hidden>
     <div class="toctabs" id="toctabs" hidden></div>
     <div class="toclist" id="toclist"></div>
-  </aside>
-  <div class="tocgrip" id="aigrip" hidden></div>
-  <aside class="aipane" id="aipane" hidden>
+  </section>
+  <section class="tocpane bkpane" id="bkpane" hidden>
+    <div class="toctabs" id="bktabs"></div>
+    <div class="toclist" id="bklist"></div>
+  </section>
+  <section class="aipane" id="aipane" hidden>
     <div class="aitabs" id="aitabs"></div>
     <div class="aihdr"><span id="aipg">p.–</span><span class="aisrc" id="aisrc" hidden></span><span class="sp"></span>
       <button class="btn" id="aiSaved" title="已存重點清單"></button>
@@ -191,6 +224,7 @@ ${TOAST_CSS}
       <span id="aiquota">額度 –</span>
       <span>AI 生成，僅供快速參考，臨床決策請以原文為準。</span>
     </div>
+  </section>
   </aside>
   <div id="gridView" class="gridview" hidden></div>
 </div>
@@ -224,7 +258,10 @@ var ICONS={
   spark:'<path d="M9.9 2.6 8.5 6.9 4.2 8.3l4.3 1.4 1.4 4.3 1.4-4.3 4.3-1.4-4.3-1.4z"/><path d="M18 13.5 17.2 16l-2.5.8 2.5.8.8 2.5.8-2.5 2.5-.8-2.5-.8z"/>',
   redo:'<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',
   copy:'<rect width="13" height="13" x="9" y="9" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
-  archive:'<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>'
+  archive:'<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
+  bookmark:'<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
+  bookmarks:'<path d="M7 3h10a2 2 0 0 1 2 2v16l-7-4-7 4V5a2 2 0 0 1 2-2z"/><path d="M21 17V7a2 2 0 0 0-2-2"/>',
+  trash:'<path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>'
 };
 function svg(n){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[n]||'')+'</svg>';}
 function $(i){return document.getElementById(i);}
@@ -282,15 +319,38 @@ function markTOC(){if(!TOCG.length)return;
   var s=tocSecOfPage(cur);
   if(s&&s!==tocPageSec){tocPageSec=s;if(s!==tocSec){tocSec=s;renderTOC();return;}}
   paintTOC();}
-$('tocBtn').onclick=function(){var t=$('tocpane');var open=t.hidden;t.hidden=!open;$('tocgrip').hidden=!open;$('tocBtn').classList.toggle('on',open);if(open){aiClose();try{var w=parseInt(localStorage.getItem('nccntocw'),10);if(w>=200&&w<=700)t.style.width=w+'px';}catch(e){}markTOC();}if(fit)relayout();};
+// 右邊一次只留一個 pane：目錄、書籤、AI 重點三選一，但它們共用同一個容器與寬度。
+// 回傳 true 代表「這次是新打開了某個 pane」，呼叫端據此決定要不要載入內容。
+var curPane=null;
+function showPane(which){
+  var was=curPane;
+  curPane=(which===was)?null:which;   // 再按同一顆＝關閉
+  $('rightpane').hidden=!curPane;$('panegrip').hidden=!curPane;
+  $('tocpane').hidden=curPane!=='toc';
+  $('bkpane').hidden=curPane!=='bk';
+  $('aipane').hidden=curPane!=='ai';
+  $('tocBtn').classList.toggle('on',curPane==='toc');
+  $('bkBtn').classList.toggle('on',curPane==='bk');
+  $('aiBtn').classList.toggle('on',curPane==='ai');
+  // 關鍵：只有「開↔關」會改變檢視區寬度。分頁之間切換寬度不變，就不能重排——
+  // relayout() 會把每一頁 innerHTML 清掉重繪，捲動位置也會被重新錨定而看起來在跳。
+  if(!!curPane!==!!was&&fit)relayout();
+  return !!curPane&&curPane!==was;}
+$('tocBtn').onclick=function(){if(showPane('toc'))markTOC();};
 // 右側 pane 的拖曳把手（目錄與 AI 重點共用）。
 function gripDrag(g,t,key,min,max){var drag=false,sx=0,sw=0;
   g.innerHTML=svg('gripv');
   g.addEventListener('mousedown',function(e){drag=true;sx=e.clientX;sw=t.getBoundingClientRect().width;document.body.style.userSelect='none';document.body.style.cursor='col-resize';e.preventDefault();});
   document.addEventListener('mousemove',function(e){if(!drag)return;var w=Math.max(min,Math.min(max,sw+(sx-e.clientX)));t.style.width=w+'px';});
   document.addEventListener('mouseup',function(){if(!drag)return;drag=false;document.body.style.userSelect='';document.body.style.cursor='';try{localStorage.setItem(key,parseInt(t.style.width,10)||min);}catch(e){}if(fit)relayout();});}
-gripDrag($('tocgrip'),$('tocpane'),'nccntocw',200,700);
-gripDrag($('aigrip'),$('aipane'),'nccnaiw',240,760);
+// 一支把手管一個共用寬度。舊版三支各存各的（nccntocw / nccnbkw / nccnaiw），
+// 寬度不一樣正是切換時會重排的原因；沿用舊的 AI 寬度當初始值，換版不會突然變窄。
+gripDrag($('panegrip'),$('rightpane'),'nccnpanew',220,760);
+(function(){try{
+  var w=parseInt(localStorage.getItem('nccnpanew'),10);
+  if(!(w>=220&&w<=760))w=parseInt(localStorage.getItem('nccnaiw'),10);
+  if(w>=220&&w<=760)$('rightpane').style.width=w+'px';
+}catch(e){}})();
 function activeScale(){ if(fit&&pages.length){ var w=viewer.clientWidth-40; var pw=(pages[cur-1]||pages[0]).w; return Math.max(0.2,Math.min(w/pw,4)); } return scale; }
 function setZpct(){ $('zpct').textContent=Math.round(activeScale()*100)+'%'; $('fit').className='btn'+(fit?' on':''); }
 
@@ -323,12 +383,12 @@ function setHL(terms){hlTerms=(terms||[]).map(function(t){return String(t).toLow
 var urlT=null;
 function syncURL(){clearTimeout(urlT);urlT=setTimeout(function(){
   try{var u=new URL(location.href);u.searchParams.set('page',cur);history.replaceState(null,'',u.pathname+u.search+u.hash);}catch(e){}},400);}
-function jumpTo(n,rec){ if(n<1||n>pages.length)return; if(rec){hBack.push(cur);hFwd=[];} cur=n; $('pageNum').value=n; scrollToPage(n); try{localStorage.setItem('nccnpg:'+GID,n);}catch(e){} updateHist(); markRail(); if(TOC.length)markTOC(); aiOnPage(); syncURL(); }
+function jumpTo(n,rec){ if(n<1||n>pages.length)return; if(rec){hBack.push(cur);hFwd=[];} cur=n; $('pageNum').value=n; scrollToPage(n); try{localStorage.setItem('nccnpg:'+GID,n);}catch(e){} updateHist(); markRail(); if(TOC.length)markTOC(); bkPaint(); aiOnPage(); syncURL(); }
 function updateHist(){ $('histBack').classList.toggle('off',!hBack.length); $('histFwd').classList.toggle('off',!hFwd.length); }
 function markRail(){ var items=rail.children; for(var k=0;k<items.length;k++){ items[k].className='thumb'+(k===cur-1?' cur':''); } var c=items[cur-1]; if(c) c.scrollIntoView({block:'nearest'}); }
 function updateCur(){ if(!pages.length)return; var vr=viewer.getBoundingClientRect(); var line=vr.top+vr.height*0.3; var best=1;
   for(var k=0;k<pages.length;k++){ if(pages[k].el.getBoundingClientRect().top<=line) best=k+1; else break; }
-  if(best!==cur){ cur=best; $('pageNum').value=cur; markRail(); if(TOC.length)markTOC(); aiOnPage(); syncURL(); try{localStorage.setItem('nccnpg:'+GID,cur);}catch(e){} } }
+  if(best!==cur){ cur=best; $('pageNum').value=cur; markRail(); if(TOC.length)markTOC(); bkPaint(); aiOnPage(); syncURL(); try{localStorage.setItem('nccnpg:'+GID,cur);}catch(e){} } }
 var ticking=false;
 viewer.addEventListener('scroll',function(){ if(!ticking){ ticking=true; requestAnimationFrame(function(){ updateCur(); ticking=false; }); } });
 
@@ -340,7 +400,7 @@ pdfjsLib.getDocument({url:PDF_URL}).promise.then(function(d){ pdfDoc=d; $('pageC
     var tb=document.createElement('button'); tb.className='thumb'; tb.dataset.i=n-1; tb.style.aspectRatio=vp.width+'/'+vp.height; tb.innerHTML='<span class="pn">'+n+'</span>';
     tb.onclick=function(){ jumpTo(idx+1,true); }; rail.appendChild(tb);
   }); }); })(n); }
-  chain.then(function(){ msg.style.display='none'; relayout(); buildThumbs(); renderPage(0); if(pages[1])renderPage(1); var pp=parseInt(new URLSearchParams(location.search).get('page'),10); if(!(pp>=1)){try{pp=parseInt(localStorage.getItem('nccnpg:'+GID),10);}catch(e){}} if(pp>=2&&pp<=pages.length){cur=pp;$('pageNum').value=pp;scrollToPage(pp);} syncURL(); updateHist(); var _q=new URLSearchParams(location.search).get('q'); if(_q){$('findInput').value=_q;$('findbar').hidden=false;runFind(!(pp>=1));} });
+  chain.then(function(){ msg.style.display='none'; relayout(); buildThumbs(); renderPage(0); if(pages[1])renderPage(1); var pp=parseInt(new URLSearchParams(location.search).get('page'),10); if(!(pp>=1)){try{pp=parseInt(localStorage.getItem('nccnpg:'+GID),10);}catch(e){}} if(pp>=2&&pp<=pages.length){cur=pp;$('pageNum').value=pp;scrollToPage(pp);} syncURL(); updateHist(); bkPaint(); var _q=new URLSearchParams(location.search).get('q'); if(_q){$('findInput').value=_q;$('findbar').hidden=false;runFind(!(pp>=1));} });
 }).catch(function(e){ msg.textContent='無法載入 PDF：'+(e&&e.message?e.message:e)+'（可能尚未快取或 cookie 過期）'; });
 
 var tio=new IntersectionObserver(function(es){es.forEach(function(e){ if(e.isIntersecting){ thumbRender(+e.target.dataset.i); tio.unobserve(e.target);} });},{root:rail,rootMargin:'400px 0px'});
@@ -355,8 +415,8 @@ $('zin').onclick=function(){ var b=activeScale(); fit=false; scale=Math.min(b+0.
 $('zout').onclick=function(){ var b=activeScale(); fit=false; scale=Math.max(b-0.15,0.3); relayout(); };
 $('fit').onclick=function(){ fit=!fit; if(!fit) scale=activeScale(); relayout(); };
 $('railBtn').onclick=function(){ rail.classList.toggle('hide'); if(fit) relayout(); };
-$('histBack').onclick=function(){ if(!hBack.length)return; hFwd.push(cur); var n=hBack.pop(); cur=n; $('pageNum').value=n; scrollToPage(n); updateHist(); markRail(); if(TOC.length)markTOC(); syncURL(); };
-$('histFwd').onclick=function(){ if(!hFwd.length)return; hBack.push(cur); var n=hFwd.pop(); cur=n; $('pageNum').value=n; scrollToPage(n); updateHist(); markRail(); if(TOC.length)markTOC(); syncURL(); };
+$('histBack').onclick=function(){ if(!hBack.length)return; hFwd.push(cur); var n=hBack.pop(); cur=n; $('pageNum').value=n; scrollToPage(n); updateHist(); markRail(); if(TOC.length)markTOC(); bkPaint(); syncURL(); };
+$('histFwd').onclick=function(){ if(!hFwd.length)return; hBack.push(cur); var n=hFwd.pop(); cur=n; $('pageNum').value=n; scrollToPage(n); updateHist(); markRail(); if(TOC.length)markTOC(); bkPaint(); syncURL(); };
 document.addEventListener('keydown',function(e){ if(e.target&&e.target.tagName==='INPUT')return;
   if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key==='PageDown'){ e.preventDefault(); if(cur<pages.length)scrollToPage(cur+1); }
   else if(e.key==='ArrowLeft'||e.key==='ArrowUp'||e.key==='PageUp'){ e.preventDefault(); if(cur>1)scrollToPage(cur-1); }
@@ -392,6 +452,109 @@ function openGrid(){if(!pages.length)return;if(!gridBuilt)buildGridView();markGr
 function closeGrid(){$('gridView').hidden=true;$('gridBtn').classList.remove('on');}
 $('gridBtn').onclick=function(){if($('gridView').hidden)openGrid();else closeGrid();};
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('gridView').hidden)closeGrid();});
+
+// ── 書籤 ─────────────────────────────────────────────────────────────────────
+// 一頁一則，存 D1（/api/bookmark）所以換裝置還在。收藏時自動把目前的 TOC 章節名
+// 當標籤存下來，備註事後在清單裡直接打、失焦就存。畫面一律先樂觀更新再送出：
+// 按下去要立刻有反應，失敗才回捲並用 toast 講清楚。
+var BK={},BKALL=[],bkAll=false;
+try{bkAll=localStorage.getItem('nccnbkall')==='1';}catch(e){}
+$('bkAdd').innerHTML=svg('bookmark');$('bkBtn').innerHTML=svg('bookmarks');
+// esc() 不會轉義雙引號，塞進 value="…" 的備註是使用者打的字，得另外處理。
+function escA(s){return esc(s).split('"').join('&quot;');}
+// 目前頁屬於哪個章節：TOC 各段攤平後取最後一個 page<=p 的標題。沒目錄就留空。
+function bkAutoLabel(p){var pn=[],tx=[];
+  for(var i=0;i<TOCG.length;i++)for(var j=0;j<TOCG[i].items.length;j++){pn.push(TOCG[i].items[j].p);tx.push(TOCG[i].items[j].t);}
+  if(!pn.length)return '';
+  var b=tocBestIndex(pn,p);return b<0?'':(tx[b]||'');}
+function bkList(){var out=[];for(var k in BK)if(Object.prototype.hasOwnProperty.call(BK,k))out.push(BK[k]);
+  out.sort(function(a,b){return a.page-b.page;});return out;}
+function bkRows(){return bkAll?BKALL:bkList();}
+function bkPaint(){var on=!!BK[cur];
+  $('bkAdd').classList.toggle('bkon',on);
+  $('bkAdd').title=on?'移除本頁書籤':'收藏本頁';
+  if(!$('bkpane').hidden)bkMarkCur();}
+function bkMarkCur(){var rs=$('bklist').querySelectorAll('.bkrow');
+  for(var i=0;i<rs.length;i++)rs[i].classList.toggle('cur',
+    rs[i].getAttribute('data-g')===GID&&+rs[i].getAttribute('data-p')===cur);}
+function bkAfterChange(){bkPaint();if(!$('bkpane').hidden)bkRender();}
+function bkSave(body,onFail){
+  return fetch('/api/bookmark',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})
+    .then(function(r){return r.json();}).then(function(d){if(!d.ok)throw new Error(d.error||'儲存失敗');return d;})
+    .catch(function(e){showToast('書籤沒存成功',String(e&&e.message||e));if(onFail)onFail();});}
+function bkLoad(){return fetch('/api/bookmarks?id='+encodeURIComponent(GID))
+  .then(function(r){return r.json();}).then(function(d){
+    BK={};(d.rows||[]).forEach(function(r){BK[r.page]={gid:GID,page:r.page,label:r.label||'',note:r.note||''};});
+    bkPaint();}).catch(function(){});}
+function bkLoadAll(){$('bklist').innerHTML='<div class="bkmsg">讀取中…</div>';
+  return fetch('/api/bookmarks?all=1').then(function(r){return r.json();})
+    .then(function(d){BKALL=d.rows||[];bkRender();})
+    .catch(function(e){$('bklist').innerHTML='<div class="bkmsg">讀取失敗：'+esc(String(e&&e.message||e))+'</div>';});}
+// 存失敗時就別自己猜狀態了，直接把伺服器那份抓回來重畫。
+function bkReload(){bkLoad().then(function(){if(bkAll)bkLoadAll();else if(!$('bkpane').hidden)bkRender();});}
+// 「全部」檢視畫的是 BKALL，所以本份的增刪也得同步進去；只更新 BK 的話，清單停在
+// 全部時新收的那一頁不會出現，看起來像沒收到。排序跟後端的 ORDER BY gid, page 一致。
+function bkAllSync(gid,page,rec){
+  BKALL=BKALL.filter(function(x){return !(x.gid===gid&&x.page===page);});
+  if(rec){BKALL.push(rec);
+    BKALL.sort(function(a,b){return a.gid<b.gid?-1:a.gid>b.gid?1:a.page-b.page;});}}
+function bkRec(page,src){return {gid:GID,page:page,label:(src&&src.label)||'',note:(src&&src.note)||'',name:GNAME};}
+function bkToggle(){var page=cur,prev=BK[page],on=!prev;
+  if(on)BK[page]={gid:GID,page:page,label:bkAutoLabel(page),note:''};else delete BK[page];
+  bkAllSync(GID,page,on?bkRec(page,BK[page]):null);
+  bkAfterChange();
+  bkSave({id:GID,page:page,label:on?BK[page].label:null,on:on},function(){
+    if(prev)BK[page]=prev;else delete BK[page];
+    bkAllSync(GID,page,prev?bkRec(page,prev):null);
+    bkAfterChange();});}
+function bkRemove(g,p){
+  if(g===GID)delete BK[p];
+  BKALL=BKALL.filter(function(x){return !(x.gid===g&&x.page===p);});
+  bkAfterChange();
+  bkSave({id:g,page:p,on:false},bkReload);}
+function bkTabs(){var n=bkList().length;
+  $('bktabs').innerHTML='<button class="toctab'+(bkAll?'':' on')+'" data-s="one">本份<span class="n">'+n+'</span></button>'
+    +'<button class="toctab'+(bkAll?' on':'')+'" data-s="all">全部</button>'
+    +'<button class="toctab" id="bkExport" style="flex:0 0 auto" title="匯出 Markdown">.md</button>';}
+function bkRender(){bkTabs();
+  var rows=bkRows();
+  if(!rows.length){$('bklist').innerHTML='<div class="bkmsg">'
+    +(bkAll?'目前整站還沒有書籤。':'這一份還沒有書籤。<br>按工具列的書籤鈕就能收藏目前這一頁。')+'</div>';return;}
+  var h='',lastGid='';
+  for(var i=0;i<rows.length;i++){var r=rows[i];
+    if(bkAll&&r.gid!==lastGid){lastGid=r.gid;h+='<div class="bkgid">'+esc(r.name||r.gid)+'</div>';}
+    h+='<div class="bkrow" data-p="'+r.page+'" data-g="'+escA(r.gid)+'"><div class="bkhd">'
+      +'<button class="bkgo"><span class="pg">p.'+r.page+'</span><span class="lb">'+esc(r.label||'')+'</span></button>'
+      +'<button class="bkx" title="移除">'+svg('trash')+'</button></div>'
+      +'<input class="bknote" placeholder="備註…" value="'+escA(r.note||'')+'"></div>';}
+  $('bklist').innerHTML=h;bkMarkCur();}
+var bookmarkMd=${bookmarkMd.toString()};
+function bkExport(){var rows=bkRows();if(!rows.length)return;
+  var md=bookmarkMd(rows,{origin:location.origin,scopeAll:bkAll,name:GNAME});
+  dl2(URL.createObjectURL(new Blob([md],{type:'text/markdown;charset=utf-8'})),
+    'NCCN-bookmarks-'+(bkAll?'all':GID)+'.md');}
+$('bkAdd').onclick=bkToggle;
+$('bkBtn').onclick=function(){if(!showPane('bk'))return;
+  if(bkAll)bkLoadAll();else bkRender();};
+$('bktabs').addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.toctab');if(!b)return;
+  if(b.id==='bkExport'){bkExport();return;}
+  var want=b.getAttribute('data-s')==='all';if(want===bkAll)return;
+  bkAll=want;try{localStorage.setItem('nccnbkall',bkAll?'1':'0');}catch(e){}
+  if(bkAll)bkLoadAll();else bkRender();});
+$('bklist').addEventListener('click',function(e){
+  var row=e.target.closest&&e.target.closest('.bkrow');if(!row)return;
+  var g=row.getAttribute('data-g'),p=+row.getAttribute('data-p');
+  if(e.target.closest('.bkx')){bkRemove(g,p);return;}
+  if(!e.target.closest('.bkgo'))return;
+  if(g!==GID){location.href='/preview/'+encodeURIComponent(g)+'?page='+p;return;}
+  jumpTo(p,true);});
+$('bklist').addEventListener('change',function(e){
+  var inp=e.target.closest&&e.target.closest('.bknote');if(!inp)return;
+  var row=inp.closest('.bkrow'),g=row.getAttribute('data-g'),p=+row.getAttribute('data-p'),note=inp.value;
+  if(g===GID&&BK[p])BK[p].note=note;
+  for(var i=0;i<BKALL.length;i++)if(BKALL[i].gid===g&&BKALL[i].page===p)BKALL[i].note=note;
+  bkSave({id:g,page:p,note:note,on:true},bkReload);});
+bkLoad();
 
 // ── AI 本頁重點 ───────────────────────────────────────────────────────────────
 // 右側 pane 跟著目前頁走，四種格式各自獨立生成與快取（/api/insight）。
@@ -521,13 +684,8 @@ function aiLoad(force){
 // 有 map 時畫面是免費的，等 200ms 就好；要自動產生才維持 700ms，免得翻太快亂燒額度。
 function aiOnPage(){if($('aipane').hidden||aiSavedOn)return;clearTimeout(aiTimer);if(cur===aiPage)return;
   aiTimer=setTimeout(function(){aiLoad(false);},(AIMAP&&!aiAuto)?200:700);}
-function aiClose(){$('aipane').hidden=true;$('aigrip').hidden=true;$('aiBtn').classList.remove('on');}
-$('aiBtn').onclick=function(){var a=$('aipane');
-  if(!a.hidden){aiClose();if(fit)relayout();return;}
-  $('tocpane').hidden=true;$('tocgrip').hidden=true;$('tocBtn').classList.remove('on'); // 右邊一次只留一個 pane
-  try{var w=parseInt(localStorage.getItem('nccnaiw'),10);if(w>=240&&w<=760)a.style.width=w+'px';}catch(e){}
-  a.hidden=false;$('aigrip').hidden=false;$('aiBtn').classList.add('on');
-  if(fit)relayout();aiPage=0;
+$('aiBtn').onclick=function(){if(!showPane('ai'))return;
+  aiPage=0;
   // 開面板時付一次往返把整份抓進來；之後翻頁都是記憶體查表。
   if(!AIMAP)aiSet('<div class="aimsg"><span class="ldot">讀取中…</span></div>','load');
   aiMapLoad().then(function(){aiLoad(false);});};

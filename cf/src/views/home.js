@@ -132,9 +132,15 @@ export function renderPage(request) {
   .r2{display:inline-flex;align-items:center;gap:4px;font-size:.66rem;color:hsl(var(--muted-foreground));}
   .r2 .d{width:7px;height:7px;border-radius:999px;background:#22c55e;}
   .r2.miss .d{background:hsl(var(--muted-foreground));}
+  .acts{display:flex;gap:5px;flex-shrink:0;}
   .dlbtn{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;font-size:15px;
     border:1px solid hsl(var(--border));background:hsl(var(--card));color:inherit;cursor:pointer;}
   .dlbtn:hover{background:hsl(var(--accent));}
+  .starbtn{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;font-size:15px;
+    border:1px solid hsl(var(--border));background:hsl(var(--card));color:hsl(var(--muted-foreground));cursor:pointer;}
+  .starbtn:hover{background:hsl(var(--accent));color:hsl(var(--foreground));}
+  .starbtn.on{color:#f59e0b;border-color:#f59e0b66;background:#f59e0b14;}
+  .starbtn.on svg{fill:currentColor;}
   .empty{opacity:.55;padding:30px 4px;text-align:center;}
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-start;justify-content:center;z-index:60;padding:56px 16px 16px;}
   .modal[hidden]{display:none;}
@@ -171,7 +177,7 @@ ${TOAST_CSS}
 <main>
   <div id="list"></div>
 </main>
-<div id="setModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>設定</b><button class="xbtn" id="setClose">✕</button></div><span class="chip" id="cookieStatus">🔑 檢查 cookie…</span><div class="setlabel">更新 NCCN cookie（過期時使用）</div><p class="sethint">登入 <a href="https://www.nccn.org/login" target="_blank" rel="noopener">nccn.org</a>，用 cookie-cook 擴充功能複製 <b>Http Header value</b> 貼在下方存檔。</p><textarea id="cookieInput" placeholder="ASP.NET_SessionId=…; …"></textarea><div><button class="btn" id="saveCookie">儲存 cookie</button> <span id="saveMsg" style="font-size:.8rem;margin-left:6px"></span></div></div></div>
+<div id="setModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>設定</b><button class="xbtn" id="setClose">✕</button></div><span class="chip" id="cookieStatus">🔑 檢查 cookie…</span><span class="chip" id="cronStatus">⏱ 檢查每日更新…</span><div class="setlabel">更新 NCCN cookie（過期時使用）</div><p class="sethint">登入 <a href="https://www.nccn.org/login" target="_blank" rel="noopener">nccn.org</a>，用 cookie-cook 擴充功能複製 <b>Http Header value</b> 貼在下方存檔。</p><textarea id="cookieInput" placeholder="ASP.NET_SessionId=…; …"></textarea><div><button class="btn" id="saveCookie">儲存 cookie</button> <span id="saveMsg" style="font-size:.8rem;margin-left:6px"></span></div></div></div>
 <footer>
   透過你的 NCCN 登入 cookie 代理下載官方 PDF。${user ? "登入身分：" + escapeHtml(user) + " · " : ""}
   每日 cron 輪流更新 ${PER_DAY} 份 · 資料屬 © NCCN，僅供個人臨床使用。<br>部署時間：${BUILD_TIME}
@@ -203,6 +209,7 @@ const ICONS = {
   file:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>',
   settings:'<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
   cross:'<path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2z"/>',
+  star:'<path d="m12 2.5 2.95 5.98 6.6.96-4.77 4.65 1.12 6.57L12 17.56l-5.9 3.1 1.12-6.57L2.45 9.44l6.6-.96z"/>',
 };
 function svg(name){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[name]||'')+'</svg>';}
 const COLOR = {}; const ICON = {};
@@ -210,6 +217,12 @@ CATS.forEach(c=>{COLOR[c.name]=c.color;ICON[c.name]=c.icon;});
 let R2 = {}, VER = {}, r2sig='';try{var _c=JSON.parse(localStorage.getItem('nccnr2')||'null');if(_c){R2=_c.cached||{};VER=_c.versions||{};r2sig=(_c.count||0)+':'+Object.keys(_c.versions||{}).length;}}catch(e){}
 const listEl=document.getElementById('list'), q=document.getElementById('q');
 var activeCat=null;try{activeCat=localStorage.getItem('nccncat')||null;}catch(e){}var filtersEl=document.getElementById('filters');
+// 星號存 D1（跨裝置），localStorage 只是快取：開頁先照本地畫，/api/stars 回來再校正，
+// 免得每次進站都要等一次往返才看得到自己收藏的東西。
+var STARCAT='★';
+var STARS={};try{var _st=JSON.parse(localStorage.getItem('nccnstars')||'[]');for(var _i=0;_i<_st.length;_i++)STARS[_st[_i]]=1;}catch(e){}
+function starIds(){return Object.keys(STARS).sort();}
+function saveStars(){try{localStorage.setItem('nccnstars',JSON.stringify(starIds()));}catch(e){}}
 document.getElementById('logo').innerHTML=svg('cross');
 document.getElementById('searchicon').innerHTML=svg('search');document.getElementById('settings').innerHTML=svg('settings');
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
@@ -224,18 +237,43 @@ function card(g){
       +'<span class="tag" style="background:'+col+'cc">'+svg(ICON[g.cat]||'help')+esc(g.cat)+'</span>'+(VER[g.id]?'<span class="ver" title="'+esc((VER[g.id].d||''))+'">v'+esc(VER[g.id].v)+'</span>':'')
     +'</div>'
     +'<div class="cardbody"><div class="t" data-cite="'+esc(g.id)+'" title="點一下複製 AMA 引用">'+esc(g.name)+'</div>'
-      +'<div class="foot">'+r2html
+      +'<div class="foot">'+r2html+'<span class="acts">'
+        +'<span class="starbtn'+(STARS[g.id]?' on':'')+'" title="收藏這一份" data-star="'+esc(g.id)+'">'+svg('star')+'</span>'
         +'<span class="dlbtn" title="下載 PDF" data-dl="'+encodeURIComponent(g.id)+'">'+svg('download')+'</span>'
-      +'</div></div></a>';
+      +'</span></div></div></a>';
 }
+// 收藏區塊是 .catsec 的一員（data-cat="★"），所以現有那套「按 data-cat 顯示／隱藏
+// 整段」的篩選邏輯不用改，點 ★ chip 就自然只剩這一區。
+function starSecHtml(items){
+  return '<div class="catsec" data-cat="'+STARCAT+'"><div class="cat">'
+    +'<span class="ci" style="background:#f59e0b22;color:#f59e0b">'+svg('star')+'</span>'
+    +'<h2>已收藏</h2><span class="count">'+items.length+'</span></div>'
+    +'<div class="grid">'+items.map(card).join('')+'</div></div>';
+}
+function starred(){return DATA.filter(function(g){return STARS[g.id];});}
 function buildGrid(){
   var html='';
+  var st=starred();
+  if(st.length)html+=starSecHtml(st);
   for(const c of CATS){
     const items=DATA.filter(function(g){return g.cat===c.name;});
     if(!items.length)continue;
     html+='<div class="catsec" data-cat="'+esc(c.name)+'"><div class="cat"><span class="ci" style="background:'+c.color+'22;color:'+c.color+'">'+svg(c.icon)+'</span><h2>'+esc(c.name)+'</h2><span class="count">'+items.length+'</span></div><div class="grid">'+items.map(card).join('')+'</div></div>';
   }
   listEl.innerHTML=html+'<div class="empty" id="emptyMsg" style="display:none">沒有符合的項目</div>';
+}
+// 收藏一份不該讓整片格線重畫（縮圖會重載、卡片動畫會全部重跑），所以只換星號的
+// 樣式與置頂那一區。
+function paintStars(){
+  var bs=listEl.querySelectorAll('[data-star]');
+  for(var i=0;i<bs.length;i++)bs[i].className='starbtn'+(STARS[bs[i].getAttribute('data-star')]?' on':'');
+}
+function renderStarSec(){
+  var sec=listEl.querySelector('.catsec[data-cat="'+STARCAT+'"]');
+  var st=starred();
+  if(!st.length){if(sec)sec.remove();return;}
+  if(sec)sec.outerHTML=starSecHtml(st);
+  else listEl.insertAdjacentHTML('afterbegin',starSecHtml(st));
 }
 function applyFilter(){
   var f=q.value.trim().toLowerCase();var any=false;
@@ -254,9 +292,14 @@ function applyFilter(){
 q.addEventListener('input',applyFilter);
 var sresEl=document.getElementById('searchResults');var sTimer=null;
 function unmark(x){return esc(x||'').split('&lt;mark&gt;').join('<mark>').split('&lt;/mark&gt;').join('</mark>');}
-function doSearch(){var qq=q.value.trim();if(qq.length<2){sresEl.innerHTML='';return;}var u='/api/search?q='+encodeURIComponent(qq)+(activeCat?'&cat='+encodeURIComponent(activeCat):'');fetch(u).then(function(r){return r.json();}).then(function(d){if((d.q||'')!==q.value.trim())return;var rs=d.results||[];if(!rs.length){sresEl.innerHTML='<div class="shdr">內容搜尋「'+esc(qq)+'」：無命中</div>';return;}var order=[],G={};rs.forEach(function(x){if(!G[x.gid]){G[x.gid]={name:x.name,cat:x.cat,hits:[]};order.push(x.gid);}G[x.gid].hits.push(x);});var html='<div class="shdr">命中 '+rs.length+' 頁 · '+order.length+' 份'+(activeCat?'（限 '+esc(activeCat)+'）':'')+'</div>';order.forEach(function(gid){var g=G[gid];html+='<div class="sgroup"><div class="sgh"><span class="sdot" style="background:'+(COLOR[g.cat]||'#64748b')+'"></span><b data-cite="'+esc(gid)+'" title="點一下複製 AMA 引用" style="cursor:copy">'+esc(g.name)+'</b><span class="sgc">'+g.hits.length+' 頁</span></div>';g.hits.slice(0,5).forEach(function(x){html+='<a class="sitem" href="/preview/'+encodeURIComponent(x.gid)+'?page='+x.page+'&q='+encodeURIComponent(qq)+'"><span class="spage">p.'+x.page+'</span><div class="snip">'+unmark(x.snip)+'</div></a>';});if(g.hits.length>5)html+='<a class="smore" href="/preview/'+encodeURIComponent(gid)+'?page='+g.hits[5].page+'&q='+encodeURIComponent(qq)+'">還有 '+(g.hits.length-5)+' 頁…</a>';html+='</div>';});sresEl.innerHTML=html;}).catch(function(){});}
+// 全文搜尋是伺服器端按 cat 欄位過濾的，「★ 已收藏」不是真的分類，不能送上去。
+function searchCat(){return activeCat&&activeCat!==STARCAT?activeCat:'';}
+function doSearch(){var qq=q.value.trim();if(qq.length<2){sresEl.innerHTML='';return;}var scat=searchCat();var u='/api/search?q='+encodeURIComponent(qq)+(scat?'&cat='+encodeURIComponent(scat):'');fetch(u).then(function(r){return r.json();}).then(function(d){if((d.q||'')!==q.value.trim())return;var rs=d.results||[];if(!rs.length){sresEl.innerHTML='<div class="shdr">內容搜尋「'+esc(qq)+'」：無命中</div>';return;}var order=[],G={};rs.forEach(function(x){if(!G[x.gid]){G[x.gid]={name:x.name,cat:x.cat,hits:[]};order.push(x.gid);}G[x.gid].hits.push(x);});var html='<div class="shdr">命中 '+rs.length+' 頁 · '+order.length+' 份'+(scat?'（限 '+esc(scat)+'）':'')+'</div>';order.forEach(function(gid){var g=G[gid];html+='<div class="sgroup"><div class="sgh"><span class="sdot" style="background:'+(COLOR[g.cat]||'#64748b')+'"></span><b data-cite="'+esc(gid)+'" title="點一下複製 AMA 引用" style="cursor:copy">'+esc(g.name)+'</b><span class="sgc">'+g.hits.length+' 頁</span></div>';g.hits.slice(0,5).forEach(function(x){html+='<a class="sitem" href="/preview/'+encodeURIComponent(x.gid)+'?page='+x.page+'&q='+encodeURIComponent(qq)+'"><span class="spage">p.'+x.page+'</span><div class="snip">'+unmark(x.snip)+'</div></a>';});if(g.hits.length>5)html+='<a class="smore" href="/preview/'+encodeURIComponent(gid)+'?page='+g.hits[5].page+'&q='+encodeURIComponent(qq)+'">還有 '+(g.hits.length-5)+' 頁…</a>';html+='</div>';});sresEl.innerHTML=html;}).catch(function(){});}
 q.addEventListener('input',function(){clearTimeout(sTimer);sTimer=setTimeout(doSearch,250);});
-listEl.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.dlbtn');if(b){e.preventDefault();e.stopPropagation();location.href='/dl/'+b.getAttribute('data-dl');}});
+listEl.addEventListener('click',function(e){
+  var s=e.target.closest&&e.target.closest('[data-star]');
+  if(s){e.preventDefault();e.stopPropagation();toggleStar(s.getAttribute('data-star'));return;}
+  var b=e.target.closest&&e.target.closest('.dlbtn');if(b){e.preventDefault();e.stopPropagation();location.href='/dl/'+b.getAttribute('data-dl');}});
 // 點標題＝抄一份 AMA 引用，不進 /preview。卡片標題在 <a> 裡面，所以要擋掉預設導覽。
 var citeText=${citeText.toString()};
 var copyText=${copyText.toString()};
@@ -274,7 +317,35 @@ document.addEventListener('click',function(e){
   e.preventDefault();e.stopPropagation();
   yankCite(t.getAttribute('data-cite'));
 });
-function buildFilters(){var counts={};DATA.forEach(function(g){counts[g.cat]=(counts[g.cat]||0)+1;});var h='<button class="fchip'+(activeCat?'':' act')+'" data-cat="">全部 <b>'+DATA.length+'</b></button>';CATS.forEach(function(c){if(!counts[c.name])return;h+='<button class="fchip'+(activeCat===c.name?' act':'')+'" data-cat="'+c.name+'" style="--cc:'+c.color+'">'+svg(c.icon)+'<span>'+esc(c.name)+'</span> <b>'+counts[c.name]+'</b></button>';});filtersEl.innerHTML=h;filtersEl.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.fchip');if(!b)return;activeCat=b.getAttribute('data-cat')||null;try{localStorage.setItem('nccncat',activeCat||'');}catch(e){}[].forEach.call(filtersEl.children,function(x){x.className='fchip'+(x===b?' act':'');});applyFilter();});}
+// 收藏數會變，所以這支要能重複呼叫；listener 因此掛在容器上一次就好，別放進來。
+function buildFilters(){var counts={};DATA.forEach(function(g){counts[g.cat]=(counts[g.cat]||0)+1;});
+  var ns=starIds().length;
+  // 收藏全清光時 ★ chip 會消失，篩選狀態不跟著放掉就會停在一片空白。
+  if(activeCat===STARCAT&&!ns){activeCat=null;try{localStorage.setItem('nccncat','');}catch(e){}}
+  var h='<button class="fchip'+(activeCat?'':' act')+'" data-cat="">全部 <b>'+DATA.length+'</b></button>';
+  if(ns)h+='<button class="fchip'+(activeCat===STARCAT?' act':'')+'" data-cat="'+STARCAT+'" style="--cc:#f59e0b">'+svg('star')+'<span>已收藏</span> <b>'+ns+'</b></button>';
+  CATS.forEach(function(c){if(!counts[c.name])return;h+='<button class="fchip'+(activeCat===c.name?' act':'')+'" data-cat="'+c.name+'" style="--cc:'+c.color+'">'+svg(c.icon)+'<span>'+esc(c.name)+'</span> <b>'+counts[c.name]+'</b></button>';});
+  filtersEl.innerHTML=h;}
+filtersEl.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.fchip');if(!b)return;
+  activeCat=b.getAttribute('data-cat')||null;try{localStorage.setItem('nccncat',activeCat||'');}catch(e){}
+  buildFilters();applyFilter();});
+function toggleStar(id){
+  var on=!STARS[id];
+  if(on)STARS[id]=1;else delete STARS[id];
+  saveStars();paintStars();renderStarSec();buildFilters();applyFilter();
+  fetch('/api/star',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:id,on:on})})
+    .then(function(r){return r.json();}).then(function(d){if(!d.ok)throw new Error(d.error||'儲存失敗');})
+    .catch(function(e){
+      if(on)delete STARS[id];else STARS[id]=1;
+      saveStars();paintStars();renderStarSec();buildFilters();applyFilter();
+      showToast('收藏沒存成功，已還原',String(e&&e.message||e));});}
+function refreshStars(){
+  fetch('/api/stars').then(function(r){return r.json();}).then(function(d){
+    if(!d||!d.ok)return;
+    var next={};(d.ids||[]).forEach(function(x){next[x]=1;});
+    if(Object.keys(next).sort().join(',')===starIds().join(','))return;
+    STARS=next;saveStars();paintStars();renderStarSec();buildFilters();applyFilter();
+  }).catch(function(){});}
 
 const themeBtn=document.getElementById('theme');
 function curTheme(){return document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');}
@@ -286,18 +357,46 @@ document.getElementById('setModal').addEventListener('click',function(e){if(e.ta
   document.querySelector('meta[name=theme-color]').setAttribute('content',next==='dark'?'#0b0f19':'#ffffff');};
 paintThemeBtn();
 
+// 齒輪上的警示點有兩個來源（cookie、每日更新），各自非同步回來，所以記在同一個物件
+// 裡一起判斷——不然後回來的那個會把前一個的警示擦掉。
+var WARN={cookie:false,cron:false};
+function paintWarn(){var g=document.getElementById('settings');
+  if(g)g.classList.toggle('warn',!!(WARN.cookie||WARN.cron));}
 async function refreshCookie(){
-  const el=document.getElementById('cookieStatus');const gear=document.getElementById('settings');
+  const el=document.getElementById('cookieStatus');
   try{const s=await(await fetch('/api/cookie-status')).json();
-    if(s.set){el.className='chip';el.textContent='🔑 cookie 已設定'+(s.updated?'（'+new Date(s.updated).toLocaleDateString()+'）':'');if(gear)gear.classList.remove('warn');}
-    else{el.className='chip warn';el.textContent='⚠ 尚未設定 cookie';if(gear)gear.classList.add('warn');}
+    if(s.set){el.className='chip';el.textContent='🔑 cookie 已設定'+(s.updated?'（'+new Date(s.updated).toLocaleDateString()+'）':'');WARN.cookie=false;}
+    else{el.className='chip warn';el.textContent='⚠ 尚未設定 cookie';WARN.cookie=true;}
   }catch(e){el.textContent='🔑 cookie 狀態未知';}
+  paintWarn();
+}
+// 每日 cron 的健康度。最常見的壞法是 cookie 過期後整批抓不到，而 cron 本身照跑不誤，
+// 所以這裡直接看最近一次「成功幾份、失敗幾份」，不是看它有沒有觸發。
+function paintCron(h){
+  var el=document.getElementById('cronStatus');if(!el)return;
+  if(!h){el.className='chip';el.textContent='⏱ 每日更新：尚無紀錄';WARN.cron=false;paintWarn();return;}
+  var when=new Date(h.at), days=Math.floor((Date.now()-when.getTime())/86400000);
+  var stale=days>=2;
+  if(h.fail&&!h.ok){el.className='chip warn';
+    el.textContent='⚠ 每日更新失敗（'+when.toLocaleDateString()+'）：'+(h.errors&&h.errors[0]||'')+'　cookie 可能已過期';
+    WARN.cron=true;}
+  else if(h.fail){el.className='chip warn';
+    el.textContent='⚠ 每日更新部分失敗 '+h.ok+'/'+(h.ok+h.fail)+'（'+when.toLocaleDateString()+'）';
+    WARN.cron=true;}
+  else if(stale){el.className='chip warn';
+    el.textContent='⚠ 每日更新已 '+days+' 天沒跑（上次 '+when.toLocaleDateString()+'）';
+    WARN.cron=true;}
+  else{el.className='chip';
+    el.textContent='⏱ 每日更新正常：'+when.toLocaleDateString()+' 更新 '+h.ok+' 份（'+(h.ids||[]).join('、')+'）';
+    WARN.cron=false;}
+  paintWarn();
 }
 async function refreshR2(){
   try{const s=await(await fetch('/api/r2-status')).json();
     var sig=(s.count||0)+':'+Object.keys(s.versions||{}).length;
     try{localStorage.setItem('nccnr2',JSON.stringify({cached:s.cached,versions:s.versions,count:s.count,total:s.total}));}catch(e){}
     R2=s.cached||{};VER=s.versions||{};
+    paintCron(s.health);
     var sub=document.getElementById('sub');if(sub)sub.textContent=s.count+' / '+s.total+' 份 · R2 · PWA';
     if(sig!==r2sig){r2sig=sig;buildGrid();applyFilter();}
   }catch(e){}
@@ -313,7 +412,7 @@ document.getElementById('saveCookie').addEventListener('click',async()=>{
   }catch(e){msg.textContent='儲存失敗';}
   btn.disabled=false;
 });
-buildFilters();buildGrid();applyFilter();refreshCookie();refreshR2();
+buildFilters();buildGrid();applyFilter();refreshCookie();refreshR2();refreshStars();
 document.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&(e.key==='f'||e.key==='F')){e.preventDefault();q.focus();q.select();}});
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}
 </script>

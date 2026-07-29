@@ -8,9 +8,9 @@ NCCN cookie 代理抓取）。
 - **登入**：Cloudflare Access（僅白名單 email：mail@hsiehting.com、ppoiu87@gmail.com、
   hsieh.ting.lin@gmail.com；收 email OTP 一次性密碼即可進入）
 - **Worker 名稱**：`nccn-download`
-- **KV**：`NCCN_KV`（id `f1c25d8c3a604b3c9fb56d4ddc5f24bb`），存 `cookie`、`cookie_meta`、`cron_cursor`
+- **KV**：`NCCN_KV`（id `f1c25d8c3a604b3c9fb56d4ddc5f24bb`），存 `cookie`、`cookie_meta`、`cron_health`、`cron_state`
 - **R2**：`nccn-pdfs`（binding `PDFS`），存 `<id>.pdf` 快取
-- **Cron**：`0 3 * * *`（每天 UTC 03:00），輪流刷新 `PER_DAY=3` 份 → 約每月一輪
+- **Cron**：`0 3 * * *`（每天 UTC 03:00），刷新最舊的 `PER_DAY=3` 份 → 約每月一輪
 
 ## 運作
 
@@ -18,14 +18,28 @@ NCCN cookie 代理抓取）。
 - `GET /preview/:id` — 內嵌 **pdf.js** 線上預覽（含縮放、下載鍵）
 - `GET /pdf/:id` — inline 供預覽用：優先讀 R2 快取，沒有才即時回 NCCN 抓並順手寫入 R2
 - `GET /dl/:id` — attachment 下載，同樣 R2 優先、fallback 即時抓
-- `GET /api/r2-status` — 回報已快取哪些 id、大小、更新時間、cursor
+- `GET /api/r2-status` — 回報已快取哪些 id、大小、更新時間，以及最近一次 cron 的健康度
 - `POST /api/refresh?n=3`（或 `?id=breast`） — 手動觸發刷新（Access 保護）
 - `GET /api/cookie-status`、`POST /api/cookie` — cookie 狀態 / 更新
 
 ### 更新排程（cron）
 
-每天刷新 3 份，用 KV 的 `cron_cursor` 輪流走過全部 86 份，約 29 天一輪（≈ 每月全部更新一次）。
-要改頻率：調 `src/index.js` 的 `PER_DAY` 或 `wrangler.jsonc` 的 `triggers.crons` 後重新 deploy。
+每天挑 **R2 上最舊的 3 份**重抓（`pickStalest`），約 29 天走完全部 86 份。
+要改頻率：調 `src/lib/constants.js` 的 `PER_DAY` 或 `wrangler.jsonc` 的 `triggers.crons` 後重新 deploy。
+
+**為什麼是「挑最舊的」而不是輪流走游標**：舊版用 KV 的 `cron_cursor` 依序前進，而且
+*不管抓成功與否都會前進* —— cookie 一過期，那一天的 3 份就被靜默跳過，要再等 29 天
+才輪到。改成依 R2 上實際的 `uploaded` 時間排序之後，沒抓成功的那份**明天仍然是最舊的**，
+會自動被重試到成功為止；R2 上缺檔的（`uploaded` 視為無限舊）則排在最前面優先補回來。
+換句話說，排程本身就是修復機制，不需要額外的重試佇列。
+
+唯一的例外是「永遠抓不到」的 id（NCCN 下架了之類）：它會一直卡在隊首。所以
+`nextCronState` 會數連續失敗次數，滿 3 次就把它「暫緩」（記一個時間戳，排序時當成
+剛更新過），讓它退到隊尾，下一輪再試一次。
+
+**健康度**：每次跑完把 `{at, ok, fail, ids, errors}` 寫進 KV 的 `cron_health`，
+`/api/r2-status` 會回傳，首頁設定面板顯示成一行狀態；全軍覆沒時 Worker 走
+`console.error`，在 Workers Observability 裡是 error 級別，可以直接設告警。
 
 id 會比對內建白名單，非清單內的 id 一律 404（防路徑注入）。cookie 過期時 NCCN 會
 回傳登入 HTML 而非 PDF，Worker 偵測到（非 `%PDF` 開頭）就回 502 並提示更新 cookie。
@@ -146,9 +160,10 @@ bash deploy.sh
 **雲端自動更新**：`.github/workflows/update-versions.yml`（GitHub Actions，每週一 04:17 UTC + 可手動）在 GitHub 雲上安裝 poppler、跑 `gen_versions.sh`、刷新 `versions.json`——不需要你的電腦。
 
 一次性設定：到 repo → Settings → Secrets and variables → Actions，新增
+
 - `CLOUDFLARE_API_TOKEN`：Cloudflare API token，權限 **Account → Workers R2 Storage → Edit**
 
-（Account ID 已寫在 workflow 內。）之後手動觸發一次：Actions 分頁 → *Update guideline versions* → *Run workflow*。
+（Account ID 已寫在 workflow 內。）之後手動觸發一次：Actions 分頁 → _Update guideline versions_ → _Run workflow_。
 
 ## 全文內容搜尋（D1 + FTS5）
 
@@ -236,12 +251,12 @@ LIMIT=5 bash gen_clean.sh    # 只跑前 5 份（冒煙測試）
 
 閱讀器右側可展開一個**跟著目前頁走**的 AI 面板（工具列 ✨），把該頁轉成四種繁體中文條列：
 
-| 分頁 | 內容 |
-| --- | --- |
-| **重點整理** | 這一頁的臨床重點：決策路徑、分層條件、適應症、category 等級 |
+| 分頁           | 內容                                                                                    |
+| -------------- | --------------------------------------------------------------------------------------- |
+| **重點整理**   | 這一頁的臨床重點：決策路徑、分層條件、適應症、category 等級                             |
 | **High Yield** | 以專科考試（Board Exam）角度挑的高頻考點：具體數字與切點、category 1 建議、易混淆的對比 |
-| **病歷片語** | 可直接貼進病歷的 Assessment / Plan 英文片語，附中文說明 |
-| **SDM** | 醫病共享決策要跟病人強調的重點：選項、好處、風險、取捨、可問病人的問題 |
+| **病歷片語**   | 可直接貼進病歷的 Assessment / Plan 英文片語，附中文說明                                 |
+| **SDM**        | 醫病共享決策要跟病人強調的重點：選項、好處、風險、取捨、可問病人的問題                  |
 
 藥名、分期、基因、category 等級一律保留英文原文，不翻成中文。
 
@@ -262,13 +277,13 @@ NCCN 的演算法頁是方框加箭頭，`pdftotext` 抽出來會散成沒有句
 面板底部有一組 **Antigravity / Workers AI** 切換鈕（選擇記在 localStorage），
 兩邊吃同一組 prompt、同一套讀圖判斷、寫同一個快取表：
 
-| | Antigravity | Workers AI |
-| --- | --- | --- |
-| 實際模型 | Google Gemini（見下方階梯） | `@cf/meta/llama-4-scout-17b-16e-instruct` |
-| 憑證 | Worker secret `ANTIGRAVITY_API_KEY` | `env.AI` 綁定，不需金鑰 |
-| 額度單位 | 每模型每天請求數（RPD） | neurons |
-| 每日總量 | 階梯加總 1,080 次 | 10,000 neurons ≈ 100–170 頁次 |
-| 資料流向 | 送到 Google 的 API | 留在自己的 Cloudflare 帳號內 |
+|          | Antigravity                         | Workers AI                                |
+| -------- | ----------------------------------- | ----------------------------------------- |
+| 實際模型 | Google Gemini（見下方階梯）         | `@cf/meta/llama-4-scout-17b-16e-instruct` |
+| 憑證     | Worker secret `ANTIGRAVITY_API_KEY` | `env.AI` 綁定，不需金鑰                   |
+| 額度單位 | 每模型每天請求數（RPD）             | neurons                                   |
+| 每日總量 | 階梯加總 1,080 次                   | 10,000 neurons ≈ 100–170 頁次             |
+| 資料流向 | 送到 Google 的 API                  | 留在自己的 Cloudflare 帳號內              |
 
 沒設 `ANTIGRAVITY_API_KEY` 時後端回 `ag: false`，切換鈕整組不出現，行為與加這個功能之前完全一樣。
 
@@ -277,14 +292,14 @@ NCCN 的演算法頁是方框加箭頭，`pdftotext` 抽出來會散成沒有句
 免費層的瓶頸不是 token 而是 **RPD（每模型每天幾次請求）**：最好的 Flash 一天只有 20 次，
 Flash Lite 則有 500 次。所以排一條「新世代優先、額度大的墊底」的階梯，撞到上限就自動往下走：
 
-| 順位 | 模型 | 免費層 RPD |
-| --- | --- | --- |
-| 1 | `gemini-3.6-flash` | 20 |
-| 2 | `gemini-3.5-flash` | 20 |
-| 3 | `gemini-3-flash-preview` | 20 |
-| 4 | `gemini-3.5-flash-lite` | 500 |
-| 5 | `gemini-3.1-flash-lite` | 500 |
-| 6 | `gemini-2.5-flash` | 20 |
+| 順位 | 模型                     | 免費層 RPD |
+| ---- | ------------------------ | ---------- |
+| 1    | `gemini-3.6-flash`       | 20         |
+| 2    | `gemini-3.5-flash`       | 20         |
+| 3    | `gemini-3-flash-preview` | 20         |
+| 4    | `gemini-3.5-flash-lite`  | 500        |
+| 5    | `gemini-3.1-flash-lite`  | 500        |
+| 6    | `gemini-2.5-flash`       | 20         |
 
 - 429 會先分類再處理：`PerDay` → 該模型當天記到滿，之後直接跳過不再浪費往返；
   `PerMinute` → 只壓 60 秒冷卻，不燒掉整天額度；404（模型下架）→ 比照當天不用
@@ -332,7 +347,7 @@ thinking 的 token 也算進 `maxOutputTokens`（用 800 跑 3.6-flash 會 `MAX_
   `provider` = `ag` | `cf`（預設 `cf`；沒設金鑰時 `ag` 會被忽略）。回應帶 `provider` / `model`
   實際用了誰、`fell` 有沒有掉回 Workers AI、`notes` 掉階原因
 - `GET /api/insight-map?id=<gid>` — 開面板時打一次：整份的已存內容 + `vision`（要讀圖的頁碼陣列）
-  + 兩邊的額度。之後翻頁都從這份資料查，不再打網路
+  - 兩邊的額度。之後翻頁都從這份資料查，不再打網路
 - `GET /api/insights?id=<gid>` 或 `?all=1` — 列出已存的重點（含完整條列，供匯出用）
 
 `kind` = `key` | `hy` | `phrase` | `sdm`。
@@ -356,8 +371,8 @@ printf '%s' "$ANTIGRAVITY_API_KEY" | wrangler secret put ANTIGRAVITY_API_KEY
 
 ### 一個你該知道的前提
 
-NCCN PDF 每頁頁首都印著 *"you MAY NOT distribute this Content or **use it with any artificial intelligence
-model or tool**"*——這是 NCCN EULA 對本帳號的限制，屬於使用者與 NCCN 之間的授權條款問題。
+NCCN PDF 每頁頁首都印著 _"you MAY NOT distribute this Content or **use it with any artificial intelligence
+model or tool**"_——這是 NCCN EULA 對本帳號的限制，屬於使用者與 NCCN 之間的授權條款問題。
 站台本身在 Cloudflare Access 後面，但**兩個 provider 的資料流向差很多，請自行斟酌**：
 
 - **Workers AI**：第一方推論，頁面內容不離開自己的 Cloudflare 帳號，是最收斂的做法
@@ -367,3 +382,45 @@ model or tool**"*——這是 NCCN EULA 對本帳號的限制，屬於使用者�
 要不要開 Antigravity、開了要用在哪些頁，請自行判斷。
 
 面板底部固定顯示「AI 生成，僅供快速參考，臨床決策請以原文為準」。
+
+## 書籤與收藏（D1，跨裝置）
+
+兩件事，都存在 D1 而不是 localStorage——在 Mac 上收的，iPad 開同一個站就看得到。
+
+**書籤（逐頁）**：閱讀器工具列的書籤鈕收藏「目前這一頁」，實心＝已收藏，翻頁時跟著變。
+旁邊那顆開右側的**書籤清單**，和目錄、AI 重點三個面板互斥（一次只留一個）。
+
+> 三個面板住在同一個容器（`#rightpane`）裡，共用一份寬度與一支拖曳把手（`nccnpanew`）。
+> 早期它們各是獨立的 aside、預設寬度還不一樣（目錄 290px、AI 340px），所以每次切換
+> 面板都會改變檢視區寬度 → 觸發 `relayout()` → 整份 PDF 清空重繪、捲動位置被重新錨定
+> 而看起來在跳。同寬之後，只有「開／關」才會重排，分頁之間切換對版面零影響；
+> 各面板自己的內部捲動位置也會保留。
+
+- 收藏時自動把目前的 TOC 章節名（例如 `AML-2`）存成標籤，沒有目錄的檔就留空
+- 清單每列可以直接打**備註**，失焦就存
+- `本份 / 全部` 切換，切到全部時依 guideline 分群並顯示書名；點別份的項目會導到 `/preview/<id>?page=N`
+- `.md` 匯出：每則是一個帶 `?page=` 的連結，備註接在下面
+
+**收藏（整份）**：首頁卡片右下角的星星。收藏後首頁最上方會多一個**已收藏**區塊，
+篩選列也多一顆 `★ 已收藏 N` chip；星號全部取消時 chip 與區塊一起消失，篩選自動回到「全部」。
+
+> 首頁的星號另外在 localStorage 存一份快取（`nccnstars`），開頁先照本地畫、`/api/stars`
+> 回來再校正，所以不用等一次往返才看得到自己收藏的東西。
+
+### 端點
+
+- `GET /api/bookmarks?id=<gid>`（本份）或 `?all=1`（全部，附上書名）
+- `POST /api/bookmark` — `{id, page, label?, note?, on?}`；`on:false` 是移除。
+  `label` / `note` 給 `null` 時保留舊值，所以只改備註不會把章節名清掉
+- `GET /api/stars` → `{ids:[…]}`；`POST /api/star` — `{id, on}`
+
+### 一次性設定
+
+```bash
+cd NCCN/cf
+set -a; . ../.env; set +a
+wrangler d1 execute nccn-search --file=sql/marks.sql --remote
+```
+
+> 同樣刻意跟 `sql/schema.sql` 分開：那支會 `DROP TABLE pages`，重建全文索引時跑，
+> 使用者自己收的東西不能跟著被洗掉。

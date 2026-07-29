@@ -4,9 +4,15 @@
 // into one Worker. See test/* for unit tests of the pure lib helpers.
 // Routes: / (grid), /preview/:id (pdf.js), /pdf/:id (inline), /dl/:id (download),
 //         /thumb/:id, /manifest.webmanifest, /sw.js, /icons/*, /apple-touch-icon.png,
-//         /api/{cookie,cookie-status,r2-status,search,refresh,toc,insight}.
+//         /api/{cookie,cookie-status,r2-status,search,refresh,toc,insight},
+//         /api/{bookmark,bookmarks,star,stars}.
 import { GUIDELINES, NAME_BY_ID, VALID_IDS } from "./data/guidelines.js";
-import { COOKIE_KEY, META_KEY, CURSOR_KEY, PER_DAY } from "./lib/constants.js";
+import {
+	COOKIE_KEY,
+	META_KEY,
+	CRON_HEALTH_KEY,
+	PER_DAY,
+} from "./lib/constants.js";
 import { json, html } from "./lib/http.js";
 import { buildMatch, queryTerms } from "./lib/search.js";
 import {
@@ -29,6 +35,12 @@ import {
 	readUsage,
 	visionMap,
 } from "./lib/insight.js";
+import {
+	listBookmarks,
+	listStars,
+	putBookmark,
+	setStar,
+} from "./lib/marks.js";
 import { renderPage } from "./views/home.js";
 import { renderViewer } from "./views/viewer.js";
 import { faviconResponse, manifestResponse, SW_JS } from "./views/static.js";
@@ -130,7 +142,9 @@ export default {
 					uploaded: o.uploaded ? o.uploaded.toISOString() : null,
 				};
 			}
-			const cursorRaw = await env.NCCN_KV.get(CURSOR_KEY);
+			const health = await env.NCCN_KV.get(CRON_HEALTH_KEY, "json").catch(
+				() => null,
+			);
 			const vobj = await env.PDFS.get("meta/versions.json");
 			const versions = vobj ? await vobj.json().catch(() => ({})) : {};
 			// Which ids have a banner-free copy (built by gen_clean.sh in CI).
@@ -142,7 +156,8 @@ export default {
 				clean,
 				count: Object.keys(map).length,
 				total: GUIDELINES.length,
-				cursor: parseInt(cursorRaw || "0", 10) || 0,
+				// 最近一次 cron 的結果。前端據此顯示警示，不用等到一輪跑完才發現壞掉。
+				health: health || null,
 				perDay: PER_DAY,
 			});
 		}
@@ -205,6 +220,60 @@ export default {
 					"cache-control": "public, max-age=3600",
 				},
 			});
+		}
+
+		// 書籤：?id= 只列該份，?all=1 列全部（跨份時附上書名，清單才看得懂是哪一份）。
+		if (pathname === "/api/bookmarks" && request.method === "GET") {
+			const gid = url.searchParams.get("id");
+			const all = url.searchParams.get("all") === "1";
+			const one = !all && VALID_IDS.has(gid) ? gid : null;
+			const rows = await listBookmarks(env, one);
+			return json({
+				ok: true,
+				count: rows.length,
+				rows: one
+					? rows
+					: rows.map((r) => ({ ...r, name: NAME_BY_ID[r.gid] || r.gid })),
+			});
+		}
+
+		// 單頁書籤的加／減／改備註。on:false 是移除，其餘是 upsert。
+		if (pathname === "/api/bookmark" && request.method === "POST") {
+			const b = await request.json().catch(() => ({}));
+			const gid = String(b.id || "");
+			const page = parseInt(b.page, 10);
+			if (!VALID_IDS.has(gid))
+				return json({ ok: false, error: "unknown id" }, 404);
+			if (!(page >= 1)) return json({ ok: false, error: "bad page" }, 400);
+			try {
+				const out = await putBookmark(env, {
+					gid,
+					page,
+					label: b.label,
+					note: b.note,
+					on: b.on !== false,
+				});
+				return json({ ok: true, ...out });
+			} catch (e) {
+				return json({ ok: false, error: String(e.message || e) }, 500);
+			}
+		}
+
+		if (pathname === "/api/stars" && request.method === "GET") {
+			const ids = await listStars(env);
+			return json({ ok: true, count: ids.length, ids });
+		}
+
+		if (pathname === "/api/star" && request.method === "POST") {
+			const b = await request.json().catch(() => ({}));
+			const gid = String(b.id || "");
+			if (!VALID_IDS.has(gid))
+				return json({ ok: false, error: "unknown id" }, 404);
+			try {
+				return json({ ok: true, ...(await setStar(env, gid, b.on !== false)) });
+			} catch (e) {
+				return json({ ok: false, error: String(e.message || e) }, 500);
+			}
 		}
 
 		// 已存重點清單（哪一份、第幾頁、什麼內容）。?id= 只列該份，?all=1 列全部。

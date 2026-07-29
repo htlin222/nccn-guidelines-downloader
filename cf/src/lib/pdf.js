@@ -1,7 +1,7 @@
 // R2-backed PDF serving + the daily cron refresh. Pulls from NCCN only on a
 // cache miss (or explicit refresh) using the stored cookie.
 import { GUIDELINES } from "../data/guidelines.js";
-import { COOKIE_KEY, CURSOR_KEY } from "./constants.js";
+import { COOKIE_KEY, CRON_HEALTH_KEY, CRON_STATE_KEY } from "./constants.js";
 
 export async function fetchLive(env, id) {
 	const cookie = await env.NCCN_KV.get(COOKIE_KEY);
@@ -33,36 +33,118 @@ export async function fetchLive(env, id) {
 // under raw/. The root <id>.pdf is the banner-free copy that gen_clean.sh
 // derives from raw/ in CI — writing the original there would put the banner
 // back on every guideline the cron happened to touch.
-export async function refreshOne(env, id) {
-	const r = await fetchLive(env, id);
-	if (!r.ok)
-		return { id, ok: false, error: r.error || `${r.status} ${r.ctype}` };
-	await env.PDFS.put(`raw/${id}.pdf`, r.buf, {
-		httpMetadata: { contentType: "application/pdf" },
-	});
-	return { id, ok: true, size: r.buf.byteLength };
+// One transient hiccup at NCCN used to cost a guideline a whole cycle, so try
+// twice. A missing cookie is not transient — retrying it just wastes a request.
+export async function refreshOne(env, id, tries = 2) {
+	let last = { error: "no-attempt" };
+	for (let k = 0; k < tries; k++) {
+		const r = await fetchLive(env, id);
+		if (r.ok) {
+			await env.PDFS.put(`raw/${id}.pdf`, r.buf, {
+				httpMetadata: { contentType: "application/pdf" },
+			});
+			return { id, ok: true, size: r.buf.byteLength, tries: k + 1 };
+		}
+		last = r;
+		if (r.error === "no-cookie") break;
+	}
+	return { id, ok: false, error: last.error || `${last.status} ${last.ctype}` };
 }
 
-// Pure round-robin batch planner: from `cursor`, pick `count` indices out of
-// `total` guidelines, wrapping. Returns the picked indices and the next cursor.
-export function planBatch(cursor, count, total) {
-	let c = Number.isFinite(cursor) && cursor >= 0 ? cursor : 0;
-	const indices = [];
-	for (let i = 0; i < count; i++) {
-		indices.push(c % total);
-		c = (c + 1) % total;
+// Pure planner: pick the `n` guidelines most in need of a refresh — never-cached
+// first, then oldest-copy first. This replaces the old round-robin cursor, which
+// advanced whether or not the fetch succeeded: a failed day silently skipped
+// those guidelines for another full cycle. Ranking by the age of what is
+// actually in R2 makes the cron self-repairing — a guideline that failed to
+// refresh is still the stalest tomorrow, so it gets retried until it lands, and
+// a hole in the bucket fills itself instead of waiting out the cycle.
+//
+// `deferred` is the escape hatch: an id that keeps failing (NCCN pulled it, say)
+// would otherwise stay top of the queue forever and starve everything behind it.
+// refreshBatch parks such an id with a timestamp, which counts here as if it had
+// just been refreshed — so it drops to the back and comes round again in a cycle.
+export function pickStalest(guidelines, cached, n, deferred) {
+	const at = (s) => {
+		const t = Date.parse(s || "");
+		return Number.isFinite(t) ? t : -Infinity;
+	};
+	const rank = guidelines.map((g, i) => {
+		const u = at(cached && cached[g.id] && cached[g.id].uploaded);
+		const d = at(deferred && deferred[g.id]);
+		return { id: g.id, i, t: d > u ? d : u };
+	});
+	// Ties (two never-cached ids are both -Infinity) fall back to catalogue order
+	// so the pick is deterministic; `a.t - b.t` alone would be NaN there.
+	rank.sort((a, b) => (a.t === b.t ? a.i - b.i : a.t - b.t));
+	return rank.slice(0, Math.max(0, n)).map((r) => r.id);
+}
+
+// Pure bookkeeping for the deferral above: three consecutive failures parks an
+// id; any success clears it. Kept separate from the I/O so it can be tested.
+export const MAX_FAILS = 3;
+export function nextCronState(state, results, now) {
+	const fails = { ...((state && state.fails) || {}) };
+	const deferred = { ...((state && state.deferred) || {}) };
+	for (const r of results) {
+		if (r.ok) {
+			delete fails[r.id];
+			delete deferred[r.id];
+			continue;
+		}
+		const n = (fails[r.id] || 0) + 1;
+		if (n >= MAX_FAILS) {
+			delete fails[r.id];
+			deferred[r.id] = now;
+		} else fails[r.id] = n;
 	}
-	return { indices, next: c };
+	return { fails, deferred };
+}
+
+async function readJson(env, key, fallback) {
+	try {
+		return (await env.NCCN_KV.get(key, "json")) || fallback;
+	} catch (e) {
+		return fallback;
+	}
 }
 
 export async function refreshBatch(env, n) {
-	const cursorRaw = await env.NCCN_KV.get(CURSOR_KEY);
-	const plan = planBatch(parseInt(cursorRaw || "0", 10), n, GUIDELINES.length);
+	const listed = await env.PDFS.list({ prefix: "raw/", limit: 1000 });
+	const cached = {};
+	for (const o of listed.objects) {
+		if (!o.key.endsWith(".pdf")) continue;
+		cached[o.key.slice("raw/".length, -".pdf".length)] = {
+			uploaded: o.uploaded ? o.uploaded.toISOString() : null,
+		};
+	}
+	const state = await readJson(env, CRON_STATE_KEY, { fails: {}, deferred: {} });
+	const ids = pickStalest(GUIDELINES, cached, n, state.deferred);
 	const results = [];
-	for (const idx of plan.indices)
-		results.push(await refreshOne(env, GUIDELINES[idx].id));
-	await env.NCCN_KV.put(CURSOR_KEY, String(plan.next));
-	return { cursor: plan.next, results };
+	for (const id of ids) results.push(await refreshOne(env, id));
+
+	const now = new Date().toISOString();
+	await env.NCCN_KV.put(
+		CRON_STATE_KEY,
+		JSON.stringify(nextCronState(state, results, now)),
+	);
+	const ok = results.filter((r) => r.ok).length;
+	const health = {
+		at: now,
+		ok,
+		fail: results.length - ok,
+		ids,
+		errors: results
+			.filter((r) => !r.ok)
+			.map((r) => `${r.id}: ${r.error}`),
+	};
+	await env.NCCN_KV.put(CRON_HEALTH_KEY, JSON.stringify(health));
+	// Nothing at all got through = systemic (an expired cookie, nearly always).
+	// console.error so it shows up as an error in Workers observability rather
+	// than blending into the normal daily log line.
+	if (ok === 0 && results.length)
+		console.error("cron refresh FAILED", JSON.stringify(health));
+	else console.log("cron refresh", JSON.stringify(health));
+	return health;
 }
 
 export async function servePdf(env, id, { download, request, raw }) {

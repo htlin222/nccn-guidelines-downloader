@@ -3,11 +3,14 @@
 # per-page text with pdftotext, and load it into the D1 FTS5 `pages` table.
 # Pulls PDFs from R2 — does NOT hit NCCN. Set LIMIT=N to index only the first N.
 set -u
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit 1
 [ -f ../.env ] && set -a && . ../.env && set +a  # load token if present
 BUCKET="nccn-pdfs"
 DB="nccn-search"
 LIMIT="${LIMIT:-0}"
+# The staging index has to clear this before it is allowed to replace the live
+# one. Lower it only for a deliberate partial run (LIMIT=N), never in CI.
+MIN_ROWS="${MIN_ROWS:-1000}"
 WORK=$(mktemp -d)
 LOG="build_index.log"; : > "$LOG"
 del(){ command rip "$@" 2>/dev/null || find "$@" -delete 2>/dev/null; }
@@ -70,23 +73,76 @@ print('CHUNKS', cn)
 PY
 
 n=$(ls "$WORK"/chunk_*.sql 2>/dev/null | wc -l | tr -d ' ')
-echo "reset table + load $n chunks" | tee -a "$LOG"
-wrangler d1 execute "$DB" --file=sql/schema.sql --remote >/dev/null 2>&1 && echo "schema reset" | tee -a "$LOG"
+
+# Bail out BEFORE touching the live table. This used to run the DROP first and
+# only check `n` afterwards, so a run that could read D1 but not R2 (bad R2
+# permissions, a bucket outage) dropped `pages`, produced nothing, and left
+# search returning zero hits until someone noticed. The only reason that never
+# fired in production is luck: the one time it happened the same missing token
+# broke the DROP too.
+if [ "$n" -eq 0 ]; then
+  echo "FAIL: no chunks were produced (could not read PDFs from R2?) — live index left untouched" | tee -a "$LOG"
+  del "$WORK" 2>/dev/null; exit 1
+fi
+
+# Load into a staging table, then swap. Search keeps serving the old index for
+# the whole rebuild, and a load that dies halfway leaves the live table alone
+# rather than half-populated. D1 has no transactions, so the swap is two
+# statements — a crash between them is the one window that still needs a rerun,
+# and it is milliseconds wide instead of minutes.
+echo "build staging table + load $n chunks" | tee -a "$LOG"
+sql(){ wrangler d1 execute "$DB" --remote --command "$1" >/dev/null 2>&1; }
+sql "DROP TABLE IF EXISTS pages_new" || true
+# Derive the staging DDL from sql/schema.sql so there is still one source of
+# truth for the FTS5 column list: drop its DROP line, rename the table.
+sed '/^DROP TABLE/d; s/CREATE VIRTUAL TABLE pages /CREATE VIRTUAL TABLE pages_new /' \
+  sql/schema.sql > "$WORK/staging.sql"
+if ! grep -q "pages_new" "$WORK/staging.sql"; then
+  echo "FAIL: sql/schema.sql no longer matches the expected CREATE — fix the sed in this script" | tee -a "$LOG"
+  del "$WORK" 2>/dev/null; exit 1
+fi
+if ! wrangler d1 execute "$DB" --file="$WORK/staging.sql" --remote >/dev/null 2>&1; then
+  echo "FAIL: could not create staging table (D1 auth?) — live index left untouched" | tee -a "$LOG"
+  del "$WORK" 2>/dev/null; exit 1
+fi
 i=0; bad=0
 for f in "$WORK"/chunk_*.sql; do
   i=$((i+1))
-  if wrangler d1 execute "$DB" --file="$f" --remote >/dev/null 2>&1; then
+  # The chunks are written against `pages`; retarget them at the staging table.
+  sed 's/^INSERT INTO pages(/INSERT INTO pages_new(/' "$f" > "$f.staged"
+  if wrangler d1 execute "$DB" --file="$f.staged" --remote >/dev/null 2>&1; then
     echo "chunk $i/$n ok" | tee -a "$LOG"
   else
     bad=$((bad+1)); echo "chunk $i/$n FAIL" | tee -a "$LOG"
   fi
 done
 echo "DONE loaded $((n - bad))/$n chunks" | tee -a "$LOG"
-del "$WORK" 2>/dev/null
-# This script DROPs and repopulates the pages table, so a partial load leaves
-# search quietly broken. Any failed chunk — or no chunks at all, which is what
-# a bad token looks like — has to surface as a non-zero exit.
-if [ "$n" -eq 0 ]; then
-  echo "FAIL: no chunks were produced (could not read PDFs from R2?)" | tee -a "$LOG"; exit 1
+
+# A partial load is worse than no rebuild: it looks fine but silently loses
+# pages. Throw the staging table away and keep the old index.
+if [ "$bad" -ne 0 ]; then
+  echo "FAIL: $bad/$n chunks failed — discarding staging table, live index left untouched" | tee -a "$LOG"
+  sql "DROP TABLE IF EXISTS pages_new" || true
+  del "$WORK" 2>/dev/null; exit 1
 fi
-[ "$bad" -eq 0 ]
+
+# Sanity-check the staging table before it becomes the live one: a rebuild that
+# somehow produced a near-empty index should not be promoted.
+rows=$(wrangler d1 execute "$DB" --remote --json \
+  --command "SELECT COUNT(*) AS n FROM pages_new" 2>/dev/null \
+  | tr -d ' \n' | sed -n 's/.*"n":\([0-9]*\).*/\1/p')
+rows="${rows:-0}"
+if [ "$rows" -lt "$MIN_ROWS" ]; then
+  echo "FAIL: staging index only has $rows rows (need $MIN_ROWS) — discarding, live index left untouched" | tee -a "$LOG"
+  sql "DROP TABLE IF EXISTS pages_new" || true
+  del "$WORK" 2>/dev/null; exit 1
+fi
+
+echo "promoting staging table ($rows rows)" | tee -a "$LOG"
+sql "DROP TABLE IF EXISTS pages" || true
+if ! sql "ALTER TABLE pages_new RENAME TO pages"; then
+  echo "FAIL: could not promote staging table — rerun this script" | tee -a "$LOG"
+  del "$WORK" 2>/dev/null; exit 1
+fi
+echo "DONE index live with $rows rows" | tee -a "$LOG"
+del "$WORK" 2>/dev/null
