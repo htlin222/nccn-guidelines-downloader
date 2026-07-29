@@ -226,6 +226,13 @@ curl -sI -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
   | grep -i last-modified
 ```
 
+> **Reads of a just-written object are cached for ~4 hours.** Both this API and
+> `wrangler r2 object get` sit behind it, so right after a rewrite you can get
+> the old bytes and the old `last-modified` back. Do not conclude a write failed
+> from a stale timestamp — check the job log for the `OK <id>` line instead.
+> (This is also why `build_index.sh` strips the NCCN banner from the extracted
+> *text* rather than trusting the object to already be banner-free.)
+
 ---
 
 ## 7. Troubleshooting, by symptom
