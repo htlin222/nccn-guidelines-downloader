@@ -229,7 +229,7 @@ ${TOAST_CSS}
   </aside>
   <div id="gridView" class="gridview" hidden></div>
 </div>
-<div id="snapModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>頁面截圖筆記</b><button class="btn" id="snapClose">✕</button></div><div class="meta" id="snapMeta"></div><img id="snapImg" class="snapimg" alt="page"><textarea id="snapNote" placeholder="在這裡寫你的 Markdown 筆記…"></textarea><div class="sheetfoot"><button class="btn" id="snapPng">下載 PNG</button><button class="btn dl" id="snapMd">下載 Markdown 筆記</button></div></div></div>
+<div id="snapModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>頁面截圖筆記</b><button class="btn" id="snapClose">✕</button></div><div class="meta" id="snapMeta"></div><img id="snapImg" class="snapimg" alt="page"><textarea id="snapNote" placeholder="在這裡寫你的 Markdown 筆記…"></textarea><div class="sheetfoot"><button class="btn" id="snapCopy">複製 PNG</button><button class="btn" id="snapPng">下載 PNG</button><button class="btn dl" id="snapMd">下載 Markdown 筆記</button></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 // 根層 <id>.pdf 就是去掉頁首橫幅的版本，所以連截圖成筆記／總覽匯出的圖都不帶橫幅。
@@ -492,6 +492,21 @@ $('snap').onclick=function(){var c=makeSnapCanvas();var img=$('snapImg');if(c){i
 $('snapClose').onclick=function(){$('snapModal').hidden=true;};
 $('snapModal').addEventListener('click',function(e){if(e.target===$('snapModal'))$('snapModal').hidden=true;});
 $('snapPng').onclick=function(){var u=$('snapImg').getAttribute('src');if(u)dl2(u,'NCCN-'+GID+'-p'+cur+'.png');};
+// 複製 PNG：Safari 只認「在點擊事件的同一個 tick 內就呼叫 clipboard.write」，先 await
+// 把 data: URL 轉成 blob 再寫，權限已經過期會被擋掉。所以這裡把 blob 當成 Promise
+// 直接塞進 ClipboardItem——規格允許，Chrome/Safari/Firefox 都吃這一招。
+$('snapCopy').onclick=function(){
+  var u=$('snapImg').getAttribute('src');if(!u)return;
+  var btn=$('snapCopy');
+  if(!(window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write)){
+    showToast('複製失敗','這個瀏覽器不支援把圖片寫進剪貼簿，請改用「下載 PNG」');return;}
+  var blob=fetch(u).then(function(r){return r.blob();});
+  navigator.clipboard.write([new ClipboardItem({'image/png':blob})]).then(function(){
+    // 就地改字比 toast 好讀——按鈕就在指標底下，不用把視線移到畫面下緣。
+    if(btn._t)clearTimeout(btn._t);
+    btn.textContent='已複製 ✓';
+    btn._t=setTimeout(function(){btn.textContent='複製 PNG';btn._t=null;},1600);
+  }).catch(function(e){showToast('複製失敗',String(e&&e.message||e));});};
 $('snapMd').onclick=function(){var u=$('snapImg').getAttribute('src')||'';var note=$('snapNote').value;var url=location.origin+'/preview/'+encodeURIComponent(GID)+'?page='+cur;var lines=['---','guideline: '+GNAME.split('"').join(''),'id: '+GID,'version: '+(VERSION||''),'page: '+cur,'source: '+url,'captured: '+new Date().toISOString(),'---','','# '+GNAME+' — p.'+cur+(VERSION?(' (v'+VERSION+')'):''),'','!['+GNAME+' p.'+cur+']('+u+')','',note,''];var md=lines.join(NL);var blob=new Blob([md],{type:'text/markdown;charset=utf-8'});dl2(URL.createObjectURL(blob),'NCCN-'+GID+'-p'+cur+'.md');};
 var fHits=[],fIdx=-1,fTimer=null;
 $('findBtn').innerHTML=svg('find');$('findIcon').innerHTML=svg('find');$('findPrev').innerHTML=svg('cl');$('findNext').innerHTML=svg('cr');
