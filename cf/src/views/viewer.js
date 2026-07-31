@@ -188,6 +188,7 @@ ${TOAST_CSS}
     <button class="btn" id="zin" title="放大"></button>
     <button class="btn" id="fit" title="符合寬度"></button></div>
   <button class="btn" id="findBtn" title="在本檔搜尋內文"></button>
+  <button class="btn" id="printBtn" title="列印本頁"></button>
   <button class="btn" id="snap" title="截圖成筆記"></button>
   <button class="btn" id="bkAdd" title="收藏本頁"></button>
   <button class="btn" id="bkBtn" title="書籤清單"></button>
@@ -261,7 +262,8 @@ var ICONS={
   archive:'<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
   bookmark:'<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
   bookmarks:'<path d="M7 3h10a2 2 0 0 1 2 2v16l-7-4-7 4V5a2 2 0 0 1 2-2z"/><path d="M21 17V7a2 2 0 0 0-2-2"/>',
-  trash:'<path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>'
+  trash:'<path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>',
+  printer:'<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect width="12" height="8" x="6" y="14" rx="1"/>'
 };
 function svg(n){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[n]||'')+'</svg>';}
 function $(i){return document.getElementById(i);}
@@ -427,6 +429,59 @@ window.addEventListener('pagehide',savePage);document.addEventListener('visibili
 var NL=String.fromCharCode(10);
 function makeSnapCanvas(){var pg=pages[cur-1];if(!pg)return null;var src=pg.el.querySelector('canvas');if(!src)return null;var maxW=1100;var sc=Math.min(1,maxW/src.width);var c=document.createElement('canvas');c.width=Math.round(src.width*sc);c.height=Math.round(src.height*sc);c.getContext('2d').drawImage(src,0,0,c.width,c.height);return c;}
 function dl2(u,nm){var a=document.createElement('a');a.href=u;a.download=nm;document.body.appendChild(a);a.click();a.remove();}
+// ── 列印本頁 ─────────────────────────────────────────────────────────────────
+// 從 pdf.js 的 page object 離屏重繪成 300 DPI 再送印，不是抓畫面上那張 canvas
+// ——後者是照螢幕寬度算的（常常 <150 DPI），印出來字邊會糊。PDF 的使用者單位是
+// 1/72 吋，所以 scale = 300/72；長邊再設一個上限，免得超大版面把記憶體吃爆。
+var PRINT_DPI=300,PRINT_MAX_PX=4200;
+function printCanvas(n){
+  var p=pages[n-1];if(!p||!p.pg)return Promise.reject(new Error('page not ready'));
+  var base=p.pg.getViewport({scale:1});
+  var sc=Math.min(PRINT_DPI/72,PRINT_MAX_PX/Math.max(base.width,base.height));
+  var vp=p.pg.getViewport({scale:sc});
+  var cv=document.createElement('canvas');
+  cv.width=Math.floor(vp.width);cv.height=Math.floor(vp.height);
+  var ctx=cv.getContext('2d');
+  // PDF 頁面本身多半沒有背景色，不先填白的話透明區在某些印表機驅動會變黑。
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);
+  var t=p.pg.render({canvasContext:ctx,viewport:vp});
+  return (t&&t.promise?t.promise:Promise.resolve()).then(function(){
+    return {url:cv.toDataURL('image/png'),landscape:vp.width>vp.height};});}
+// 用隱藏 iframe 而不是 window.open：不會被彈窗封鎖，也不會把整個閱讀器 UI 一起印進去。
+function printPage(){
+  var btn=$('printBtn'),n=cur;
+  if(btn.classList.contains('off'))return;
+  btn.classList.add('off');
+  printCanvas(n).then(function(r){
+    var f=document.createElement('iframe');
+    f.setAttribute('aria-hidden','true');
+    f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+    document.body.appendChild(f);
+    var d=f.contentWindow.document;
+    d.open();
+    d.write('<!doctype html><html><head><meta charset="utf-8"><title>'
+      +esc(GNAME)+' p.'+n+'</title><style>'
+      // 紙張方向跟著這一頁走，橫式流程圖才不會被縮成一小條。
+      +'@page{size:'+(r.landscape?'landscape':'portrait')+';margin:8mm;}'
+      +'html,body{margin:0;padding:0;background:#fff;}'
+      +'img{display:block;width:100%;height:auto;}'
+      +'</style></head><body><img alt=""></body></html>');
+    d.close();
+    var img=d.body.firstChild;
+    var done=false;
+    function go(){
+      if(done)return;done=true;
+      try{f.contentWindow.focus();f.contentWindow.print();}catch(e){}
+      // 列印對話框是同步阻塞的，但 Safari 不一定，所以延後移除而不是馬上砍。
+      setTimeout(function(){f.remove();btn.classList.remove('off');},1000);}
+    img.onload=go;
+    img.onerror=go;
+    img.src=r.url;
+  }).catch(function(e){
+    btn.classList.remove('off');
+    showToast('列印失敗',String(e&&e.message||e));});}
+$('printBtn').innerHTML=svg('printer');
+$('printBtn').onclick=printPage;
 $('snap').onclick=function(){var c=makeSnapCanvas();var img=$('snapImg');if(c){img.src=c.toDataURL('image/png');}else{img.removeAttribute('src');}$('snapMeta').textContent=GNAME+'  ·  '+(VERSION?('v'+VERSION+'  ·  '):'')+'p.'+cur;$('snapModal').hidden=false;};
 $('snapClose').onclick=function(){$('snapModal').hidden=true;};
 $('snapModal').addEventListener('click',function(e){if(e.target===$('snapModal'))$('snapModal').hidden=true;});

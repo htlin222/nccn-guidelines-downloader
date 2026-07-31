@@ -68,6 +68,7 @@ Everything for the web app lives in [`cf/`](cf/) and is documented in detail in
 | 🖼️ **Thumbnails** | First-page preview image per guideline (generated with `pdftoppm` → webp, stored in R2). |
 | 👁️ **In-browser preview** | Full **pdf.js** viewer with zoom — no download needed. |
 | ⬇️ **Download** | One click; served from the R2 cache, falls back to a live NCCN fetch. |
+| 🖨 **Print a page** | The current page re-rendered offscreen at 300 DPI, not a grab of the on-screen canvas. Paper orientation follows the page. |
 | ♻️ **Self-healing refresh** | Daily cron re-pulls the 3 stalest copies → every guideline renewed ≈ monthly. A failed fetch stays stalest, so it is retried until it lands instead of being skipped. |
 | 🔑 **Cookie self-service** | Paste a fresh NCCN cookie right in the (gated) page when it expires — stored in KV, no redeploy. |
 

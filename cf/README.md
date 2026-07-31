@@ -117,6 +117,10 @@ pdf.js 打造、參考 [mcq-bank](https://github.com/htlin222/mcq-bank) 的 Embe
 - **縮放**：`−` / `+`、百分比、**符合寬度**（fit-width，預設）
 - **連續捲動 + 懶載入**：IntersectionObserver 只渲染接近視窗的頁（大檔也順）
 - **可選取文字層**：pdf.js text layer，可反白／複製
+- **列印本頁**（工具列 🖨）：把目前這一頁以 **300 DPI** 離屏重繪後送印，不是抓螢幕上
+  那張 canvas——後者是照螢幕寬度算的（常常不到 150 DPI），印出來字邊會糊。紙張方向
+  跟著該頁走（橫式流程圖就用橫式紙），長邊上限 4200px 以免超大版面吃爆記憶體。
+  走隱藏 iframe 而不是 `window.open`，不會被彈窗封鎖，也不會把閱讀器 UI 一起印進去。
 - **鍵盤**：←/→/PageUp/PageDown 翻頁、`+` / `-` 縮放
 - **light/dark 主題切換**（與首頁共用偏好）
 
