@@ -463,8 +463,14 @@ function printPage(){
       +esc(GNAME)+' p.'+n+'</title><style>'
       // 紙張方向跟著這一頁走，橫式流程圖才不會被縮成一小條。
       +'@page{size:'+(r.landscape?'landscape':'portrait')+';margin:8mm;}'
-      +'html,body{margin:0;padding:0;background:#fff;}'
-      +'img{display:block;width:100%;height:auto;}'
+      // 一定要同時鎖住兩個方向。只給 width:100% 的話，只要頁面的長寬比比紙張「胖」，
+      // 撐滿寬度後高度就會超出可印範圍而掉到第二頁——NCCN 是 letter 橫式（比例
+      // 0.773），A4 橫式可印區是 0.690，撐滿 281mm 寬會變成 217mm 高，可印高度只有
+      // 194mm。max-width + max-height 讓它取兩者較嚴格的那個，等比縮到一定放得下。
+      // height:100% 要一路標到 html 才有具體高度可以拿來算百分比。
+      +'html,body{margin:0;padding:0;height:100%;background:#fff;}'
+      +'body{overflow:hidden;}'
+      +'img{display:block;max-width:100%;max-height:100%;width:auto;height:auto;margin:0 auto;}'
       +'</style></head><body><img alt=""></body></html>');
     d.close();
     var img=d.body.firstChild;
