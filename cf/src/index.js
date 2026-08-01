@@ -5,7 +5,8 @@
 // Routes: / (grid), /preview/:id (pdf.js), /pdf/:id (inline), /dl/:id (download),
 //         /thumb/:id, /manifest.webmanifest, /sw.js, /icons/*, /apple-touch-icon.png,
 //         /api/{cookie,cookie-status,r2-status,search,refresh,toc,insight},
-//         /api/{bookmark,bookmarks,star,stars}.
+//         /api/{bookmark,bookmarks,star,stars},
+//         /api/notifications(/read).
 import { GUIDELINES, NAME_BY_ID, VALID_IDS } from "./data/guidelines.js";
 import {
 	COOKIE_KEY,
@@ -41,6 +42,12 @@ import {
 	putBookmark,
 	setStar,
 } from "./lib/marks.js";
+import {
+	countNotifications,
+	lastCronAt,
+	listNotifications,
+	markRead,
+} from "./lib/notify.js";
 import { renderPage } from "./views/home.js";
 import { renderViewer } from "./views/viewer.js";
 import { faviconResponse, manifestResponse, SW_JS } from "./views/static.js";
@@ -145,6 +152,9 @@ export default {
 			const health = await env.NCCN_KV.get(CRON_HEALTH_KEY, "json").catch(
 				() => null,
 			);
+			// 未讀數順路搭這班車。首頁本來就會打 /api/r2-status，鈴鐺的徽章不值得
+			// 多一次往返；完整清單等使用者真的點開鈴鐺才拉。
+			const notify = await countNotifications(env);
 			const vobj = await env.PDFS.get("meta/versions.json");
 			const versions = vobj ? await vobj.json().catch(() => ({})) : {};
 			// Which ids have a banner-free copy (built by gen_clean.sh in CI).
@@ -159,7 +169,27 @@ export default {
 				// 最近一次 cron 的結果。前端據此顯示警示，不用等到一輪跑完才發現壞掉。
 				health: health || null,
 				perDay: PER_DAY,
+				notify,
 			});
+		}
+
+		// 通知中心。清單只在使用者點開鈴鐺時才拉（徽章數字走 /api/r2-status）。
+		// lastCron 是「最新一筆 cron 紀錄的時間」——cron 沒跑這件事沒有人會來寫，
+		// 只能由前端拿它推算靜默幾天（lib/notify.js 的 staleEvent）。
+		if (pathname === "/api/notifications" && request.method === "GET") {
+			const [rows, counts, lastCron] = await Promise.all([
+				listNotifications(env, url.searchParams.get("limit")),
+				countNotifications(env),
+				lastCronAt(env),
+			]);
+			return json({ ok: true, rows, lastCron, ...counts });
+		}
+
+		// {all:true} 全部已讀，{id:N} 單筆。
+		if (pathname === "/api/notifications/read" && request.method === "POST") {
+			const b = await request.json().catch(() => ({}));
+			const out = await markRead(env, { id: b.id, all: b.all === true });
+			return json(out, out.ok ? 200 : 400);
 		}
 
 		if (pathname === "/api/search" && request.method === "GET") {

@@ -2,6 +2,7 @@
 // cache miss (or explicit refresh) using the stored cookie.
 import { GUIDELINES } from "../data/guidelines.js";
 import { COOKIE_KEY, CRON_HEALTH_KEY, CRON_STATE_KEY } from "./constants.js";
+import { notifyCron } from "./notify.js";
 
 export async function fetchLive(env, id) {
 	const cookie = await env.NCCN_KV.get(COOKIE_KEY);
@@ -138,6 +139,10 @@ export async function refreshBatch(env, n) {
 			.map((r) => `${r.id}: ${r.error}`),
 	};
 	await env.NCCN_KV.put(CRON_HEALTH_KEY, JSON.stringify(health));
+	// KV 只留最後一次，看不出「上週是不是也壞了」。同一份結果再寫一列進 D1 的
+	// 通知表，那裡才有歷史與已讀狀態。notifyCron 自己吞例外：PDF 都已經進 R2 了，
+	// 通知寫不進去不該讓整輪 cron 看起來像失敗。
+	await notifyCron(env, health);
 	// Nothing at all got through = systemic (an expired cookie, nearly always).
 	// console.error so it shows up as an error in Workers observability rather
 	// than blending into the normal daily log line.

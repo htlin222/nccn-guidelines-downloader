@@ -3,6 +3,7 @@ import { CATS } from "../data/categories.js";
 import { PER_DAY, BUILD_TIME } from "../lib/constants.js";
 import { escapeHtml } from "../lib/http.js";
 import { citeText, copyText, showToast, TOAST_CSS } from "../lib/cite.js";
+import { fmtEvent, relTime, staleEvent } from "../lib/notify.js";
 
 export function renderPage(request) {
 	const user = request.headers.get("cf-access-authenticated-user-email") || "";
@@ -152,6 +153,27 @@ export function renderPage(request) {
   .sethint{opacity:.75;font-size:.82rem;margin:0;}
   .iconbtn.warn::after{content:"";position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:999px;background:#f59e0b;border:2px solid hsl(var(--background));}
   .iconbtn{position:relative;}
+  /* 徽章只在有 warn/error 未讀時出現數字；純 info 未讀給一顆不吵人的灰點。 */
+  .badge{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;
+    background:#ef4444;color:#fff;font-size:.62rem;font-weight:700;line-height:17px;text-align:center;
+    border:2px solid hsl(var(--background));box-sizing:content-box;}
+  .badge.quiet{min-width:8px;height:8px;padding:0;background:hsl(var(--muted-foreground));font-size:0;line-height:0;top:2px;right:2px;}
+  .nlist{display:flex;flex-direction:column;gap:7px;}
+  .nrow{display:flex;gap:10px;align-items:flex-start;text-align:left;font:inherit;width:100%;cursor:pointer;
+    padding:9px 11px;border:1px solid hsl(var(--border));border-radius:10px;background:hsl(var(--card));color:inherit;}
+  .nrow:hover{border-color:hsl(var(--ring));background:hsl(var(--accent));}
+  .nrow.read{opacity:.55;}
+  .nrow.synthetic{cursor:default;border-style:dashed;}
+  .nrow.lv-warn{border-color:#f59e0b66;}
+  .nrow.lv-error{border-color:#ef444466;}
+  .nico{font-size:.95rem;line-height:1.3;flex-shrink:0;}
+  .nbody{min-width:0;flex:1;}
+  .ntitle{font-size:.84rem;font-weight:600;line-height:1.35;}
+  .nsub{font-size:.74rem;color:hsl(var(--muted-foreground));margin-top:2px;overflow-wrap:anywhere;}
+  .nwhen{font-size:.7rem;color:hsl(var(--muted-foreground));flex-shrink:0;margin-top:1px;}
+  .ndot{width:7px;height:7px;border-radius:999px;background:#3b82f6;flex-shrink:0;margin-top:7px;}
+  .nrow.read .ndot{background:transparent;}
+  .sheethead .btn{font-size:.74rem;padding:5px 10px;}
   footer{max-width:1180px;margin:0 auto;padding:0 20px 50px;color:hsl(var(--muted-foreground));font-size:.74rem;}
   footer a{color:inherit;}
 ${TOAST_CSS}
@@ -163,6 +185,7 @@ ${TOAST_CSS}
     <div class="htop">
       <div class="brand"><span class="logo" id="logo"></span><span>NCCN Guidelines<small id="sub">${GUIDELINES.length} 份 · R2 · PWA</small></span></div>
       <div class="spacer"></div>
+      <button class="iconbtn" id="bell" title="通知"></button>
       <button class="iconbtn" id="settings" title="設定"></button>
       <button class="iconbtn" id="theme" title="切換主題"></button>
     </div>
@@ -177,6 +200,7 @@ ${TOAST_CSS}
 <main>
   <div id="list"></div>
 </main>
+<div id="notifModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>通知</b><span style="flex:1"></span><button class="btn" id="notifAll">全部已讀</button><button class="xbtn" id="notifClose">✕</button></div><span class="chip" id="notifAlive">⏱ 讀取中…</span><div class="nlist" id="notifList"></div></div></div>
 <div id="setModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>設定</b><button class="xbtn" id="setClose">✕</button></div><span class="chip" id="cookieStatus">🔑 檢查 cookie…</span><span class="chip" id="cronStatus">⏱ 檢查每日更新…</span><div class="setlabel">更新 NCCN cookie（過期時使用）</div><p class="sethint">登入 <a href="https://www.nccn.org/login" target="_blank" rel="noopener">nccn.org</a>，用 cookie-cook 擴充功能複製 <b>Http Header value</b> 貼在下方存檔。</p><textarea id="cookieInput" placeholder="ASP.NET_SessionId=…; …"></textarea><div><button class="btn" id="saveCookie">儲存 cookie</button> <span id="saveMsg" style="font-size:.8rem;margin-left:6px"></span></div></div></div>
 <footer>
   透過你的 NCCN 登入 cookie 代理下載官方 PDF。${user ? "登入身分：" + escapeHtml(user) + " · " : ""}
@@ -210,6 +234,7 @@ const ICONS = {
   settings:'<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
   cross:'<path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2z"/>',
   star:'<path d="m12 2.5 2.95 5.98 6.6.96-4.77 4.65 1.12 6.57L12 17.56l-5.9 3.1 1.12-6.57L2.45 9.44l6.6-.96z"/>',
+  bell:'<path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="M21 18H3a2 2 0 0 0 2-2v-5a7 7 0 0 1 14 0v5a2 2 0 0 0 2 2z"/>',
 };
 function svg(name){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[name]||'')+'</svg>';}
 const COLOR = {}; const ICON = {};
@@ -351,11 +376,12 @@ const themeBtn=document.getElementById('theme');
 function curTheme(){return document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');}
 function paintThemeBtn(){themeBtn.innerHTML=svg(curTheme()==='dark'?'sun':'moon');}
 themeBtn.onclick=()=>{const next=curTheme()==='dark'?'light':'dark';document.documentElement.dataset.theme=next;try{localStorage.setItem('theme',next);}catch(e){}paintThemeBtn();
+  document.querySelector('meta[name=theme-color]').setAttribute('content',next==='dark'?'#0b0f19':'#ffffff');};
+paintThemeBtn();
+// 設定面板的接線以前縮在 themeBtn.onclick 的大括號裡，等於「先切一次主題，齒輪才會動」。
 document.getElementById('settings').onclick=function(){document.getElementById('setModal').hidden=false;};
 document.getElementById('setClose').onclick=function(){document.getElementById('setModal').hidden=true;};
 document.getElementById('setModal').addEventListener('click',function(e){if(e.target===this)this.hidden=true;});
-  document.querySelector('meta[name=theme-color]').setAttribute('content',next==='dark'?'#0b0f19':'#ffffff');};
-paintThemeBtn();
 
 // 齒輪上的警示點有兩個來源（cookie、每日更新），各自非同步回來，所以記在同一個物件
 // 裡一起判斷——不然後回來的那個會把前一個的警示擦掉。
@@ -391,11 +417,67 @@ function paintCron(h){
     WARN.cron=false;}
   paintWarn();
 }
+// ── 通知中心 ────────────────────────────────────────────────────────────
+// 徽章數字搭 /api/r2-status 回來（不多一次往返），完整清單等點開鈴鐺才拉。
+var relTime=${relTime.toString()};
+var fmtEvent=${fmtEvent.toString()};
+var staleEvent=${staleEvent.toString()};
+var NOTIF={unread:0,alert:0};
+function paintBell(){
+  var b=document.getElementById('bell');if(!b)return;
+  var n=NOTIF.alert||0, quiet=!n&&(NOTIF.unread||0)>0;
+  b.innerHTML=svg('bell')+(n?'<span class="badge">'+(n>9?'9+':n)+'</span>':quiet?'<span class="badge quiet"></span>':'');
+  b.title=n?n+' 則未處理的警示':quiet?NOTIF.unread+' 則未讀':'通知';
+}
+function notifRow(r){
+  var f=fmtEvent(r), read=!!r.read_at, syn=!!r.synthetic;
+  return '<button class="nrow lv-'+esc(r.level||'info')+(read?' read':'')+(syn?' synthetic':'')+'"'+
+    (syn?' disabled':' data-nid="'+esc(String(r.id))+'"')+'>'+
+    '<span class="ndot"></span><span class="nico">'+f.icon+'</span>'+
+    '<span class="nbody"><span class="ntitle">'+esc(r.title||'')+'</span>'+
+    (f.sub?'<span class="nsub">'+esc(f.sub)+'</span>':'')+'</span>'+
+    '<span class="nwhen">'+esc(relTime(r.created))+'</span></button>';
+}
+// cron 沒跑的時候沒有人會來寫那一列，所以「靜默」是前端從最新一筆推出來的，
+// 排在清單最上面。這也是整個通知中心真正回答「它還活著嗎」的那一行。
+function renderNotif(d){
+  var alive=document.getElementById('notifAlive');
+  var st=staleEvent(d.lastCron,new Date().toISOString(),2);
+  if(alive){
+    if(!d.lastCron){alive.className='chip warn';alive.textContent='⚠ 尚無任何每日更新紀錄';}
+    else if(st){alive.className='chip warn';alive.textContent='⚠ '+st.title;}
+    else{alive.className='chip';alive.textContent='✓ cron 正常：最後一次紀錄 '+relTime(d.lastCron);}
+  }
+  var rows=(d.rows||[]).slice();
+  if(st)rows.unshift(st);
+  var el=document.getElementById('notifList');if(!el)return;
+  el.innerHTML=rows.length?rows.map(notifRow).join(''):'<div class="empty">還沒有任何通知</div>';
+}
+async function loadNotif(){
+  try{const d=await(await fetch('/api/notifications')).json();
+    NOTIF={unread:d.unread||0,alert:d.alert||0};paintBell();renderNotif(d);
+  }catch(e){var el=document.getElementById('notifList');if(el)el.innerHTML='<div class="empty">讀不到通知</div>';}
+}
+async function markNotif(payload){
+  try{await fetch('/api/notifications/read',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});}
+  catch(e){showToast('標記已讀失敗',String(e&&e.message||e));}
+  loadNotif();
+}
+document.getElementById('bell').onclick=function(){document.getElementById('notifModal').hidden=false;loadNotif();};
+document.getElementById('notifClose').onclick=function(){document.getElementById('notifModal').hidden=true;};
+document.getElementById('notifModal').addEventListener('click',function(e){if(e.target===this)this.hidden=true;});
+document.getElementById('notifAll').onclick=function(){markNotif({all:true});};
+// 逐筆已讀：開面板不自動全部標掉，否則你今天瞄一眼，明天就不知道昨天壞過。
+document.getElementById('notifList').addEventListener('click',function(e){
+  var b=e.target.closest&&e.target.closest('[data-nid]');if(!b)return;
+  b.classList.add('read');markNotif({id:parseInt(b.getAttribute('data-nid'),10)});});
+
 async function refreshR2(){
   try{const s=await(await fetch('/api/r2-status')).json();
     var sig=(s.count||0)+':'+Object.keys(s.versions||{}).length;
     try{localStorage.setItem('nccnr2',JSON.stringify({cached:s.cached,versions:s.versions,count:s.count,total:s.total}));}catch(e){}
     R2=s.cached||{};VER=s.versions||{};
+    if(s.notify){NOTIF={unread:s.notify.unread||0,alert:s.notify.alert||0};paintBell();}
     paintCron(s.health);
     var sub=document.getElementById('sub');if(sub)sub.textContent=s.count+' / '+s.total+' 份 · R2 · PWA';
     if(sig!==r2sig){r2sig=sig;buildGrid();applyFilter();}
@@ -412,7 +494,7 @@ document.getElementById('saveCookie').addEventListener('click',async()=>{
   }catch(e){msg.textContent='儲存失敗';}
   btn.disabled=false;
 });
-buildFilters();buildGrid();applyFilter();refreshCookie();refreshR2();refreshStars();
+paintBell();buildFilters();buildGrid();applyFilter();refreshCookie();refreshR2();refreshStars();
 document.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&(e.key==='f'||e.key==='F')){e.preventDefault();q.focus();q.select();}});
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}
 </script>

@@ -83,19 +83,21 @@ wrangler kv key get cookie_meta --binding NCCN_KV --remote
 
 ## 2. One-time D1 migrations
 
-Three SQL files, deliberately separate. Run each **once**:
+Four SQL files, deliberately separate. Run each **once**:
 
 ```bash
 cd cf && set -a && . ../.env && set +a
 wrangler d1 execute nccn-search --remote --file=sql/schema.sql    # FTS5 `pages`
 wrangler d1 execute nccn-search --remote --file=sql/insights.sql  # AI cache + quota
 wrangler d1 execute nccn-search --remote --file=sql/marks.sql     # bookmarks + stars
+wrangler d1 execute nccn-search --remote --file=sql/notify.sql    # notification centre
 ```
 
 `schema.sql` starts with `DROP TABLE IF EXISTS pages` — it is the search index's
-own schema and gets re-derived on every rebuild. `insights.sql` and `marks.sql`
-are `CREATE TABLE IF NOT EXISTS` on purpose: **an index rebuild must never wipe
-the AI cache or anything the user saved.** Never merge them into `schema.sql`.
+own schema and gets re-derived on every rebuild. The other three are
+`CREATE TABLE IF NOT EXISTS` on purpose: **an index rebuild must never wipe the
+AI cache, anything the user saved, or an unread alert.** Never merge them into
+`schema.sql`.
 
 ---
 
@@ -117,9 +119,12 @@ If that header is absent the site is unprotected — check before pointing anyon
 
 ```bash
 cd cf && pnpm install
-pnpm test            # 84 unit tests, all pure helpers — must pass
-pnpm deploy          # = bash deploy.sh
+pnpm test            # 112 unit tests, all pure helpers — must pass
+pnpm run deploy      # = bash deploy.sh
 ```
+
+Use `pnpm run deploy`, not `pnpm deploy` — pnpm has a built-in `deploy` for
+workspaces that shadows the script and fails with `ERR_PNPM_CANNOT_DEPLOY`.
 
 `deploy.sh` stamps `BUILD_TIME` into `src/lib/constants.js` (shown in the footer,
 so you can tell at a glance which build is live), sources `../.env`, and runs
@@ -155,6 +160,10 @@ puts a warning dot on the gear when the last run failed, partly failed, or has n
 run in 2 days. **A totally failed run logs via `console.error`** so it shows up as
 error-level in Workers Observability — that is the thing to alert on.
 
+KV only ever holds the *last* run, so it cannot answer "was it also broken last
+week?". The same record is therefore written a second time, as a row in the
+notification centre (§5.5), which keeps history and read/unread state.
+
 Nearly every real failure is an expired NCCN cookie. Fix it in the settings sheet
 on the home page (paste the `Http Header value` from the cookie-cook extension),
 or:
@@ -187,8 +196,59 @@ Order matters; each step is a script in `cf/`:
 7. **Verify the result** — index row count, and that both manifests cover the
    catalogue. A step can pass on its own terms and still leave the site wrong.
 
+Steps 8 and 9 feed the notification centre: `archive_notify.sh` rolls anything
+older than 90 days off to R2, and a final `if: always()` step posts the run's own
+outcome — green *or* red — so a silently-broken weekly rebuild is visible on the
+home page.
+
 Run it by hand: `gh workflow run update-versions.yml`, then
 `gh run watch $(gh run list --workflow=update-versions.yml --limit 1 --json databaseId -q '.[0].databaseId')`.
+
+---
+
+## 5.5 The notification centre
+
+The bell in the header. Answers one question: **is the cron still alive?**
+
+Four kinds of event land in the D1 `notifications` table:
+
+| kind | written by | when |
+|---|---|---|
+| `cron` | Worker, `refreshBatch` → `notifyCron` | every daily run, info / warn / error |
+| `cookie` | Worker, same call | only when a run gets **nothing** through |
+| `version` | `gen_versions.sh` | a guideline's `Version X.YYYY` changed |
+| `ci` | `update-versions.yml`, final step | the weekly rebuild, green or red |
+
+Three decisions worth not undoing:
+
+- **CI writes to D1 directly, not through an HTTP endpoint.** The site is behind
+  Cloudflare Access, so a webhook from a GitHub Action gets the login page. CI
+  already holds a D1-Edit token, so `cf/notify.sh` just runs an INSERT.
+- **The badge counts only `warn`/`error`.** A daily "3/3 完成" is an `info` row —
+  it is the evidence the cron ran, but if it lit the badge the bell would glow
+  every day and you would stop looking at it.
+- **A repeated unread alert bumps its timestamp instead of inserting again**
+  (`notify()` in `lib/notify.js`, mirrored in `notify.sh`). A cookie dead for five
+  days is one problem, not five rows.
+
+The one thing a cron cannot report is **not having run** — nothing writes that
+row. So the sheet derives it client-side from the newest `cron` row
+(`staleEvent`) and shows a synthetic error at the top after 2 days of silence.
+That line, not any stored row, is the actual liveness check.
+
+Look at it without the browser:
+
+```bash
+cd cf && set -a && . ../.env && set +a
+wrangler d1 execute nccn-search --remote \
+  --command "SELECT created, level, kind, title FROM notifications ORDER BY created DESC LIMIT 10"
+bash notify.sh ci info "手動測試" '{"rows":0}'   # write one by hand
+KEEP_DAYS=90 bash archive_notify.sh              # roll old rows to R2, then prune
+```
+
+Archived history is at `meta/notify/YYYY-MM.jsonl` in R2. `archive_notify.sh`
+prunes a month from D1 **only** after that month's object writes successfully, so
+a failed upload costs a retry, never the history.
 
 Every script ends with `[ "$ok" -gt 0 ]` — a run where *nothing* succeeded goes
 red. That guard exists because these scripts once reported success for weeks while
@@ -210,6 +270,7 @@ thumb/<id>.webp     first-page thumbnail
 meta/versions.json  {id: {v, d}}
 meta/clean.json     sha256 of each source, so gen_clean.sh can skip unchanged ids
 meta/toc/<id>.json  Discussion table of contents
+meta/notify/*.jsonl notifications older than 90 days, one month per object
 asset/*.png         PWA icons
 ```
 
@@ -246,6 +307,8 @@ curl -sI -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
 | Every R2/D1 read is empty in CI | Token missing or under-scoped | §1; the "Check the token" step catches this now |
 | `Invalid access token` on deploy | OAuth creds revoked | Use the API token, not `wrangler login` |
 | A guideline never refreshes | Parked after 3 consecutive failures | `wrangler kv key get cron_state --binding NCCN_KV --remote`; delete its entry to retry now |
+| Bell says "已 N 天沒有紀錄" | The Worker cron did not fire, or D1 writes are failing | `wrangler tail nccn-download` over a run; compare KV `cron_health` against the newest `cron` row in D1 |
+| Bell is empty on a working site | `sql/notify.sql` was never run | §2 — every read in `lib/notify.js` swallows the missing-table error by design |
 
 ---
 
@@ -260,4 +323,4 @@ curl -sI -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
   much of it.
 - New D1 tables get their own `sql/*.sql` with `CREATE TABLE IF NOT EXISTS`, never
   an addition to `schema.sql`.
-- `pnpm test` must pass before `pnpm deploy`. CI enforces it on push.
+- `pnpm test` must pass before `pnpm run deploy`. CI enforces it on push.
