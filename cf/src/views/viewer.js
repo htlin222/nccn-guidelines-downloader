@@ -3,6 +3,7 @@ import { escapeHtml } from "../lib/http.js";
 import { tocGroups, tocBestIndex } from "../lib/toc.js";
 import { citeText, copyText, showToast, TOAST_CSS } from "../lib/cite.js";
 import { bookmarkMd } from "../lib/marks.js";
+import { annotRect, annotNextNum, annotHit, annotDraw } from "../lib/annot.js";
 
 export function renderViewer(id) {
 	const name = NAME_BY_ID[id] || id;
@@ -166,7 +167,18 @@ export function renderViewer(id) {
   .sheet{background:hsl(var(--bar));color:hsl(var(--fg));border:1px solid hsl(var(--border));border-radius:14px;width:min(680px,100%);max-height:90vh;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px;}
   .sheethead{display:flex;justify-content:space-between;align-items:center;font-size:.95rem;}
   .meta{font-size:.8rem;color:hsl(var(--muted-fg));}
-  .snapimg{width:100%;border:1px solid hsl(var(--border));border-radius:8px;background:#fff;}
+  .snapimg{width:100%;height:auto;display:block;border:1px solid hsl(var(--border));border-radius:8px;background:#fff;}
+  /* 標註工具列：跟工具列同一套 .btn／.grp，只是字級縮一號塞得下六個工具。 */
+  .anntb{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .anntb .btn{font-size:.76rem;padding:5px 8px;}
+  .anntb .grp .btn{padding:5px 7px;}
+  .anntb .sp{flex:1;}
+  .annhint{font-size:.7rem;color:hsl(var(--muted-fg));line-height:1.5;}
+  /* touch-action:none 讓手機上拖曳框選不會被當成捲動而把 pointermove 吃掉。 */
+  .snapwrap{position:relative;line-height:0;}
+  .snapwrap canvas{touch-action:none;}
+  .snapwrap.tool canvas{cursor:crosshair;}
+  .snapwrap.erase canvas{cursor:pointer;}
   .sheet textarea{width:100%;min-height:120px;border:1px solid hsl(var(--border));border-radius:8px;background:hsl(var(--bg));color:inherit;padding:10px;font-family:ui-monospace,monospace;font-size:.85rem;box-sizing:border-box;}
   .sheetfoot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
   @media (max-width:640px){ .rail{position:absolute;z-index:9;height:100%;box-shadow:2px 0 14px rgba(0,0,0,.35);} }
@@ -229,7 +241,28 @@ ${TOAST_CSS}
   </aside>
   <div id="gridView" class="gridview" hidden></div>
 </div>
-<div id="snapModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>頁面截圖筆記</b><button class="btn" id="snapClose">✕</button></div><div class="meta" id="snapMeta"></div><img id="snapImg" class="snapimg" alt="page"><textarea id="snapNote" placeholder="在這裡寫你的 Markdown 筆記…"></textarea><div class="sheetfoot"><button class="btn" id="snapCopy">複製 PNG</button><button class="btn" id="snapPng">下載 PNG</button><button class="btn dl" id="snapMd">下載 Markdown 筆記</button></div></div></div>
+<div id="snapModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>頁面截圖筆記</b><button class="btn" id="snapClose">✕</button></div><div class="meta" id="snapMeta"></div>
+  <div class="anntb">
+    <div class="grp" id="annTools">
+      <button class="btn" data-tool="sel" title="框選：拖曳出重點區域"></button>
+      <button class="btn" data-tool="num" title="編號：點一下放 ①，再點一下放 ②…"></button>
+      <button class="btn" data-tool="pointer" title="圖章：游標"></button>
+      <button class="btn" data-tool="arrow" title="圖章：左上箭頭"></button>
+      <button class="btn" data-tool="check" title="圖章：打勾"></button>
+      <button class="btn" data-tool="ok" title="圖章：圈起來的勾"></button>
+    </div>
+    <div class="grp" id="annStyles">
+      <button class="btn" data-st="stroke" title="只畫紅色外框">外框</button>
+      <button class="btn" data-st="dim" title="框以外的區域變暗">框外變暗</button>
+      <button class="btn" data-st="shadow" title="框以外的區域加陰影">框外陰影</button>
+    </div>
+    <span class="sp"></span>
+    <button class="btn" id="annUndo" title="復原上一個標註"></button>
+    <button class="btn" id="annClear" title="清除全部標註"></button>
+  </div>
+  <div class="annhint" id="annHint"></div>
+  <div class="snapwrap" id="snapWrap"><canvas id="snapCv" class="snapimg"></canvas></div>
+  <textarea id="snapNote" placeholder="在這裡寫你的 Markdown 筆記…"></textarea><div class="sheetfoot"><button class="btn" id="snapCopy">複製 PNG</button><button class="btn" id="snapPng">下載 PNG</button><button class="btn dl" id="snapMd">下載 Markdown 筆記</button></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 // 根層 <id>.pdf 就是去掉頁首橫幅的版本，所以連截圖成筆記／總覽匯出的圖都不帶橫幅。
@@ -263,7 +296,16 @@ var ICONS={
   bookmark:'<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
   bookmarks:'<path d="M7 3h10a2 2 0 0 1 2 2v16l-7-4-7 4V5a2 2 0 0 1 2-2z"/><path d="M21 17V7a2 2 0 0 0-2-2"/>',
   trash:'<path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>',
-  printer:'<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect width="12" height="8" x="6" y="14" rx="1"/>'
+  printer:'<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect width="12" height="8" x="6" y="14" rx="1"/>',
+  // 截圖標註工具列。pointer2/upleft/check/checkbig 的路徑跟 lib/annot.js 蓋在圖上
+  // 的那份是同一組，按鈕長什麼樣蓋出來就是什麼樣。
+  crop:'<path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/>',
+  num1:'<circle cx="12" cy="12" r="9"/><path d="M10.5 9.5 13 8v8"/>',
+  pointer2:'<path d="m4 4 7.07 17 2.51-7.39L21 11.07z"/>',
+  upleft:'<path d="M8 15V8h7"/><path d="M21 21 8 8"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  checkbig:'<path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/>',
+  undo:'<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>'
 };
 function svg(n){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[n]||'')+'</svg>';}
 function $(i){return document.getElementById(i);}
@@ -488,15 +530,110 @@ function printPage(){
     showToast('列印失敗',String(e&&e.message||e));});}
 $('printBtn').innerHTML=svg('printer');
 $('printBtn').onclick=printPage;
-$('snap').onclick=function(){var c=makeSnapCanvas();var img=$('snapImg');if(c){img.src=c.toDataURL('image/png');}else{img.removeAttribute('src');}$('snapMeta').textContent=GNAME+'  ·  '+(VERSION?('v'+VERSION+'  ·  '):'')+'p.'+cur;$('snapModal').hidden=false;};
+// ── 截圖標註 ─────────────────────────────────────────────────────────────────
+// 標註不會燒進底圖：SNAP.base 永遠是那張乾淨的底圖，畫面上那張是每次操作後用
+// base + anns 整個重畫出來的。所以「復原」只是 pop 掉一個元素，切換框線樣式也不用
+// 重新截圖——代價只有一次 drawImage，這個尺寸的圖上感覺不出來。
+var annotRect=${annotRect.toString()};
+var annotNextNum=${annotNextNum.toString()};
+var annotHit=${annotHit.toString()};
+var annotDraw=${annotDraw.toString()};
+var STAMPS={pointer:1,arrow:1,check:1,ok:1};
+var ANNIC={sel:'crop',num:'num1',pointer:'pointer2',arrow:'upleft',check:'check',ok:'checkbig'};
+var SNAP={base:null,anns:[],tool:'',style:'stroke',drag:null,anchor:null};
+(function(){var t=$('annTools').children;for(var i=0;i<t.length;i++)t[i].innerHTML=svg(ANNIC[t[i].dataset.tool]);})();
+$('annUndo').innerHTML=svg('undo');$('annClear').innerHTML=svg('trash');
+function snapPaint(){var cv=$('snapCv'),b=SNAP.base;
+  if(!b){cv.width=0;cv.height=0;return;}
+  if(cv.width!==b.width||cv.height!==b.height){cv.width=b.width;cv.height=b.height;}
+  var ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,cv.width,cv.height);ctx.drawImage(b,0,0);
+  annotDraw(ctx,SNAP.drag?SNAP.anns.concat([SNAP.drag]):SNAP.anns,cv.width,cv.height,SNAP.style);}
+function annHint(){var h;
+  if(SNAP.tool==='sel')h='在圖上拖曳出要強調的區域。右邊那三個樣式是整層共用的——有幾個框就一起變。';
+  else if(SNAP.tool==='num')h='點一下放一個編號，號碼自己往下接。';
+  else if(SNAP.tool)h='點一下把圖章蓋上去。';
+  else h='先選一個工具再點圖片。沒選工具時，點既有的標註可以刪掉它（框要點在邊線上）。';
+  $('annHint').textContent=h;}
+function annSync(){var i,t=$('annTools').children,s=$('annStyles').children;
+  for(i=0;i<t.length;i++)t[i].classList.toggle('on',t[i].dataset.tool===SNAP.tool);
+  for(i=0;i<s.length;i++)s[i].classList.toggle('on',s[i].dataset.st===SNAP.style);
+  var w=$('snapWrap');
+  w.classList.toggle('tool',!!SNAP.tool);
+  w.classList.toggle('erase',!SNAP.tool&&SNAP.anns.length>0);
+  $('annUndo').classList.toggle('off',!SNAP.anns.length);
+  $('annClear').classList.toggle('off',!SNAP.anns.length);
+  annHint();}
+// 再點同一個工具＝取消選取，回到「點標註可刪」的狀態。
+$('annTools').onclick=function(e){var b=e.target.closest('button[data-tool]');if(!b)return;
+  SNAP.tool=SNAP.tool===b.dataset.tool?'':b.dataset.tool;annSync();};
+$('annStyles').onclick=function(e){var b=e.target.closest('button[data-st]');if(!b)return;
+  SNAP.style=b.dataset.st;annSync();snapPaint();};
+$('annUndo').onclick=function(){SNAP.anns.pop();annSync();snapPaint();};
+$('annClear').onclick=function(){SNAP.anns=[];SNAP.tool='';annSync();snapPaint();};
+// 座標一律換算成 0..1 再存，跟 CSS 把 canvas 縮到多寬無關。
+function snapPt(e){var cv=$('snapCv'),r=cv.getBoundingClientRect();
+  return {x:(e.clientX-r.left)/(r.width||1),y:(e.clientY-r.top)/(r.height||1)};}
+$('snapCv').addEventListener('pointerdown',function(e){
+  if(!SNAP.base)return;
+  var p=snapPt(e);
+  if(SNAP.tool==='sel'){
+    e.preventDefault();
+    SNAP.anchor=p;SNAP.drag=null;
+    // 抓住指標，拖到圖外面（甚至拖到 modal 背景上）放開也還算同一次拖曳。
+    try{$('snapCv').setPointerCapture(e.pointerId);}catch(_e){}
+    return;}
+  if(SNAP.tool==='num'){SNAP.anns.push({t:'num',x:p.x,y:p.y,n:annotNextNum(SNAP.anns)});annSync();snapPaint();return;}
+  if(STAMPS[SNAP.tool]){SNAP.anns.push({t:'stamp',x:p.x,y:p.y,k:SNAP.tool});annSync();snapPaint();return;}
+  var h=annotHit(SNAP.anns,p.x,p.y,$('snapCv').width,$('snapCv').height);
+  if(h>=0){SNAP.anns.splice(h,1);annSync();snapPaint();}});
+$('snapCv').addEventListener('pointermove',function(e){
+  if(!SNAP.anchor)return;
+  var p=snapPt(e);SNAP.drag=annotRect(SNAP.anchor.x,SNAP.anchor.y,p.x,p.y);snapPaint();});
+$('snapCv').addEventListener('pointerup',function(e){
+  if(!SNAP.anchor)return;
+  var p=snapPt(e),r=annotRect(SNAP.anchor.x,SNAP.anchor.y,p.x,p.y);
+  SNAP.anchor=null;SNAP.drag=null;
+  if(r)SNAP.anns.push(r);
+  annSync();snapPaint();});
+$('snapCv').addEventListener('pointercancel',function(){SNAP.anchor=null;SNAP.drag=null;snapPaint();});
+// 匯出的就是畫面上這張——標註已經在裡面了，不用再合成一次。
+function snapURL(){var cv=$('snapCv');return (SNAP.base&&cv.width)?cv.toDataURL('image/png'):'';}
+// 底圖從 pdf.js 的 page object 離屏重繪，跟 printCanvas 同一套路，不抄畫面上那張
+// canvas：那張可能還沒畫完（p.done 是在「送出 render」時就設 true 的），剛翻到的頁
+// 甚至還沒開始畫、連 canvas 都還不存在，而且它的解析度是照螢幕寬度算的。
+var SNAP_W=1600;
+function snapRender(n){
+  var p=pages[n-1];if(!p||!p.pg)return Promise.resolve(null);
+  var base=p.pg.getViewport({scale:1});
+  var vp=p.pg.getViewport({scale:Math.min(SNAP_W/base.width,4)});
+  var cv=document.createElement('canvas');
+  cv.width=Math.floor(vp.width);cv.height=Math.floor(vp.height);
+  var ctx=cv.getContext('2d');
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);
+  var t=p.pg.render({canvasContext:ctx,viewport:vp});
+  return (t&&t.promise?t.promise:Promise.resolve()).then(function(){return cv;});}
+$('snap').onclick=function(){
+  var n=cur;
+  // 先擺畫面上那張頂著，視窗立刻打得開；離屏那張畫好再換上去。不等它才開視窗是因為
+  // 分頁在背景時 pdf.js 的 rAF 會停擺，promise 可能一直不 settle，等下去就是對著空
+  // 白發呆。已經動手標註就不換圖，免得把使用者畫的東西弄不見。
+  SNAP.base=makeSnapCanvas();SNAP.anns=[];SNAP.tool='';SNAP.drag=null;SNAP.anchor=null;
+  snapPaint();annSync();
+  $('snapMeta').textContent=GNAME+'  ·  '+(VERSION?('v'+VERSION+'  ·  '):'')+'p.'+cur;$('snapModal').hidden=false;
+  snapRender(n).then(function(cv){
+    if(cv&&n===cur&&!SNAP.anns.length){SNAP.base=cv;snapPaint();annSync();}}).catch(function(){});};
 $('snapClose').onclick=function(){$('snapModal').hidden=true;};
 $('snapModal').addEventListener('click',function(e){if(e.target===$('snapModal'))$('snapModal').hidden=true;});
-$('snapPng').onclick=function(){var u=$('snapImg').getAttribute('src');if(u)dl2(u,'NCCN-'+GID+'-p'+cur+'.png');};
+// Esc：先退掉工具（怕誤刪），沒有工具在用才關視窗。
+document.addEventListener('keydown',function(e){if(e.key!=='Escape'||$('snapModal').hidden)return;
+  if(SNAP.tool){SNAP.tool='';annSync();}else $('snapModal').hidden=true;});
+$('snapPng').onclick=function(){var u=snapURL();if(u)dl2(u,'NCCN-'+GID+'-p'+cur+'.png');};
 // 複製 PNG：Safari 只認「在點擊事件的同一個 tick 內就呼叫 clipboard.write」，先 await
 // 把 data: URL 轉成 blob 再寫，權限已經過期會被擋掉。所以這裡把 blob 當成 Promise
 // 直接塞進 ClipboardItem——規格允許，Chrome/Safari/Firefox 都吃這一招。
 $('snapCopy').onclick=function(){
-  var u=$('snapImg').getAttribute('src');if(!u)return;
+  var u=snapURL();if(!u)return;
   var btn=$('snapCopy');
   if(!(window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write)){
     showToast('複製失敗','這個瀏覽器不支援把圖片寫進剪貼簿，請改用「下載 PNG」');return;}
@@ -507,7 +644,7 @@ $('snapCopy').onclick=function(){
     btn.textContent='已複製 ✓';
     btn._t=setTimeout(function(){btn.textContent='複製 PNG';btn._t=null;},1600);
   }).catch(function(e){showToast('複製失敗',String(e&&e.message||e));});};
-$('snapMd').onclick=function(){var u=$('snapImg').getAttribute('src')||'';var note=$('snapNote').value;var url=location.origin+'/preview/'+encodeURIComponent(GID)+'?page='+cur;var lines=['---','guideline: '+GNAME.split('"').join(''),'id: '+GID,'version: '+(VERSION||''),'page: '+cur,'source: '+url,'captured: '+new Date().toISOString(),'---','','# '+GNAME+' — p.'+cur+(VERSION?(' (v'+VERSION+')'):''),'','!['+GNAME+' p.'+cur+']('+u+')','',note,''];var md=lines.join(NL);var blob=new Blob([md],{type:'text/markdown;charset=utf-8'});dl2(URL.createObjectURL(blob),'NCCN-'+GID+'-p'+cur+'.md');};
+$('snapMd').onclick=function(){var u=snapURL();var note=$('snapNote').value;var url=location.origin+'/preview/'+encodeURIComponent(GID)+'?page='+cur;var lines=['---','guideline: '+GNAME.split('"').join(''),'id: '+GID,'version: '+(VERSION||''),'page: '+cur,'source: '+url,'captured: '+new Date().toISOString(),'---','','# '+GNAME+' — p.'+cur+(VERSION?(' (v'+VERSION+')'):''),'','!['+GNAME+' p.'+cur+']('+u+')','',note,''];var md=lines.join(NL);var blob=new Blob([md],{type:'text/markdown;charset=utf-8'});dl2(URL.createObjectURL(blob),'NCCN-'+GID+'-p'+cur+'.md');};
 var fHits=[],fIdx=-1,fTimer=null;
 $('findBtn').innerHTML=svg('find');$('findIcon').innerHTML=svg('find');$('findPrev').innerHTML=svg('cl');$('findNext').innerHTML=svg('cr');
 $('findBtn').onclick=function(){var fb=$('findbar');fb.hidden=!fb.hidden;if(!fb.hidden){$('findInput').focus();$('findInput').select();}};
