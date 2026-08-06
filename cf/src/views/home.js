@@ -4,6 +4,7 @@ import { PER_DAY, BUILD_TIME } from "../lib/constants.js";
 import { escapeHtml } from "../lib/http.js";
 import { citeText, copyText, showToast, TOAST_CSS } from "../lib/cite.js";
 import { fmtEvent, relTime, staleEvent } from "../lib/notify.js";
+import { hayHit } from "../lib/search.js";
 
 export function renderPage(request) {
 	const user = request.headers.get("cf-access-authenticated-user-email") || "";
@@ -84,7 +85,12 @@ export function renderPage(request) {
   .fchip.act svg,.fchip.act b{color:hsl(var(--primary-foreground));}
   .sresults{position:absolute;top:calc(100% - 6px);left:0;right:0;z-index:30;background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:12px;box-shadow:0 14px 36px -10px rgba(0,0,0,.45);max-height:min(64vh,540px);overflow-y:auto;padding:6px;}
   .sresults:empty{display:none;}
-  .shdr{position:sticky;top:0;background:hsl(var(--card));font-size:.74rem;color:hsl(var(--muted-foreground));padding:4px 6px 8px;font-weight:600;z-index:1;}
+  .shdr{position:sticky;top:0;background:hsl(var(--card));font-size:.74rem;color:hsl(var(--muted-foreground));padding:4px 30px 8px 6px;font-weight:600;z-index:1;}
+  /* 高度 0 的 sticky 外框：關閉鈕永遠停在下拉右上角，捲到第 200 頁命中也還在，
+     而且不佔版面、不把第一行標題往下推。 */
+  .sxwrap{position:sticky;top:0;height:0;z-index:3;text-align:right;}
+  .sx{position:relative;top:2px;border:0;background:transparent;color:hsl(var(--muted-foreground));cursor:pointer;padding:3px;border-radius:999px;line-height:0;font-size:17px;}
+  .sx:hover{color:hsl(var(--foreground));background:hsl(var(--accent));}
   .sitem{display:flex;gap:10px;padding:9px 11px;border:1px solid hsl(var(--border));border-radius:10px;background:hsl(var(--card));text-decoration:none;color:inherit;margin-bottom:6px;align-items:flex-start;}
   .sitem:hover{border-color:hsl(var(--ring));background:hsl(var(--accent));}
   .sdot{width:8px;height:8px;border-radius:999px;margin-top:5px;flex-shrink:0;}
@@ -241,6 +247,7 @@ const ICONS = {
   cross:'<path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2z"/>',
   star:'<path d="m12 2.5 2.95 5.98 6.6.96-4.77 4.65 1.12 6.57L12 17.56l-5.9 3.1 1.12-6.57L2.45 9.44l6.6-.96z"/>',
   bell:'<path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="M21 18H3a2 2 0 0 0 2-2v-5a7 7 0 0 1 14 0v5a2 2 0 0 0 2 2z"/>',
+  circlex:'<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>',
 };
 function svg(name){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[name]||'')+'</svg>';}
 const COLOR = {}; const ICON = {};
@@ -306,6 +313,7 @@ function renderStarSec(){
   if(sec)sec.outerHTML=starSecHtml(st);
   else listEl.insertAdjacentHTML('afterbegin',starSecHtml(st));
 }
+var hayHit=${hayHit.toString()};
 function applyFilter(){
   var f=q.value.trim().toLowerCase();var any=false;
   var secs=listEl.querySelectorAll('.catsec');
@@ -313,7 +321,7 @@ function applyFilter(){
     if(activeCat && sec.getAttribute('data-cat')!==activeCat){sec.style.display='none';continue;}
     var vis=false;var cards=sec.querySelectorAll('.card');
     for(var j=0;j<cards.length;j++){var cd=cards[j];
-      var show=!f||(cd.getAttribute('data-h')||'').indexOf(f)>=0;
+      var show=!f||hayHit(cd.getAttribute('data-h')||'',f);
       cd.style.display=show?'':'none';if(show){vis=true;any=true;}
     }
     sec.style.display=vis?'':'none';
@@ -325,8 +333,74 @@ var sresEl=document.getElementById('searchResults');var sTimer=null;
 function unmark(x){return esc(x||'').split('&lt;mark&gt;').join('<mark>').split('&lt;/mark&gt;').join('</mark>');}
 // 全文搜尋是伺服器端按 cat 欄位過濾的，「★ 已收藏」不是真的分類，不能送上去。
 function searchCat(){return activeCat&&activeCat!==STARCAT?activeCat:'';}
-function doSearch(){var qq=q.value.trim();if(qq.length<2){sresEl.innerHTML='';return;}var scat=searchCat();var u='/api/search?q='+encodeURIComponent(qq)+(scat?'&cat='+encodeURIComponent(scat):'');fetch(u).then(function(r){return r.json();}).then(function(d){if((d.q||'')!==q.value.trim())return;var rs=d.results||[];if(!rs.length){sresEl.innerHTML='<div class="shdr">內容搜尋「'+esc(qq)+'」：無命中</div>';return;}var order=[],G={};rs.forEach(function(x){if(!G[x.gid]){G[x.gid]={name:x.name,cat:x.cat,hits:[]};order.push(x.gid);}G[x.gid].hits.push(x);});var html='<div class="shdr">命中 '+rs.length+' 頁 · '+order.length+' 份'+(scat?'（限 '+esc(scat)+'）':'')+'</div>';order.forEach(function(gid){var g=G[gid];html+='<div class="sgroup"><div class="sgh"><span class="sdot" style="background:'+(COLOR[g.cat]||'#64748b')+'"></span><b data-cite="'+esc(gid)+'" title="點一下複製 AMA 引用" style="cursor:copy">'+esc(g.name)+'</b><span class="sgc">'+g.hits.length+' 頁</span></div>';g.hits.slice(0,5).forEach(function(x){html+='<a class="sitem" href="/preview/'+encodeURIComponent(x.gid)+'?page='+x.page+'&q='+encodeURIComponent(qq)+'"><span class="spage">p.'+x.page+'</span><div class="snip">'+unmark(x.snip)+'</div></a>';});if(g.hits.length>5)html+='<a class="smore" href="/preview/'+encodeURIComponent(gid)+'?page='+g.hits[5].page+'&q='+encodeURIComponent(qq)+'">還有 '+(g.hits.length-5)+' 頁…</a>';html+='</div>';});sresEl.innerHTML=html;}).catch(function(){});}
-q.addEventListener('input',function(){clearTimeout(sTimer);sTimer=setTimeout(doSearch,250);});
+// 下拉是蓋在卡片清單上的浮層，所以清單被篩成什麼樣，搜尋時根本看不到。打 breast
+// 十次有九次只是想打開那一份，得先在浮層最上面列出「指南名稱命中」，否則使用者
+// 只能在幾百頁內文片段裡撈那份 PDF。這一段純用本機的 DATA 算，不等 fetch。
+var FILE_MAX=8;
+function fileHits(qq){
+  var scat=searchCat();var onlyStar=activeCat===STARCAT;
+  return DATA.filter(function(g){
+    if(onlyStar&&!STARS[g.id])return false;
+    if(scat&&g.cat!==scat)return false;
+    return hayHit(g.name+' '+g.id+' '+g.cat,qq);
+  });
+}
+function fileHtml(qq){
+  var hs=fileHits(qq);if(!hs.length)return '';
+  var h='<div class="sgroup"><div class="shdr">指南名稱「'+esc(qq)+'」：'+hs.length+' 份</div>';
+  hs.slice(0,FILE_MAX).forEach(function(g){
+    h+='<a class="sitem" href="/preview/'+encodeURIComponent(g.id)+'">'
+      +'<span class="sdot" style="background:'+(COLOR[g.cat]||'#64748b')+'"></span>'
+      +'<div class="sbody"><div class="stitle">'+esc(g.name)+'</div>'
+      +'<div class="snip">'+esc(g.cat)+' · '+esc(g.id)+(VER[g.id]?' · v'+esc(VER[g.id].v):'')+'</div></div></a>';
+  });
+  if(hs.length>FILE_MAX)h+='<div class="smore">還有 '+(hs.length-FILE_MAX)+' 份名稱符合，打字再精確一點</div>';
+  return h+'</div>';
+}
+function ftHtml(d,qq,scat){
+  var rs=d.results||[];
+  if(!rs.length)return '<div class="shdr">內文搜尋「'+esc(qq)+'」：無命中</div>';
+  var order=[],G={};
+  rs.forEach(function(x){if(!G[x.gid]){G[x.gid]={name:x.name,cat:x.cat,hits:[]};order.push(x.gid);}G[x.gid].hits.push(x);});
+  var html='<div class="shdr">內文命中 '+rs.length+' 頁 · '+order.length+' 份'+(scat?'（限 '+esc(scat)+'）':'')+'</div>';
+  order.forEach(function(gid){var g=G[gid];
+    html+='<div class="sgroup"><div class="sgh"><span class="sdot" style="background:'+(COLOR[g.cat]||'#64748b')+'"></span><b data-cite="'+esc(gid)+'" title="點一下複製 AMA 引用" style="cursor:copy">'+esc(g.name)+'</b><span class="sgc">'+g.hits.length+' 頁</span></div>';
+    g.hits.slice(0,5).forEach(function(x){html+='<a class="sitem" href="/preview/'+encodeURIComponent(x.gid)+'?page='+x.page+'&q='+encodeURIComponent(qq)+'"><span class="spage">p.'+x.page+'</span><div class="snip">'+unmark(x.snip)+'</div></a>';});
+    if(g.hits.length>5)html+='<a class="smore" href="/preview/'+encodeURIComponent(gid)+'?page='+g.hits[5].page+'&q='+encodeURIComponent(qq)+'">還有 '+(g.hits.length-5)+' 頁…</a>';
+    html+='</div>';});
+  return html;
+}
+// 名稱命中是本機算的、內文命中要等 D1，所以兩段分開畫：打字當下先出名稱，
+// 內文那半塊等 fetch 回來再補上，中間掛一行「搜尋中」而不是整個下拉空著。
+var ftQ='',ftCache='';
+// 下拉是浮層，會蓋住底下的卡片清單。關掉它（✕ 或 Esc）只是收起浮層，搜尋字串
+// 留著——底下的清單仍然是篩選後的結果，這才是「只挑一份檔案」時要看的東西。
+var sHidden=false;
+function closeSearch(){sHidden=true;sresEl.innerHTML='';}
+function paintSearch(){
+  var qq=q.value.trim();
+  if(sHidden||qq.length<2){sresEl.innerHTML='';return;}
+  sresEl.innerHTML='<div class="sxwrap"><button type="button" class="sx" title="關閉搜尋結果（Esc）" aria-label="關閉搜尋結果">'+svg('circlex')+'</button></div>'
+    +fileHtml(qq)+(ftQ===qq?ftCache:'<div class="shdr">內文搜尋中…</div>');
+}
+sresEl.addEventListener('click',function(e){
+  var b=e.target.closest&&e.target.closest('.sx');if(!b)return;
+  e.preventDefault();e.stopPropagation();closeSearch();});
+q.addEventListener('keydown',function(e){if(e.key==='Escape'||e.keyCode===27)closeSearch();});
+function doSearch(){
+  var qq=q.value.trim();if(qq.length<2)return;
+  var scat=searchCat();
+  var u='/api/search?q='+encodeURIComponent(qq)+(scat?'&cat='+encodeURIComponent(scat):'');
+  fetch(u).then(function(r){return r.json();}).then(function(d){
+    if((d.q||'')!==q.value.trim())return;
+    ftCache=ftHtml(d,qq,scat);ftQ=qq;paintSearch();
+  }).catch(function(){
+    // 名稱那半塊還在，別讓「內文搜尋中…」永遠掛著假裝還在跑。
+    if(q.value.trim()!==qq)return;
+    ftCache='<div class="shdr">內文搜尋「'+esc(qq)+'」：連線失敗</div>';ftQ=qq;paintSearch();
+  });
+}
+q.addEventListener('input',function(){sHidden=false;paintSearch();clearTimeout(sTimer);sTimer=setTimeout(doSearch,250);});
 listEl.addEventListener('click',function(e){
   var s=e.target.closest&&e.target.closest('[data-star]');
   if(s){e.preventDefault();e.stopPropagation();toggleStar(s.getAttribute('data-star'));return;}
@@ -359,7 +433,8 @@ function buildFilters(){var counts={};DATA.forEach(function(g){counts[g.cat]=(co
   filtersEl.innerHTML=h;}
 filtersEl.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.fchip');if(!b)return;
   activeCat=b.getAttribute('data-cat')||null;try{localStorage.setItem('nccncat',activeCat||'');}catch(e){}
-  buildFilters();applyFilter();});
+  // 分類一換，名稱命中與內文命中的範圍都變了，快取的那半塊不能再用。
+  buildFilters();applyFilter();ftQ='';sHidden=false;paintSearch();doSearch();});
 function toggleStar(id){
   var on=!STARS[id];
   if(on)STARS[id]=1;else delete STARS[id];

@@ -25,6 +25,19 @@ export function buildMatch(q) {
 		})
 		.join(" ");
 }
+// 首頁搜尋框的「檔名命中」判斷：純字串比對，跟 FTS 無關。輸入 breast 時最想做的
+// 事通常是打開那一份，不是讀 200 頁內文片段，所以這一段要能獨立算出來、先畫出來。
+// 瀏覽器端是用 .toString() 注入的，必須自給自足（只吃參數與 JS 內建）。
+export function hayHit(hay, q) {
+	const h = String(hay || "").toLowerCase();
+	const toks = String(q || "")
+		.toLowerCase()
+		.split(/\s+/)
+		.filter(Boolean);
+	if (!toks.length) return true;
+	for (const t of toks) if (h.indexOf(t) < 0) return false;
+	return true;
+}
 export function queryTerms(q) {
 	const toks = q
 		.replace(/["*()]/g, " ")
