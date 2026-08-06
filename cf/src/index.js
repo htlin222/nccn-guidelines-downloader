@@ -483,7 +483,7 @@ export default {
 			);
 			if (!VALID_IDS.has(id))
 				return new Response("Unknown id", { status: 404 });
-			return html(renderViewer(id));
+			return html(await renderViewer(env, id));
 		}
 
 		return new Response("Not found", { status: 404 });

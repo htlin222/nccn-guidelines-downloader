@@ -4,9 +4,17 @@ import { tocGroups, tocBestIndex } from "../lib/toc.js";
 import { citeText, copyText, showToast, TOAST_CSS } from "../lib/cite.js";
 import { bookmarkMd } from "../lib/marks.js";
 import { annotRect, annotNextNum, annotHit, annotDraw } from "../lib/annot.js";
+import { viewerMeta } from "../lib/viewermeta.js";
 
-export function renderViewer(id) {
+// 每一頁都是 792×612 pts（landscape letter）。抽查 10 份跨腫瘤／支持治療／篩檢／
+// 兒童／遺傳的指引，86 份的目錄裡沒有例外——所以骨架可以照這個比例撐出來，不必
+// 等 PDF 解析。萬一哪天真的出現不同尺寸的頁，needPage() 會在那一頁就地校正。
+const PAGE_W = 792;
+const PAGE_H = 612;
+
+export async function renderViewer(env, id) {
 	const name = NAME_BY_ID[id] || id;
+	const meta = await viewerMeta(env, id);
 	return `<!doctype html>
 <html lang="zh-Hant">
 <head>
@@ -159,7 +167,14 @@ export function renderViewer(id) {
   .annotationLayer a{position:absolute;pointer-events:auto;cursor:pointer;border-radius:2px;}
   .annotationLayer a:hover{background:rgba(59,130,246,.18);}
   #msg{position:absolute;top:20px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:12px;color:hsl(var(--muted-fg));font-size:.82rem;max-width:92%;text-align:center;}
-  .preview{max-width:min(72vw,520px);width:auto;border-radius:4px;box-shadow:0 6px 26px -8px rgba(0,0,0,.5);background:#fff;}
+  /* 有骨架時，載入提示縮成底部的一顆膠囊——它不該蓋在已經畫好的第一頁上。
+     sticky 讓它跟著捲動留在視窗底部，且不佔版面高度。 */
+  #msg.pill{top:auto;bottom:16px;background:hsl(var(--bar));border:1px solid hsl(var(--border));
+    border-radius:999px;padding:5px 14px;box-shadow:0 4px 16px -6px rgba(0,0,0,.4);}
+  /* 低解析度預覽：縮圖當第一頁的背景，尺寸就是最終尺寸，所以換成 canvas 時
+     不會有任何位移。用 background 而不是 <img> 子元素，是因為 renderPage() 和
+     relayout() 都會清掉 innerHTML——背景不受影響，畫面不會閃一下空白。 */
+  .page.lqip{background-size:100% 100%;background-repeat:no-repeat;background-position:center;}
   .ldot{display:inline-flex;align-items:center;gap:8px;animation:pulse 1.2s ease-in-out infinite;}
   @keyframes pulse{0%,100%{opacity:.45}50%{opacity:1}}
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px;}
@@ -190,10 +205,10 @@ ${TOAST_CSS}
   <a href="/" class="btn" id="back" title="回清單"></a>
   <button class="btn" id="railBtn" title="縮圖側欄"></button>
   <button class="btn" id="gridBtn" title="總覽所有頁面"></button>
-  <span class="title" id="gtitle" title="點一下複製 AMA 引用">${escapeHtml(name)}</span><span class="tver" id="tver" hidden></span>
+  <span class="title" id="gtitle" title="點一下複製 AMA 引用">${escapeHtml(name)}</span><span class="tver" id="tver"${meta.version ? ` title="${escapeHtml(meta.date || "")}"` : " hidden"}>${meta.version ? `v${escapeHtml(meta.version)}` : ""}</span>
   <div class="grp"><button class="btn" id="histBack" title="回上一個位置"></button><button class="btn" id="histFwd" title="前往下一個位置"></button></div>
   <div class="grp"><button class="btn" id="prev" title="上一頁"></button>
-    <input class="pageinput" id="pageNum" value="1" inputmode="numeric"><span class="pcount">/ <span id="pageCount">–</span></span>
+    <input class="pageinput" id="pageNum" value="1" inputmode="numeric"><span class="pcount">/ <span id="pageCount">${meta.pages || "–"}</span></span>
     <button class="btn" id="next" title="下一頁"></button></div>
   <div class="grp"><button class="btn" id="zout" title="縮小"></button>
     <span class="zpct" id="zpct">–</span>
@@ -204,7 +219,7 @@ ${TOAST_CSS}
   <button class="btn" id="snap" title="截圖成筆記"></button>
   <button class="btn" id="bkAdd" title="收藏本頁"></button>
   <button class="btn" id="bkBtn" title="書籤清單"></button>
-  <button class="btn" id="tocBtn" title="目錄（Discussion）" hidden></button>
+  <button class="btn" id="tocBtn" title="目錄（Discussion）"${meta.hasToc ? "" : " hidden"}></button>
   <button class="btn" id="aiBtn" title="AI 本頁重點"></button>
   <button class="btn" id="theme" title="切換主題"></button>
   <a class="btn dl" href="/dl/${encodeURIComponent(id)}"><span id="dlic"></span>下載</a>
@@ -212,7 +227,7 @@ ${TOAST_CSS}
 <div class="findbar" id="findbar" hidden><span class="fi" id="findIcon"></span><input id="findInput" type="search" placeholder="在本檔搜尋內文（含藥名同義詞）…"><span class="fcount" id="findCount"></span><button class="btn" id="findPrev" title="上一個"></button><button class="btn" id="findNext" title="下一個"></button><button class="btn" id="findClose" title="關閉">✕</button></div>
 <div class="body">
   <aside class="rail" id="rail"></aside>
-  <div class="viewer" id="viewer"><div id="msg"><img id="preview" class="preview" src="/thumb/${encodeURIComponent(id)}" alt="" onerror="this.remove()"><div class="ldot">載入完整版 PDF…</div></div></div>
+  <div class="viewer" id="viewer"><div id="msg"${meta.pages ? ' class="pill"' : ""}><div class="ldot">載入完整版 PDF…</div></div></div>
   <div class="panegrip" id="panegrip" hidden></div>
   <aside class="rightpane" id="rightpane" hidden>
   <section class="tocpane" id="tocpane" hidden>
@@ -268,6 +283,11 @@ ${TOAST_CSS}
 // 根層 <id>.pdf 就是去掉頁首橫幅的版本，所以連截圖成筆記／總覽匯出的圖都不帶橫幅。
 var PDF_URL='/pdf/${encodeURIComponent(id)}';
 var GID=${JSON.stringify(id)};var GNAME=${JSON.stringify(name)};var VALIDS=${JSON.stringify(Object.fromEntries([...VALID_IDS].map((x) => [x, 1])))};
+// Worker 端就讀好的 metadata（lib/viewermeta.js）。PAGES 為 null 代表這一份還沒
+// 進 meta/clean.json，一切退回舊行為：等 PDF 解析完才建版面。
+var PAGES=${meta.pages || "null"};var VERSION=${JSON.stringify(meta.version || "")};
+var THUMB_URL='/thumb/${encodeURIComponent(id)}'+${JSON.stringify(meta.version ? `?v=${meta.version}` : "")};
+var PW=${PAGE_W},PH=${PAGE_H};
 (function(){
 window.addEventListener('error',function(ev){var m=document.getElementById('msg');if(m){m.style.display='';m.textContent='執行錯誤：'+(ev.message||(ev.error&&ev.error.message)||ev);}});
 if('scrollRestoration' in history){try{history.scrollRestoration='manual';}catch(e){}}
@@ -321,15 +341,19 @@ paintTheme();
 
 var viewer=$('viewer'),rail=$('rail'),msg=$('msg');
 var pages=[],scale=1.2,fit=true,cur=1,dpr=window.devicePixelRatio||1,pdfDoc=null;
-var hBack=[],hFwd=[],hlTerms=[],TOC=[],TOCR=[];var VERSION='';fetch('/api/r2-status').then(function(r){return r.json();}).then(function(d){var v=(d.versions||{})[GID];if(v){VERSION=v.v;var tv=document.getElementById('tver');if(tv){tv.textContent='v'+v.v;if(v.d)tv.title=v.d;tv.hidden=false;}}}).catch(function(){});
-// 點工具列的書名（或版本徽章）＝抄一份 AMA 引用。版本還沒抓到就先省略 Version 那句。
+var hBack=[],hFwd=[],hlTerms=[],TOC=[],TOCR=[];
+// VERSION 由 Worker 直接注入（見上面）。以前是開頁後打 /api/r2-status 再把徽章
+// 從 hidden 解開——那一次往返省掉了，header 也就不會在資料回來時變寬。
+// 點工具列的書名（或版本徽章）＝抄一份 AMA 引用。
 var citeText=${citeText.toString()};
 var copyText=${copyText.toString()};
 var showToast=${showToast.toString()};
 function yankCite(){var txt=citeText({name:GNAME,id:GID,version:VERSION});
   copyText(txt).then(function(ok){showToast(ok?'已複製引用':'複製失敗，請手動選取',txt);});}
 $('gtitle').onclick=yankCite;$('tver').onclick=yankCite;
-fetch('/api/toc?id='+encodeURIComponent(GID)).then(function(r){return r.json();}).then(function(d){TOC=(d&&d.length)?d:[];if(TOC.length){buildTOC();$('tocBtn').hidden=false;}}).catch(function(){});
+// 按鈕的顯示與否已經由 Worker 決定（meta.hasToc），這裡只補內容。抓不到就把
+// 按鈕收回去——寧可少一顆，也不要點下去是空的。
+fetch('/api/toc?id='+encodeURIComponent(GID)).then(function(r){return r.json();}).then(function(d){TOC=(d&&d.length)?d:[];if(TOC.length){buildTOC();$('tocBtn').hidden=false;}else{$('tocBtn').hidden=true;}}).catch(function(){$('tocBtn').hidden=true;});
 // Pure helpers shared with the server + unit tests, injected verbatim.
 var tocGroups=${tocGroups.toString()};
 var tocBestIndex=${tocBestIndex.toString()};
@@ -398,10 +422,38 @@ gripDrag($('panegrip'),$('rightpane'),'nccnpanew',220,760);
 function activeScale(){ if(fit&&pages.length){ var w=viewer.clientWidth-40; var pw=(pages[cur-1]||pages[0]).w; return Math.max(0.2,Math.min(w/pw,4)); } return scale; }
 function setZpct(){ $('zpct').textContent=Math.round(activeScale()*100)+'%'; $('fit').className='btn'+(fit?' on':''); }
 
+// 兩個觀察器都要宣告在 buildSkeleton() 被呼叫之前——骨架是同步建的，那時就會
+// 用到它們（var 只提升宣告不提升賦值，晚一行都是 undefined）。
 var io=new IntersectionObserver(function(es){es.forEach(function(e){ if(e.isIntersecting){renderPage(+e.target.dataset.i);} });},{root:viewer,rootMargin:'1000px 0px'});
+// 側欄縮圖刻意不在觸發後 unobserve：骨架期間就會觸發一次，那時 pdfDoc 還沒好，
+// 取消觀察等於讓那幾格永遠空著。重複觸發由 p.tdone 擋掉，成本可以忽略。
+var tio=new IntersectionObserver(function(es){es.forEach(function(e){ if(e.isIntersecting){ thumbRender(+e.target.dataset.i);} });},{root:rail,rootMargin:'400px 0px'});
+// 骨架先用 metadata 撐出版面，真正的 PDFPageProxy 到要畫的時候才抓。
+// 舊版在第一次繪製前把 getPage(1..N) 全部序列跑完——PDF 走的是 HTTP Range，
+// 所以那等於幾百次往返之後才看得到第一頁。
+function needPage(i){ var p=pages[i]; if(!p) return Promise.resolve(null);
+  if(p.pg) return Promise.resolve(p.pg);
+  if(!pdfDoc) return Promise.resolve(null);
+  if(!p.req) p.req=pdfDoc.getPage(i+1).then(function(pg){ p.pg=pg;
+    // 骨架照全站一致的 792×612 撐出來。萬一這一頁不是，就地校正——只有那一頁
+    // 會動一下，不會整份重排。
+    var vp=pg.getViewport({scale:1});
+    if(Math.abs(vp.width-p.w)>1||Math.abs(vp.height-p.h)>1){ p.w=vp.width; p.h=vp.height;
+      var s=activeScale(); p.el.style.width=(p.w*s)+'px'; p.el.style.height=(p.h*s)+'px';
+      var rb=rail.children[i]; if(rb) rb.style.aspectRatio=p.w+'/'+p.h; }
+    return pg; }).catch(function(){ p.req=null; return null; });
+  return p.req; }
+// relayout() 會把每一頁清掉重畫。needPage() 讓 renderPage 多了一個 await，
+// 期間若使用者縮放，回來時的 sc 就過期了——用世代號把那次繪製丟掉。
+var layoutGen=0;
 function renderPage(i){ var p=pages[i]; if(!p||p.done)return; p.done=true;
+  var gen=layoutGen;
+  needPage(i).then(function(pg){ if(!pg){ p.done=false; return; } if(gen!==layoutGen) return; drawPage(p,i); }); }
+function drawPage(p,i){
   var sc=activeScale(); var vp=p.pg.getViewport({scale:sc});
   p.el.style.width=vp.width+'px';p.el.style.height=vp.height+'px';p.el.innerHTML='';
+  // 第一頁的低解析度預覽已經完成任務，撤掉它，免得半透明處透出舊圖。
+  p.el.classList.remove('lqip');p.el.style.backgroundImage='';
   var cv=document.createElement('canvas'); cv.width=Math.floor(vp.width*dpr);cv.height=Math.floor(vp.height*dpr);
   cv.style.width=vp.width+'px';cv.style.height=vp.height+'px'; p.el.appendChild(cv);
   p.pg.render({canvasContext:cv.getContext('2d'),viewport:vp,transform:dpr!==1?[dpr,0,0,dpr,0,0]:null});
@@ -412,7 +464,7 @@ function renderPage(i){ var p=pages[i]; if(!p||p.done)return; p.done=true;
 }
 // 符合寬度時，開關右側 pane 會改變頁面尺寸，總高度一變，px 的 scrollTop 就落到
 // 別頁去了——所以重算前先記住目前頁與頁內的相對位置，重算後貼回原處。
-function relayout(){ var ap=pages[cur-1], anchor=null;
+function relayout(){ var ap=pages[cur-1], anchor=null; layoutGen++;
   if(ap&&ap.el&&ap.el.offsetHeight) anchor=Math.max(0,Math.min(1,(viewer.scrollTop-ap.el.offsetTop)/ap.el.offsetHeight));
   var sc=activeScale(); pages.forEach(function(p){ p.done=false; p.el.style.width=(p.w*sc)+'px'; p.el.style.height=(p.h*sc)+'px'; p.el.innerHTML=''; io.unobserve(p.el); io.observe(p.el); }); setZpct();
   if(anchor!==null) viewer.scrollTop=Math.max(0,ap.el.offsetTop+anchor*ap.el.offsetHeight); }
@@ -436,21 +488,59 @@ function updateCur(){ if(!pages.length)return; var vr=viewer.getBoundingClientRe
 var ticking=false;
 viewer.addEventListener('scroll',function(){ if(!ticking){ ticking=true; requestAnimationFrame(function(){ updateCur(); ticking=false; }); } });
 
-pdfjsLib.getDocument({url:PDF_URL}).promise.then(function(d){ pdfDoc=d; $('pageCount').textContent=d.numPages;
-  var chain=Promise.resolve();
-  for(var n=1;n<=d.numPages;n++){ (function(n){ chain=chain.then(function(){ return d.getPage(n).then(function(pg){
-    var vp=pg.getViewport({scale:1}); var el=document.createElement('div'); el.className='page'; el.dataset.i=n-1;
-    viewer.appendChild(el); var idx=pages.length; pages.push({pg:pg,w:vp.width,h:vp.height,el:el,done:false});
-    var tb=document.createElement('button'); tb.className='thumb'; tb.dataset.i=n-1; tb.style.aspectRatio=vp.width+'/'+vp.height; tb.innerHTML='<span class="pn">'+n+'</span>';
-    tb.onclick=function(){ jumpTo(idx+1,true); }; rail.appendChild(tb);
-  }); }); })(n); }
-  chain.then(function(){ msg.style.display='none'; relayout(); buildThumbs(); renderPage(0); if(pages[1])renderPage(1); var pp=parseInt(new URLSearchParams(location.search).get('page'),10); if(!(pp>=1)){try{pp=parseInt(localStorage.getItem('nccnpg:'+GID),10);}catch(e){}} if(pp>=2&&pp<=pages.length){cur=pp;$('pageNum').value=pp;scrollToPage(pp);} syncURL(); updateHist(); bkPaint(); var _q=new URLSearchParams(location.search).get('q'); if(_q){$('findInput').value=_q;$('findbar').hidden=false;runFind(!(pp>=1));} });
-}).catch(function(e){ msg.textContent='無法載入 PDF：'+(e&&e.message?e.message:e)+'（可能尚未快取或 cookie 過期）'; });
+// 建出 n 頁的空版面：正確的頁數、正確的長寬比、正確的最終尺寸。
+// 只要頁數已知就能做，完全不需要 PDF——這就是「首屏即最終版面」的來源。
+function buildSkeleton(n){
+  pages=[]; viewer.querySelectorAll('.page').forEach(function(el){el.remove();}); rail.innerHTML='';
+  var pf=document.createDocumentFragment(), rf=document.createDocumentFragment();
+  for(var k=0;k<n;k++){
+    var el=document.createElement('div'); el.className='page'; el.dataset.i=k; pf.appendChild(el);
+    pages.push({pg:null,req:null,w:PW,h:PH,el:el,done:false});
+    var tb=document.createElement('button'); tb.className='thumb'; tb.dataset.i=k;
+    tb.style.aspectRatio=PW+'/'+PH; tb.innerHTML='<span class="pn">'+(k+1)+'</span>';
+    (function(idx){tb.onclick=function(){jumpTo(idx+1,true);};})(k); rf.appendChild(tb);
+  }
+  viewer.appendChild(pf); rail.appendChild(rf);
+  // 第一頁先鋪縮圖。尺寸已經是最終尺寸，所以之後換成 canvas 不會有任何位移。
+  if(pages[0]){ pages[0].el.classList.add('lqip'); pages[0].el.style.backgroundImage='url("'+THUMB_URL+'")'; }
+  relayout(); buildThumbs();
+}
+// 開場該停在哪一頁：?page=N 優先，其次是這一份上次讀到哪。
+function wantedPage(){ var pp=parseInt(new URLSearchParams(location.search).get('page'),10);
+  if(!(pp>=1)){try{pp=parseInt(localStorage.getItem('nccnpg:'+GID),10);}catch(e){}}
+  return pp>=2?pp:1; }
+// 只做「捲到位置」。書籤、搜尋那些狀態留給 pdfDoc 就緒後那一輪——它們依賴的
+// 變數（BK、fHits…）在這個檔案更後面才初始化，這裡碰會是 undefined。
+function restoreScroll(){ var pp=wantedPage();
+  if(pp>=2&&pp<=pages.length){cur=pp;$('pageNum').value=pp;scrollToPage(pp);} syncURL(); }
 
-var tio=new IntersectionObserver(function(es){es.forEach(function(e){ if(e.isIntersecting){ thumbRender(+e.target.dataset.i); tio.unobserve(e.target);} });},{root:rail,rootMargin:'400px 0px'});
-function buildThumbs(){ for(var k=0;k<rail.children.length;k++) tio.observe(rail.children[k]); markRail(); }
-function thumbRender(i){ var p=pages[i]; if(!p)return; var vp=p.pg.getViewport({scale:130/p.w}); var cv=document.createElement('canvas');
-  cv.width=vp.width;cv.height=vp.height; var btn=rail.children[i]; btn.insertBefore(cv,btn.firstChild); p.pg.render({canvasContext:cv.getContext('2d'),viewport:vp}); }
+// 頁數已知就立刻建版面，不等 pdf.js。骨架一旦在，getPage 就能完全交給
+// IntersectionObserver 按需觸發。
+if(PAGES){ buildSkeleton(PAGES); restoreScroll(); }
+
+pdfjsLib.getDocument({url:PDF_URL}).promise.then(function(d){ pdfDoc=d;
+  $('pageCount').textContent=d.numPages;
+  // clean.json 可能落後於實際的 PDF（例如剛換版還沒重建索引）。以 PDF 為準重建；
+  // 只有頁數真的對不上時才會看到這一次重排。
+  if(d.numPages!==pages.length){ buildSkeleton(d.numPages); }
+  // 一定要重新掛觀察器。骨架期間可視範圍內那幾頁早就觸發過一次了，但當時
+  // pdfDoc 還是 null，needPage 只能放棄——IntersectionObserver 不會為了
+  // 「還在畫面上」再叫一次，不重掛的話那幾頁會永遠空白。
+  relayout(); buildThumbs(); restoreScroll();
+  msg.style.display='none';
+  renderPage(cur-1); if(pages[cur])renderPage(cur);
+  updateHist(); bkPaint();
+  var _q=new URLSearchParams(location.search).get('q');
+  if(_q){$('findInput').value=_q;$('findbar').hidden=false;runFind(wantedPage()<2);}
+}).catch(function(e){ msg.style.display=''; msg.className=''; msg.textContent='無法載入 PDF：'+(e&&e.message?e.message:e)+'（可能尚未快取或 cookie 過期）'; });
+
+// unobserve→observe 是重點：只有這樣才會為「已經在可視範圍內」的那幾格再叫一次。
+function buildThumbs(){ for(var k=0;k<rail.children.length;k++){ tio.unobserve(rail.children[k]); tio.observe(rail.children[k]); } markRail(); }
+function thumbRender(i){ var p=pages[i]; if(!p||p.tdone)return; p.tdone=true;
+  needPage(i).then(function(pg){ if(!pg){p.tdone=false;return;}
+    var vp=pg.getViewport({scale:130/p.w}); var cv=document.createElement('canvas');
+    cv.width=vp.width;cv.height=vp.height; var btn=rail.children[i]; if(!btn)return;
+    btn.insertBefore(cv,btn.firstChild); pg.render({canvasContext:cv.getContext('2d'),viewport:vp}); }); }
 
 $('prev').onclick=function(){ if(cur>1) scrollToPage(cur-1); };
 $('next').onclick=function(){ if(cur<pages.length) scrollToPage(cur+1); };
@@ -476,19 +566,21 @@ function dl2(u,nm){var a=document.createElement('a');a.href=u;a.download=nm;docu
 // ——後者是照螢幕寬度算的（常常 <150 DPI），印出來字邊會糊。PDF 的使用者單位是
 // 1/72 吋，所以 scale = 300/72；長邊再設一個上限，免得超大版面把記憶體吃爆。
 var PRINT_DPI=300,PRINT_MAX_PX=4200;
+// 頁面改成按需抓之後，列印／截圖／AI 都可能指到一頁還沒取回來的 PDFPageProxy
+// （以前開檔就全部抓齊，所以 !p.pg 幾乎不會發生）。統一走 needPage 補抓。
 function printCanvas(n){
-  var p=pages[n-1];if(!p||!p.pg)return Promise.reject(new Error('page not ready'));
-  var base=p.pg.getViewport({scale:1});
+  return needPage(n-1).then(function(pg){ if(!pg) throw new Error('page not ready');
+  var base=pg.getViewport({scale:1});
   var sc=Math.min(PRINT_DPI/72,PRINT_MAX_PX/Math.max(base.width,base.height));
-  var vp=p.pg.getViewport({scale:sc});
+  var vp=pg.getViewport({scale:sc});
   var cv=document.createElement('canvas');
   cv.width=Math.floor(vp.width);cv.height=Math.floor(vp.height);
   var ctx=cv.getContext('2d');
   // PDF 頁面本身多半沒有背景色，不先填白的話透明區在某些印表機驅動會變黑。
   ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);
-  var t=p.pg.render({canvasContext:ctx,viewport:vp});
+  var t=pg.render({canvasContext:ctx,viewport:vp});
   return (t&&t.promise?t.promise:Promise.resolve()).then(function(){
-    return {url:cv.toDataURL('image/png'),landscape:vp.width>vp.height};});}
+    return {url:cv.toDataURL('image/png'),landscape:vp.width>vp.height};});});}
 // 用隱藏 iframe 而不是 window.open：不會被彈窗封鎖，也不會把整個閱讀器 UI 一起印進去。
 function printPage(){
   var btn=$('printBtn'),n=cur;
@@ -604,15 +696,15 @@ function snapURL(){var cv=$('snapCv');return (SNAP.base&&cv.width)?cv.toDataURL(
 // 甚至還沒開始畫、連 canvas 都還不存在，而且它的解析度是照螢幕寬度算的。
 var SNAP_W=1600;
 function snapRender(n){
-  var p=pages[n-1];if(!p||!p.pg)return Promise.resolve(null);
-  var base=p.pg.getViewport({scale:1});
-  var vp=p.pg.getViewport({scale:Math.min(SNAP_W/base.width,4)});
+  return needPage(n-1).then(function(pg){ if(!pg)return null;
+  var base=pg.getViewport({scale:1});
+  var vp=pg.getViewport({scale:Math.min(SNAP_W/base.width,4)});
   var cv=document.createElement('canvas');
   cv.width=Math.floor(vp.width);cv.height=Math.floor(vp.height);
   var ctx=cv.getContext('2d');
   ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);
-  var t=p.pg.render({canvasContext:ctx,viewport:vp});
-  return (t&&t.promise?t.promise:Promise.resolve()).then(function(){return cv;});}
+  var t=pg.render({canvasContext:ctx,viewport:vp});
+  return (t&&t.promise?t.promise:Promise.resolve()).then(function(){return cv;});});}
 $('snap').onclick=function(){
   var n=cur;
   // 先擺畫面上那張頂著，視窗立刻打得開；離屏那張畫好再換上去。不等它才開視窗是因為
@@ -657,7 +749,11 @@ $('findPrev').onclick=function(){if(fHits.length){fIdx=(fIdx-1+fHits.length)%fHi
 $('findNext').onclick=function(){if(fHits.length){fIdx=(fIdx+1)%fHits.length;gotoHit();}};
 document.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&(e.key==='f'||e.key==='F')){e.preventDefault();var fb=$('findbar');fb.hidden=false;$('findInput').focus();$('findInput').select();}else if(e.key==='Escape'&&!$('findbar').hidden){$('findbar').hidden=true;setHL([]);}});
 var gio=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){gcellRender(+e.target.dataset.i);gio.unobserve(e.target);}});},{root:$('gridView'),rootMargin:'400px 0px'});
-function gcellRender(i){var p=pages[i];if(!p||p.gdone)return;p.gdone=true;var vp=p.pg.getViewport({scale:220/p.w});var cv=document.createElement('canvas');cv.width=vp.width;cv.height=vp.height;var cell=$('gridView').children[i];if(cell)cell.insertBefore(cv,cell.firstChild);p.pg.render({canvasContext:cv.getContext('2d'),viewport:vp});}
+function gcellRender(i){var p=pages[i];if(!p||p.gdone)return;p.gdone=true;
+  needPage(i).then(function(pg){if(!pg){p.gdone=false;return;}
+    var vp=pg.getViewport({scale:220/p.w});var cv=document.createElement('canvas');cv.width=vp.width;cv.height=vp.height;
+    var cell=$('gridView').children[i];if(!cell)return;cell.insertBefore(cv,cell.firstChild);
+    pg.render({canvasContext:cv.getContext('2d'),viewport:vp});});}
 var gridBuilt=false;
 function buildGridView(){var gv=$('gridView');var h='';for(var i=0;i<pages.length;i++){h+='<button class="gcell" data-i="'+i+'"><span class="pn">'+(i+1)+'</span></button>';}gv.innerHTML=h;for(var k=0;k<gv.children.length;k++){var c=gv.children[k];c.style.aspectRatio=pages[k].w+'/'+pages[k].h;gio.observe(c);(function(idx,el){el.onclick=function(){closeGrid();jumpTo(idx+1,true);};})(k,c);}gridBuilt=true;}
 function markGrid(){var ch=$('gridView').children;for(var i=0;i<ch.length;i++){ch[i].className='gcell'+(i===cur-1?' cur':'');}var c=ch[cur-1];if(c)c.scrollIntoView({block:'nearest'});}
@@ -825,12 +921,13 @@ function aiShow(d){var b=d.bullets||[];var s=$('aisrc');s.hidden=false;
   aiSet(h);}
 // 直接從 pdf.js 的 page object 離屏重繪，不依賴畫面上那張 canvas 有沒有渲染好。
 function rasterPage(n,maxW){return new Promise(function(res,rej){
-  var p=pages[n-1];if(!p||!p.pg)return rej(new Error('page not ready'));
-  var vp=p.pg.getViewport({scale:Math.min(2.5,(maxW||1100)/p.w)});
+  needPage(n-1).then(function(pg){ if(!pg)return rej(new Error('page not ready'));
+  var p=pages[n-1];
+  var vp=pg.getViewport({scale:Math.min(2.5,(maxW||1100)/p.w)});
   var cv=document.createElement('canvas');cv.width=Math.floor(vp.width);cv.height=Math.floor(vp.height);
   var ctx=cv.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);
-  var t=p.pg.render({canvasContext:ctx,viewport:vp});
-  (t&&t.promise?t.promise:Promise.resolve()).then(function(){var u=cv.toDataURL('image/jpeg',.82);res(u.slice(u.indexOf(',')+1));}).catch(rej);});}
+  var t=pg.render({canvasContext:ctx,viewport:vp});
+  (t&&t.promise?t.promise:Promise.resolve()).then(function(){var u=cv.toDataURL('image/jpeg',.82);res(u.slice(u.indexOf(',')+1));}).catch(rej);}).catch(rej);});}
 // 不設 busy 鎖：翻頁翻很快時舊的請求靠 aiSeq 判斷過期直接忽略，而它的結果後端
 // 還是會寫進快取，所以不算白花——加鎖反而會讓新頁卡在「產生中」的畫面出不來。
 function aiGen(page,kind,seq,force,vision){
