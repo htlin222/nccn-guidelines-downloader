@@ -174,6 +174,12 @@ export function renderPage(request) {
   .ndot{width:7px;height:7px;border-radius:999px;background:#3b82f6;flex-shrink:0;margin-top:7px;}
   .nrow.read .ndot{background:transparent;}
   .sheethead .btn{font-size:.74rem;padding:5px 10px;}
+  .kin{background:hsl(var(--card));color:inherit;border:1px solid hsl(var(--border));border-radius:8px;padding:6px 9px;font-size:.8rem;width:190px;}
+  .krow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid hsl(var(--border));font-size:.76rem;}
+  .krow code{font-size:.72rem;opacity:.8;}
+  .krow .kmeta{flex:1;min-width:0;color:hsl(var(--muted-foreground));font-size:.7rem;overflow-wrap:anywhere;}
+  .krow.dead{opacity:.45;text-decoration:line-through;}
+  .krow .xbtn{font-size:.74rem;padding:2px 7px;}
   footer{max-width:1180px;margin:0 auto;padding:0 20px 50px;color:hsl(var(--muted-foreground));font-size:.74rem;}
   footer a{color:inherit;}
 ${TOAST_CSS}
@@ -201,7 +207,7 @@ ${TOAST_CSS}
   <div id="list"></div>
 </main>
 <div id="notifModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>通知</b><span style="flex:1"></span><button class="btn" id="notifAll">全部已讀</button><button class="xbtn" id="notifClose">✕</button></div><span class="chip" id="notifAlive">⏱ 讀取中…</span><div class="nlist" id="notifList"></div></div></div>
-<div id="setModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>設定</b><button class="xbtn" id="setClose">✕</button></div><span class="chip" id="cookieStatus">🔑 檢查 cookie…</span><span class="chip" id="cronStatus">⏱ 檢查每日更新…</span><div class="setlabel">更新 NCCN cookie（過期時使用）</div><p class="sethint">登入 <a href="https://www.nccn.org/login" target="_blank" rel="noopener">nccn.org</a>，用 cookie-cook 擴充功能複製 <b>Http Header value</b> 貼在下方存檔。</p><textarea id="cookieInput" placeholder="ASP.NET_SessionId=…; …"></textarea><div><button class="btn" id="saveCookie">儲存 cookie</button> <span id="saveMsg" style="font-size:.8rem;margin-left:6px"></span></div></div></div>
+<div id="setModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>設定</b><button class="xbtn" id="setClose">✕</button></div><span class="chip" id="cookieStatus">🔑 檢查 cookie…</span><span class="chip" id="cronStatus">⏱ 檢查每日更新…</span><div class="setlabel">更新 NCCN cookie（過期時使用）</div><p class="sethint">登入 <a href="https://www.nccn.org/login" target="_blank" rel="noopener">nccn.org</a>，用 cookie-cook 擴充功能複製 <b>Http Header value</b> 貼在下方存檔。</p><textarea id="cookieInput" placeholder="ASP.NET_SessionId=…; …"></textarea><div><button class="btn" id="saveCookie">儲存 cookie</button> <span id="saveMsg" style="font-size:.8rem;margin-left:6px"></span></div><div class="setlabel">Claude Code skill</div><p class="sethint">產生一個內嵌金鑰的 <code>nccn.skill</code>，解壓到 <code>~/.claude/skills/nccn/</code> 後，Claude Code 就能直接讀目錄、章節全文、本版更新與 PDF，<b>不需要再登入</b>。每次產生都是一把獨立的金鑰——換裝置就再產一把，弄丟了就撤銷那一把。</p><div><input class="kin" id="skillLabel" placeholder="這把要給誰用？例如 MacBook" maxlength="40"> <button class="btn" id="makeSkill">產生並下載</button> <span id="skillMsg" style="font-size:.8rem;margin-left:6px"></span></div><div id="keyList"></div></div></div>
 <footer>
   透過你的 NCCN 登入 cookie 代理下載官方 PDF。${user ? "登入身分：" + escapeHtml(user) + " · " : ""}
   每日 cron 輪流更新 ${PER_DAY} 份 · 資料屬 © NCCN，僅供個人臨床使用。<br>部署時間：${BUILD_TIME}
@@ -379,7 +385,7 @@ themeBtn.onclick=()=>{const next=curTheme()==='dark'?'light':'dark';document.doc
   document.querySelector('meta[name=theme-color]').setAttribute('content',next==='dark'?'#0b0f19':'#ffffff');};
 paintThemeBtn();
 // 設定面板的接線以前縮在 themeBtn.onclick 的大括號裡，等於「先切一次主題，齒輪才會動」。
-document.getElementById('settings').onclick=function(){document.getElementById('setModal').hidden=false;};
+document.getElementById('settings').onclick=function(){document.getElementById('setModal').hidden=false;loadKeys();};
 document.getElementById('setClose').onclick=function(){document.getElementById('setModal').hidden=true;};
 document.getElementById('setModal').addEventListener('click',function(e){if(e.target===this)this.hidden=true;});
 
@@ -417,6 +423,56 @@ function paintCron(h){
     WARN.cron=false;}
   paintWarn();
 }
+// ── Claude Code skill 的金鑰 ────────────────────────────────────────────
+// 這裡發出去的東西不需要 SSO 就能讀全站資料，所以列表把「最後用過」擺在顯眼處：
+// 要決定該不該撤銷一把金鑰，需要知道的是它還有沒有人在用，不是它何時發出。
+function kesc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function paintKeys(rows){
+  var box=document.getElementById('keyList');if(!box)return;
+  box.innerHTML=(rows||[]).map(function(k){
+    var used=k.lastUsed?('最後用過 '+new Date(k.lastUsed).toLocaleDateString()):'還沒用過';
+    return '<div class="krow'+(k.revoked?' dead':'')+'">'
+      +'<code>'+kesc(k.prefix)+'…</code><span>'+kesc(k.label)+'</span>'
+      +'<span class="kmeta">'+used+' · '+(k.calls||0)+' 次</span>'
+      +(k.revoked?'<span class="kmeta">已撤銷</span>'
+                 :'<button class="xbtn" data-revoke="'+k.id+'">撤銷</button>')
+      +'</div>';
+  }).join('');
+}
+async function loadKeys(){
+  try{const r=await(await fetch('/api/keys')).json();paintKeys(r.rows);}
+  catch(e){}
+}
+document.getElementById('keyList').addEventListener('click',async function(e){
+  var id=e.target&&e.target.getAttribute&&e.target.getAttribute('data-revoke');
+  if(!id)return;
+  // 撤銷是立即的（伺服器連 KV 那層的快取一起刪），但已經下載的 .skill 檔還在對方
+  // 手上，所以講清楚「檔案還在、只是打不通了」。
+  if(!confirm('撤銷後這把金鑰立刻失效，已下載的 skill 會開始收到 401。確定？'))return;
+  e.target.disabled=true;
+  try{await fetch('/api/keys/revoke',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({id:parseInt(id,10)})});}catch(err){}
+  loadKeys();
+});
+document.getElementById('makeSkill').onclick=async function(){
+  var btn=this,msg=document.getElementById('skillMsg'),inp=document.getElementById('skillLabel');
+  var label=(inp.value||'').trim()||'Claude Code';
+  btn.disabled=true;msg.textContent='產生中…';
+  try{
+    const r=await fetch('/api/skill.zip?label='+encodeURIComponent(label));
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    // 走 blob 而不是直接把 <a href> 指過去：這條路徑在 Access 後面，用 fetch 才
+    // 確定帶得到登入 cookie，也才拿得到回應標頭裡的金鑰前綴。
+    const blob=await r.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download='nccn.skill';document.body.appendChild(a);a.click();a.remove();
+    setTimeout(function(){URL.revokeObjectURL(url);},10000);
+    msg.textContent='已下載（'+(r.headers.get('x-key-prefix')||'')+'…）';
+    inp.value='';loadKeys();
+  }catch(e){msg.textContent='失敗：'+e.message;}
+  btn.disabled=false;
+};
+
 // ── 通知中心 ────────────────────────────────────────────────────────────
 // 徽章數字搭 /api/r2-status 回來（不多一次往返），完整清單等點開鈴鐺才拉。
 var relTime=${relTime.toString()};

@@ -79,6 +79,15 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
         run: bash build_toc.sh
 
+      # 每一版改了什麼，逐條拆好存成 meta/updates/<id>.json。/api/v1/updates 直接
+      # 端這個檔出去，Claude Code skill 不必自己去翻 PDF 前幾頁猜章節邊界。
+      - name: Extract "Summary of the Guidelines Updates" → R2
+        working-directory: cf
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+        run: bash build_updates.sh
+
       # Banner-free copies for slide-making. Deterministic: strips only the two
       # content streams NCCN stamps on each page, keeps the source /ID, and skips
       # ids whose source PDF hasn't changed (sha256 tracked in meta/clean.json).
@@ -108,6 +117,15 @@ jobs:
           echo "search index rows: ${rows:-0} (catalogue: $total guidelines)"
           echo "INDEX_ROWS=${rows:-0}" >> "$GITHUB_ENV"
           [ "${rows:-0}" -ge 1000 ] || { echo "::error::search index has ${rows:-0} rows — it is broken"; exit 1; }
+          # page_text feeds /api/v1/page and is written from the same loop as
+          # pages. If the two ever disagree, search and the API are looking at
+          # different versions of the same guideline.
+          prows=$(wrangler d1 execute nccn-search --remote --json \
+            --command "SELECT COUNT(*) AS n FROM page_text" 2>/dev/null \
+            | tr -d ' \n' | sed -n 's/.*"n":\([0-9]*\).*/\1/p')
+          echo "page_text rows: ${prows:-0}"
+          [ "${prows:-0}" -eq "${rows:-0}" ] \
+            || { echo "::error::page_text has ${prows:-0} rows but pages has ${rows:-0} — the API and search disagree"; exit 1; }
           for f in meta/versions.json meta/clean.json; do
             wrangler r2 object get "nccn-pdfs/$f" --remote --file="/tmp/$(basename "$f")" \
               || { echo "::error::$f missing from R2"; exit 1; }
@@ -115,6 +133,20 @@ jobs:
             echo "$f: $n entries"
             [ "$n" -ge $((total / 2)) ] || { echo "::error::$f only covers $n/$total guidelines"; exit 1; }
           done
+
+      # /api/v1 的 KV 快取全部帶著這個世代號當 key 前綴，所以改寫它一次就等於整批
+      # 失效（KV 沒有「刪掉某個前綴」，逐鍵刪又慢又貴；孤兒項目靠 30 天 TTL 自己
+      # 消失）。一定要在 Verify 之後——先清快取再發現重建是壞的，等於拿舊快取換了
+      # 一份壞資料。run_id 單調遞增，天然適合當世代號。
+      - name: Bump the API cache generation
+        working-directory: cf
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+        run: |
+          wrangler kv key put api:gen "${{ github.run_id }}" --binding NCCN_KV --remote \
+            || { echo "::error::could not bump api:gen — /api/v1 will keep serving the previous build for up to 30 days"; exit 1; }
+          echo "api cache generation → ${{ github.run_id }}"
 
       # 通知中心的歷史卸載。放在驗證之後，因為它會刪 D1 的列——上面任何一步炸掉時
       # 這一輪的重點是「哪裡壞了」，不是整理舊資料。

@@ -48,6 +48,9 @@ import {
 	listNotifications,
 	markRead,
 } from "./lib/notify.js";
+import { API_PREFIX, handleApi } from "./lib/api.js";
+import { listKeys, mintKey, revokeKey } from "./lib/apikey.js";
+import { SKILL_FILENAME, buildSkillZip } from "./lib/skillpack.js";
 import { renderPage } from "./views/home.js";
 import { renderViewer } from "./views/viewer.js";
 import { faviconResponse, manifestResponse, SW_JS } from "./views/static.js";
@@ -58,9 +61,17 @@ export default {
 		console.log("cron refresh", JSON.stringify(out));
 	},
 
-	async fetch(request, env) {
+	async fetch(request, env, ctx) {
 		const url = new URL(request.url);
 		const { pathname } = url;
+
+		// 給 Claude Code skill 用的 token API。這是整個站唯一在 Cloudflare Access
+		// 開了 Bypass 的路徑（Zero Trust 裡有一個 application 指向
+		// nccn.hsiehting.com/api/v1，政策 Bypass Everyone），所以擋在前面的只有
+		// bearer token。底下的 /api/keys 與 /api/skill.zip 刻意不在這個前綴內——
+		// 它們發放與撤銷金鑰，必須留在 Access 後面。
+		if (pathname.startsWith(API_PREFIX))
+			return handleApi(request, env, ctx, url);
 
 		if (pathname === "/" || pathname === "/index.html")
 			return html(renderPage(request));
@@ -107,6 +118,51 @@ export default {
 				"image/webp",
 				"public, max-age=86400",
 			);
+		}
+
+		// 金鑰管理。留在 Access 保護內（不在 /api/v1 前綴），所以打得到這裡就代表
+		// 已經 SSO 登入過了，不需要再檢查一次身分。
+		if (pathname === "/api/keys" && request.method === "GET")
+			return json({ ok: true, rows: await listKeys(env) });
+
+		// 只鑄金鑰、不打包 skill。回傳的明文之後再也拿不到。
+		if (pathname === "/api/keys" && request.method === "POST") {
+			const b = await request.json().catch(() => ({}));
+			try {
+				return json({ ok: true, ...(await mintKey(env, b.label)) });
+			} catch (e) {
+				return json({ ok: false, error: String(e.message || e) }, 500);
+			}
+		}
+
+		if (pathname === "/api/keys/revoke" && request.method === "POST") {
+			const b = await request.json().catch(() => ({}));
+			const id = parseInt(b.id, 10);
+			if (!(id > 0)) return json({ ok: false, error: "bad id" }, 400);
+			const out = await revokeKey(env, id);
+			return json(out, out.ok ? 200 : 404);
+		}
+
+		// 鑄一把新金鑰、當場烤進 zip 回傳。瀏覽器會直接存成 nccn.skill。
+		if (pathname === "/api/skill.zip" && request.method === "GET") {
+			const label = (url.searchParams.get("label") || "").trim() || "Claude Code";
+			try {
+				const { bytes, prefix } = await buildSkillZip(env, {
+					label,
+					origin: url.origin,
+				});
+				return new Response(bytes, {
+					headers: {
+						"content-type": "application/zip",
+						"content-disposition": `attachment; filename="${SKILL_FILENAME}"`,
+						"cache-control": "no-store",
+						// 面板要顯示「這次發的是哪一把」，但 body 是二進位拿不到。
+						"x-key-prefix": prefix,
+					},
+				});
+			} catch (e) {
+				return json({ ok: false, error: String(e.message || e) }, 500);
+			}
 		}
 
 		if (pathname === "/api/cookie-status" && request.method === "GET") {

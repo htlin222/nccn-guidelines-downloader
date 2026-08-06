@@ -10,6 +10,26 @@
     "AI_DAILY_NEURONS": "8000"
   },
   "ai": { "binding": "AI" },
+  // src/skill/ 底下的檔案是 .skill 包的內容，要在 Worker 裡當字串讀出來打包成
+  // zip（lib/skillpack.js）。宣告成 Text module，就能保持它們是真正的 SKILL.md
+  // 與 nccn.py——看得懂、可以直接跑、可以被 lint——而不是塞在 JS 裡的字串常數。
+  //
+  // 兩個踩過的坑，改這裡之前先看：
+  //   1. 不要加 "fallthrough": true。它的意思是「這條不算數，往下一條找」，而
+  //      下面沒有別條，結果 esbuild 收到的是「.md 沒有 loader」。
+  //   2. glob 不能帶目錄。"src/skill/*.md"、"skill/**/*.md" 全都不匹配，只有
+  //      "**/*.ext" 這種形式有效。所以這裡看起來比實際意圖寬——但專案裡只有
+  //      skillpack.js 會 import .md/.py，而 find_additional_modules 預設關閉，
+  //      不會有別的東西被順手打包進去。
+  "rules": [
+    {
+      "type": "Text",
+      "globs": ["**/*.md", "**/*.py"],
+      // 這條會遮蔽 wrangler 內建的 Text 規則（**/*.txt、**/*.html、**/*.sql）。
+      // 專案裡沒有任何地方 import 那三種副檔名，所以只是把警告關掉，不改行為。
+      "fallthrough": false
+    }
+  ],
   "kv_namespaces": [
     {
       "binding": "NCCN_KV",

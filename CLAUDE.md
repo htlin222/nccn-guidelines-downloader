@@ -23,6 +23,7 @@ Everything runs from `cf/`. `wrangler.jsonc` is the source of truth for bindings
 | Worker secret | `ANTIGRAVITY_API_KEY` (optional) | `wrangler secret put` |
 | Repo secret | `CLOUDFLARE_API_TOKEN` | GitHub → Settings → Secrets |
 | Access application | gates the custom domain | Cloudflare Zero Trust |
+| Access application (bypass) | opens **only** `/api/v1` for the skill's token | Cloudflare Zero Trust |
 
 The ids in `wrangler.jsonc` are already filled in for the existing account. On a
 fresh account, create the resources first and replace them:
@@ -83,7 +84,7 @@ wrangler kv key get cookie_meta --binding NCCN_KV --remote
 
 ## 2. One-time D1 migrations
 
-Four SQL files, deliberately separate. Run each **once**:
+Five SQL files, deliberately separate. Run each **once**:
 
 ```bash
 cd cf && set -a && . ../.env && set +a
@@ -91,13 +92,20 @@ wrangler d1 execute nccn-search --remote --file=sql/schema.sql    # FTS5 `pages`
 wrangler d1 execute nccn-search --remote --file=sql/insights.sql  # AI cache + quota
 wrangler d1 execute nccn-search --remote --file=sql/marks.sql     # bookmarks + stars
 wrangler d1 execute nccn-search --remote --file=sql/notify.sql    # notification centre
+wrangler d1 execute nccn-search --remote --file=sql/api.sql       # API keys + page_text
 ```
 
 `schema.sql` starts with `DROP TABLE IF EXISTS pages` — it is the search index's
-own schema and gets re-derived on every rebuild. The other three are
+own schema and gets re-derived on every rebuild. The other four are
 `CREATE TABLE IF NOT EXISTS` on purpose: **an index rebuild must never wipe the
-AI cache, anything the user saved, or an unread alert.** Never merge them into
-`schema.sql`.
+AI cache, anything the user saved, an unread alert, or an issued API key.** Never
+merge them into `schema.sql`.
+
+`api.sql` is the one exception that is half-derived: `page_text` *is* rebuilt by
+`build_index.sh` (into `page_text_new`, promoted alongside `pages`), while
+`api_keys` in the same file must never be touched. `build_index.sh` pulls out only
+the `page_text` CREATE block by `awk` and refuses to run if `api_keys` shows up in
+what it extracted.
 
 ---
 
@@ -113,13 +121,29 @@ Zero Trust → Access → Applications:
 The Worker reads `cf-access-authenticated-user-email` and shows it in the footer.
 If that header is absent the site is unprotected — check before pointing anyone at it.
 
+**Except `/api/v1`.** The Claude Code skill authenticates with a bearer token, so
+it needs a path Access lets through. A *second* application, with a **Bypass
+(Everyone)** policy, covers exactly that prefix:
+
+- Application domain: `nccn.hsiehting.com`, path `api/v1`
+- Policy: **Bypass** → Everyone
+
+Access matches the most specific path, so `/api/v1/*` reaches the Worker while
+everything else still demands a login. Two things to keep straight:
+
+- The **path must stay `api/v1`**. Widening it to `api` would expose
+  `/api/cookie` (writes the NCCN session cookie) and `/api/keys` (issues and
+  revokes credentials) to the open internet.
+- **`/api/v1` is the only unauthenticated surface this site has.** Everything
+  behind it is guarded by the token alone — see §5.6.
+
 ---
 
 ## 4. Deploy
 
 ```bash
 cd cf && pnpm install
-pnpm test            # 112 unit tests, all pure helpers — must pass
+pnpm test            # 201 tests — pure helpers, plus an end-to-end pass over /api/v1
 pnpm run deploy      # = bash deploy.sh
 ```
 
@@ -192,14 +216,19 @@ Order matters; each step is a script in `cf/`:
 3. `gen_thumbs.sh` → `thumb/<id>.webp`
 4. `build_index.sh` → the D1 FTS5 index
 5. `build_toc.sh` → `meta/toc/<id>.json`
-6. `gen_clean.sh` → banner-free `<id>.pdf` at the bucket root + `meta/clean.json`
-7. **Verify the result** — index row count, and that both manifests cover the
-   catalogue. A step can pass on its own terms and still leave the site wrong.
+6. `build_updates.sh` → `meta/updates/<id>.json` (what changed in this version)
+7. `gen_clean.sh` → banner-free `<id>.pdf` at the bucket root + `meta/clean.json`
+8. **Verify the result** — index row count, `page_text` row count matching it, and
+   that both manifests cover the catalogue. A step can pass on its own terms and
+   still leave the site wrong.
+9. **Bump `api:gen`** — one KV write that invalidates every `/api/v1` cache entry
+   at once. It runs *after* verification on purpose: dropping the cache first and
+   only then discovering the rebuild was broken trades a good cache for bad data.
 
-Steps 8 and 9 feed the notification centre: `archive_notify.sh` rolls anything
-older than 90 days off to R2, and a final `if: always()` step posts the run's own
-outcome — green *or* red — so a silently-broken weekly rebuild is visible on the
-home page.
+The last two steps feed the notification centre: `archive_notify.sh` rolls
+anything older than 90 days off to R2, and a final `if: always()` step posts the
+run's own outcome — green *or* red — so a silently-broken weekly rebuild is
+visible on the home page.
 
 Run it by hand: `gh workflow run update-versions.yml`, then
 `gh run watch $(gh run list --workflow=update-versions.yml --limit 1 --json databaseId -q '.[0].databaseId')`.
@@ -254,10 +283,77 @@ Every script ends with `[ "$ok" -gt 0 ]` — a run where *nothing* succeeded goe
 red. That guard exists because these scripts once reported success for weeks while
 an empty `CLOUDFLARE_API_TOKEN` made every read a no-op.
 
-`build_index.sh` builds into a **staging table** and only promotes it after the
+`build_index.sh` builds into **staging tables** and only promotes them after the
 row count clears `MIN_ROWS` (default 1000), so a failed or partial rebuild leaves
 the live index serving. Set `LIMIT=N MIN_ROWS=…` for a dry run — with a low LIMIT
-the guard will correctly refuse to promote.
+the guard will correctly refuse to promote. It now builds `pages` **and**
+`page_text` from the same loop and promotes both in one batch; if their row counts
+ever disagree it discards the whole thing, because search and `/api/v1/page`
+reading different versions of a guideline is worse than not rebuilding.
+
+---
+
+## 5.6 The Claude Code skill (`/api/v1`)
+
+A read-only, token-authenticated API, plus a `.skill` package that the settings
+sheet mints on demand. Install it in Claude Code and Claude can read the
+catalogue, a TOC, what changed in this version, page or section text, search the
+whole corpus, and pull a PDF — **without logging in**.
+
+### The three decisions that shape it
+
+- **The token API is the only path Access lets through** (§3). Everything else,
+  including the endpoints that issue and revoke tokens, stays behind SSO. The
+  split is exactly the `/api/v1` prefix — see the warning in §3 before touching it.
+- **The `.skill` is minted, not published.** It is a zip with the key baked into
+  its `.env`, so it can never go to a GitHub release. `/api/skill.zip` builds one
+  on the fly (`lib/zip.js` writes store-mode zip by hand — Workers has no zip
+  writer, and a compression library is not worth 40 KB of text). Every download is
+  a fresh, separately revocable key.
+- **Plaintext keys never land anywhere.** D1 holds `sha256(key)` plus a 12-char
+  prefix for identification. The plaintext exists once, in the response body.
+
+### Endpoints
+
+`GET /api/v1/{catalogue, toc/:id, updates/:id, page/:id?p=N|A-B, section/:id?ref=,
+search?q=, pdf/:id, insights/:id}`, all with `Authorization: Bearer nccn_…`.
+
+`page` reads `page_text` (primary key, `rows_read=1`) rather than the FTS5 `pages`
+table — `gid`/`page` are UNINDEXED there, so a single-page lookup would scan all
+10,670 rows and burn the daily D1 quota in ~500 calls.
+
+### Caching
+
+Four layers: isolate memory → `caches.default` (keyed on the URL *without* the
+token, so all keys share one entry) → KV → D1/R2. Every KV key carries a
+generation prefix (`api:<gen>:toc:aml`); CI bumps `api:gen` once per rebuild and
+the whole cache goes stale at once, with 30-day TTLs clearing the orphans.
+
+Hot entries slide: `getWithMetadata` carries the expiry, and an entry is only
+rewritten once it has burned 30% of its life. A page you keep reading never
+expires; one you stop reading is gone in 30 days; nothing is rewritten more than
+once every nine days.
+
+### Operating it
+
+```bash
+cd cf && set -a && . ../.env && set +a
+wrangler d1 execute nccn-search --remote \
+  --command "SELECT id, prefix, label, last_used, calls, revoked FROM api_keys ORDER BY id DESC"
+wrangler kv key get api:gen --binding NCCN_KV --remote     # current cache generation
+```
+
+Revoking from the settings sheet is immediate: it marks D1 *and* deletes the KV
+entry. The only residue is up to 10 seconds of isolate memory on whichever
+instances already saw the key.
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Skill gets the Access login page as HTML | The bypass application is missing or its path is wrong | §3 — path must be `api/v1` |
+| Every call 401s right after issuing a key | `sql/api.sql` was never run | §2 |
+| `/page` and `/section` 404 on everything | `page_text` is empty — the index has not been rebuilt since this feature landed | run `build_index.sh`, or wait for Monday |
+| Stale data after a rebuild | `api:gen` was not bumped (that CI step failed) | `wrangler kv key put api:gen "$(date +%s)" --binding NCCN_KV --remote` |
+| `/updates/:id` 404s for one guideline | It ships no update pages, or uses an older heading | normal; `build_updates.log` says `no-updates` |
 
 ---
 
@@ -270,6 +366,7 @@ thumb/<id>.webp     first-page thumbnail
 meta/versions.json  {id: {v, d}}
 meta/clean.json     sha256 of each source, so gen_clean.sh can skip unchanged ids
 meta/toc/<id>.json  Discussion table of contents
+meta/updates/<id>.json  "Summary of the Guidelines Updates", parsed into items
 meta/notify/*.jsonl notifications older than 90 days, one month per object
 asset/*.png         PWA icons
 ```
@@ -309,6 +406,7 @@ curl -sI -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
 | A guideline never refreshes | Parked after 3 consecutive failures | `wrangler kv key get cron_state --binding NCCN_KV --remote`; delete its entry to retry now |
 | Bell says "已 N 天沒有紀錄" | The Worker cron did not fire, or D1 writes are failing | `wrangler tail nccn-download` over a run; compare KV `cron_health` against the newest `cron` row in D1 |
 | Bell is empty on a working site | `sql/notify.sql` was never run | §2 — every read in `lib/notify.js` swallows the missing-table error by design |
+| The Claude Code skill stopped working | Key revoked, `sql/api.sql` missing, or the Access bypass changed | §5.6 has its own symptom table |
 
 ---
 
@@ -323,4 +421,12 @@ curl -sI -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
   much of it.
 - New D1 tables get their own `sql/*.sql` with `CREATE TABLE IF NOT EXISTS`, never
   an addition to `schema.sql`.
+- `src/skill/*` is the *content* of the `.skill` package, pulled into the bundle as
+  Text modules. It lives under `src/` because that is where wrangler's module rules
+  can reach it — read the two warnings above `rules` in `wrangler.jsonc` before
+  changing anything there, both were found the hard way. `vitest.config.js` mirrors
+  the same rule so tests load exactly what ships.
+- Anything new under `/api/v1` is **unauthenticated except for the bearer token**.
+  Adding a route there is a decision about what the open internet may read; adding
+  one that writes is almost certainly a mistake (`handleApi` rejects non-GET).
 - `pnpm test` must pass before `pnpm run deploy`. CI enforces it on push.
