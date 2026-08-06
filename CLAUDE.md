@@ -143,7 +143,8 @@ everything else still demands a login. Two things to keep straight:
 
 ```bash
 cd cf && pnpm install
-pnpm test            # 211 tests — pure helpers, plus an end-to-end pass over /api/v1
+pnpm test            # 230 tests — pure helpers, an end-to-end pass over /api/v1,
+                     # and the viewer's injected script executed under jsdom
 pnpm run deploy      # = bash deploy.sh
 ```
 
@@ -458,7 +459,22 @@ curl -sI -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
   everything it touches arrives as a parameter).
 - Views are single template literals in `cf/src/views/*`. There is no build step
   for the front end; `node --check` the extracted `<script>` block if you change
-  much of it.
+  much of it. For `viewer.js` that is not enough — `test/viewer.test.js` actually
+  *runs* the injected script under jsdom. The bug class it exists for is ordering:
+  the viewer builds its page skeleton synchronously, and `var` hoists the
+  declaration but not the assignment, so calling something declared 200 lines
+  later is a `TypeError` that kills the whole page. It caught two while being
+  written. If you move code across that boundary, run it.
+- `/preview/:id` renders from metadata the Worker already has: `viewerMeta()` in
+  `lib/viewermeta.js` reads `meta/versions.json`, `meta/clean.json` and a HEAD on
+  the TOC, so the version badge, page count, TOC button and the full page
+  skeleton are in the first paint instead of appearing one network round-trip
+  later (each of which used to shift the layout). `viewerMeta` never throws —
+  a missing or broken manifest degrades to `null` and the viewer falls back to
+  the old behaviour of waiting for pdf.js.
+- The skeleton assumes every page is 792×612 pts, which held across a 10-guideline
+  sample. `needPage()` corrects any page that disagrees, so a future oddly-sized
+  page costs one localised reflow, not a wrong document.
 - New D1 tables get their own `sql/*.sql` with `CREATE TABLE IF NOT EXISTS`, never
   an addition to `schema.sql`.
 - `src/skill/*` is the *content* of the `.skill` package, pulled into the bundle as
