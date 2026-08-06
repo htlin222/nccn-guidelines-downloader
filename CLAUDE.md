@@ -143,7 +143,7 @@ everything else still demands a login. Two things to keep straight:
 
 ```bash
 cd cf && pnpm install
-pnpm test            # 201 tests — pure helpers, plus an end-to-end pass over /api/v1
+pnpm test            # 211 tests — pure helpers, plus an end-to-end pass over /api/v1
 pnpm run deploy      # = bash deploy.sh
 ```
 
@@ -212,18 +212,45 @@ Order matters; each step is a script in `cf/`:
 
 1. **Check the token** — proves it can reach both R2 and D1, and fails the run on
    step 1 rather than doing five useless passes.
-2. `gen_versions.sh` → `meta/versions.json` (the version badges)
-3. `gen_thumbs.sh` → `thumb/<id>.webp`
-4. `build_index.sh` → the D1 FTS5 index
-5. `build_toc.sh` → `meta/toc/<id>.json`
-6. `build_updates.sh` → `meta/updates/<id>.json` (what changed in this version)
-7. `gen_clean.sh` → banner-free `<id>.pdf` at the bucket root + `meta/clean.json`
+2. `gen_clean.sh` → banner-free `<id>.pdf` at the bucket root + `meta/clean.json`
+3. `gen_versions.sh` → `meta/versions.json` (the version badges)
+4. `gen_thumbs.sh` → `thumb/<id>.webp`
+5. `build_index.sh` → the D1 FTS5 index
+6. `build_toc.sh` → `meta/toc/<id>.json`
+7. `build_updates.sh` → `meta/updates/<id>.json` (what changed in this version)
 8. **Verify the result** — index row count, `page_text` row count matching it, and
    that both manifests cover the catalogue. A step can pass on its own terms and
    still leave the site wrong.
 9. **Bump `api:gen`** — one KV write that invalidates every `/api/v1` cache entry
    at once. It runs *after* verification on purpose: dropping the cache first and
    only then discovering the rebuild was broken trades a good cache for bad data.
+
+**`gen_clean.sh` runs first, and that is load-bearing.** Steps 3–7 are all derived
+from the root `<id>.pdf`, which is exactly the object `gen_clean.sh` writes. It
+used to run *last*, so every derived artefact described the *previous* run's PDF:
+the site served a new guideline while the badge, thumbnail, search index, TOC and
+updates all still described the old one, for a full week. Measured: on
+2026-08-03 the run published breast v6.2026 and `versions.json` still said
+v5.2026 — the bump was only recorded on 08-06, by a manual re-run.
+
+The move alone is not enough, because R2 reads go through a ~4-hour cache (§6) and
+would hand the later steps the pre-rebuild bytes. So `gen_clean.sh` also drops
+each stripped PDF into `CLEAN_DIR` (`${{ runner.temp }}/clean`) and every
+downstream step reads that copy first — `fetch_clean` in `cf/lib.sh`, mirrored in
+`build_index.sh`'s Python. It also saves four full re-downloads of the catalogue.
+
+Only ids that were **stripped and uploaded successfully** land in `CLEAN_DIR`.
+Skipped ids (source sha unchanged) and `PUT-FAIL` ids fall back to R2 on purpose:
+there the served object *is* the old one, and the derived data must match what is
+served, not what we wish had uploaded. Running any of these scripts by hand
+without `CLEAN_DIR` just reads R2, exactly as before.
+
+That fallback is also why step 2 carries `continue-on-error: true`. `gen_clean.sh`
+guards with `[ "$fail" -eq 0 ]` — **one** bad id fails the whole script — and an
+expired NCCN cookie reliably produces bad ids, because the cron writes the login
+HTML into `raw/` and `gen_clean.sh` rejects it as `NOT-PDF`. Stopping there would
+have taken the entire weekly rebuild down with it. The run still goes red: the
+"Verify the result" step re-checks `steps.clean.outcome` before anything else.
 
 The last two steps feed the notification centre: `archive_notify.sh` rolls
 anything older than 90 days off to R2, and a final `if: always()` step posts the
@@ -409,6 +436,8 @@ curl -sI -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
 | Preview returns 502 | Cookie expired | Re-paste the cookie (§5) |
 | Gear has a warning dot | Cookie missing, or the last cron failed / is stale | Open settings — the chip says which |
 | Search returns nothing | Index rebuild wiped it | Re-run `build_index.sh`; the staging swap should now prevent this |
+| A card shows the previous version's cover | The weekly rebuild derived it from the old PDF | Fixed by running `gen_clean.sh` first (§5). To confirm which layer is stale, compare `thumb/<id>.webp` against `<id>.pdf` in R2 before blaming the browser |
+| R2 has the new thumbnail, the browser does not | The service worker cached `/thumb/` and Cache Storage ignores `Cache-Control` | Fixed: `assetResponse` in `src/lib/sw.js` is stale-while-revalidate, and the `<img>` URL carries `?v=<version>`. A browser still holding the old SW updates on its next visit |
 | Action green but nothing changed | A script exiting 0 on total failure | All five now end with `[ "$ok" -gt 0 ]` — if you add a sixth, do the same |
 | Every R2/D1 read is empty in CI | Token missing or under-scoped | §1; the "Check the token" step catches this now |
 | `Invalid access token` on deploy | OAuth creds revoked | Use the API token, not `wrangler login` |
@@ -424,7 +453,9 @@ curl -sI -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
 - Pure helpers go in `cf/src/lib/*` with unit tests in `cf/test/*`. Functions the
   browser also needs are injected verbatim via `.toString()` — those **must** stay
   self-contained (params + JS builtins only, no closures, no module-scope refs).
-  See `lib/cite.js`, `lib/toc.js`, `lib/marks.js`.
+  See `lib/cite.js`, `lib/toc.js`, `lib/marks.js`, `lib/sw.js` (the last one is
+  injected into `/sw.js`, so it also has no `self`, `caches` or `fetch` in scope —
+  everything it touches arrives as a parameter).
 - Views are single template literals in `cf/src/views/*`. There is no build step
   for the front end; `node --check` the extracted `<script>` block if you change
   much of it.

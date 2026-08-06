@@ -252,7 +252,11 @@ const ICONS = {
 function svg(name){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[name]||'')+'</svg>';}
 const COLOR = {}; const ICON = {};
 CATS.forEach(c=>{COLOR[c.name]=c.color;ICON[c.name]=c.icon;});
-let R2 = {}, VER = {}, r2sig='';try{var _c=JSON.parse(localStorage.getItem('nccnr2')||'null');if(_c){R2=_c.cached||{};VER=_c.versions||{};r2sig=(_c.count||0)+':'+Object.keys(_c.versions||{}).length;}}catch(e){}
+// 「有沒有變」的指紋。原本只數 versions 的鍵數，所以 v5.2026 → v6.2026 這種
+// 換版完全看不出來，refreshR2() 就不會重畫格子，徽章和縮圖要等下一次進站才更新。
+// 版本字串本身也算進來。
+function r2Sig(o){var v=(o&&o.versions)||{};return (o&&o.count||0)+':'+Object.keys(v).sort().map(function(k){return k+'='+(v[k]&&v[k].v);}).join(',');}
+let R2 = {}, VER = {}, r2sig='';try{var _c=JSON.parse(localStorage.getItem('nccnr2')||'null');if(_c){R2=_c.cached||{};VER=_c.versions||{};r2sig=r2Sig(_c);}}catch(e){}
 const listEl=document.getElementById('list'), q=document.getElementById('q');
 var activeCat=null;try{activeCat=localStorage.getItem('nccncat')||null;}catch(e){}var filtersEl=document.getElementById('filters');
 // 星號存 D1（跨裝置），localStorage 只是快取：開頁先照本地畫，/api/stars 回來再校正，
@@ -271,7 +275,10 @@ function card(g){
   const r2html=c?'<span class="r2"><span class="d"></span>'+(dt||'R2')+'</span>':'<span class="r2 miss"><span class="d"></span>未快取</span>';
   return '<a class="card" data-h="'+esc((g.name+' '+g.id+' '+g.cat).toLowerCase())+'" href="/preview/'+encodeURIComponent(g.id)+'">'
     +'<div class="thumb">'
-            +'<img loading="lazy" src="/thumb/'+encodeURIComponent(g.id)+'" alt="" onerror="this.remove()">'
+            // 帶上版本當快取鍵。Worker 只看 pathname，query 純粹是給瀏覽器和
+            // service worker 看的：換版就是一個沒見過的網址，立刻抓到新封面，
+            // 不必等 stale-while-revalidate 的下一輪。
+            +'<img loading="lazy" src="/thumb/'+encodeURIComponent(g.id)+(VER[g.id]&&VER[g.id].v?'?v='+encodeURIComponent(VER[g.id].v):'')+'" alt="" onerror="this.remove()">'
       +'<span class="tag" style="background:'+col+'cc">'+svg(ICON[g.cat]||'help')+esc(g.cat)+'</span>'+(VER[g.id]?'<span class="ver" title="'+esc((VER[g.id].d||''))+'">v'+esc(VER[g.id].v)+'</span>':'')
     +'</div>'
     +'<div class="cardbody"><div class="t" data-cite="'+esc(g.id)+'" title="點一下複製 AMA 引用">'+esc(g.name)+'</div>'
@@ -605,7 +612,7 @@ document.getElementById('notifList').addEventListener('click',function(e){
 
 async function refreshR2(){
   try{const s=await(await fetch('/api/r2-status')).json();
-    var sig=(s.count||0)+':'+Object.keys(s.versions||{}).length;
+    var sig=r2Sig(s);
     try{localStorage.setItem('nccnr2',JSON.stringify({cached:s.cached,versions:s.versions,count:s.count,total:s.total}));}catch(e){}
     R2=s.cached||{};VER=s.versions||{};
     if(s.notify){NOTIF={unread:s.notify.unread||0,alert:s.notify.alert||0};paintBell();}

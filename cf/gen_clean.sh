@@ -19,6 +19,10 @@
 #   bash gen_clean.sh          # incremental
 #   FORCE=1 bash gen_clean.sh  # rebuild every id
 #   LIMIT=5 bash gen_clean.sh  # only the first 5 ids (smoke test)
+#
+# CLEAN_DIR=<dir> 會把剝好的 PDF 也留在那個目錄，給同一輪的下游腳本直接取用
+# （見 lib.sh 的 fetch_clean）。只有「確定上傳成功」的才留——上傳失敗的 id 線上
+# 服務的仍是舊物件，下游跟著讀舊的才不會產生對不上的縮圖和索引。
 set -u
 cd "$(dirname "$0")"
 [ -f ../.env ] && set -a && . ../.env && set +a  # load token if present
@@ -27,6 +31,7 @@ STRIP="../strip_nccn_disclaimer.py"
 FORCE="${FORCE:-0}"
 LIMIT="${LIMIT:-0}"
 WORK=$(mktemp -d)
+[ -n "${CLEAN_DIR:-}" ] && mkdir -p "$CLEAN_DIR"
 LOG="gen_clean.log"; : > "$LOG"
 del(){ command rip "$@" 2>/dev/null || rm -rf "$@" 2>/dev/null; }
 sha(){ if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}';
@@ -77,6 +82,7 @@ import json;d=json.load(open('$WORK/prev.json'));print(d.get('$id',{}).get('page
     printf '%s\t%s\t%s\n' "$id" "$src_sha" "${pages:-0}" >> "$WORK/rows.tsv"
     ok=$((ok+1))
     echo "[$i/$total] OK $id (${pages:-?} pages, $(wc -c < "$out") bytes)" | tee -a "$LOG"
+    if [ -n "${CLEAN_DIR:-}" ]; then command cp "$out" "$CLEAN_DIR/$id.pdf" 2>/dev/null; fi
   else
     fail=$((fail+1)); echo "[$i/$total] PUT-FAIL $id" | tee -a "$LOG"
   fi
