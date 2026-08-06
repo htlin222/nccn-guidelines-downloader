@@ -1,18 +1,35 @@
 // /api/v1 的金鑰。明文只在鑄造當下回傳一次（烤進 .skill），之後永遠只剩 sha256。
 //
-// 熱路徑的成本是重點：每個 API 請求都要驗一次金鑰，若每次都打 D1，光認證就比取
-// 資料還慢。所以驗證結果疊三層——isolate 記憶體 10 秒、KV 60 秒、最後才是 D1。
-// 撤銷時主動刪掉 KV，所以撤銷不必等 TTL 到期；唯一的殘留是別的 isolate 的記憶體
-// 快取，上限 10 秒，這是刻意換來的（記憶體那層擋掉的量最大）。
+// 熱路徑的成本是重點：每個 API 請求都要驗一次金鑰。所以驗證結果快取在 isolate
+// 記憶體 10 秒，之後才回頭問 D1（hash 有 UNIQUE 索引，rows_read=1）。
+//
+// **這裡刻意沒有 KV 那一層**，雖然它看起來是這個站到處都在用的模式。原本有，而且
+// 撤銷時會把 KV 那個 key 刪掉，理論上撤銷即時生效。實測是：D1 已標記撤銷、KV 的
+// key 也確實不見了，被撤銷的金鑰仍然暢行無阻超過 24 秒。原因是 KV 的讀取在邊緣
+// 節點另有一層快取，刪除要花時間傳播——KV 是最終一致的，拿它當授權判斷的來源，
+// 「已撤銷」這個事實就會晚幾十秒才生效。
+//
+// 換句話說：快取層可以放資料，不能放「這個人能不能進來」。撤銷現在最壞延遲
+// MEM_TTL_MS（10 秒，且只在撤銷當下已經看過這把金鑰的 isolate 上），代價是每個
+// isolate 每 10 秒多一次 rows_read=1 的查詢。對這種流量而言那是零。
 
 const KEY_RE = /^nccn_[0-9a-f]{32}$/;
 const MEM_TTL_MS = 10_000; // isolate 記憶體：撤銷最壞殘留這麼久
-const KV_TTL_S = 60; // KV：撤銷時會主動刪，所以可以放長一點
 const TOUCH_EVERY_MS = 300_000; // last_used / calls 的降頻寫入間隔
 
 // isolate 全域。Worker 隨時可能被回收，所以這只能當快取，不能當事實來源。
 const mem = new Map(); // hash -> { at, ok, id }
 const touched = new Map(); // hash -> 上次寫 D1 的時間
+
+// 失敗的驗證也會進 mem（否則無效金鑰猛打就等於直接壓 D1），代價是任何人都能用
+// 隨機字串在這個 Map 裡塞東西。所以要有上限：滿了就整個倒掉，重建的成本只是幾次
+// rows_read=1 的查詢。LRU 不值得為這點東西寫。
+// （名字刻意不叫 remember——lib/cache.js 有一個同名但完全不同的東西。）
+const MEM_MAX = 500;
+function capped(map, k, v) {
+	if (map.size >= MEM_MAX) map.clear();
+	map.set(k, v);
+}
 
 export function parseBearer(header) {
 	const s = String(header || "").trim();
@@ -80,31 +97,20 @@ export async function verifyKey(env, key, ctx) {
 	}
 
 	let id = null;
-	const cached = await env.NCCN_KV.get("apikey:" + hash).catch(() => null);
-	if (cached != null) {
-		id = cached === "" ? null : parseInt(cached, 10);
-	} else {
-		try {
-			const row = await env.DB.prepare(
-				"SELECT id, revoked FROM api_keys WHERE hash = ?",
-			)
-				.bind(hash)
-				.first();
-			id = row && !row.revoked ? row.id : null;
-		} catch (e) {
-			// api.sql 沒跑過就是這裡炸。當成驗不過，而不是放行。
-			return { ok: false, reason: "bad" };
-		}
-		// 失敗也快取（空字串），否則拿無效 key 猛打就等於直接壓 D1。
-		if (ctx?.waitUntil)
-			ctx.waitUntil(
-				env.NCCN_KV.put("apikey:" + hash, id == null ? "" : String(id), {
-					expirationTtl: KV_TTL_S,
-				}).catch(() => {}),
-			);
+	try {
+		const row = await env.DB.prepare(
+			"SELECT id, revoked FROM api_keys WHERE hash = ?",
+		)
+			.bind(hash)
+			.first();
+		id = row && !row.revoked ? row.id : null;
+	} catch (e) {
+		// api.sql 沒跑過就是這裡炸。當成驗不過，而不是放行。
+		return { ok: false, reason: "bad" };
 	}
 
-	mem.set(hash, { at: now, ok: id != null, id });
+	// 失敗結果也記進來，否則拿無效 key 猛打就等於直接壓 D1。
+	capped(mem, hash, { at: now, ok: id != null, id });
 	if (id == null) return { ok: false, reason: "bad" };
 	touch(env, hash, id, ctx);
 	return { ok: true, id };
@@ -114,7 +120,7 @@ export async function verifyKey(env, key, ctx) {
 function touch(env, hash, id, ctx) {
 	const now = Date.now();
 	if (!needsTouch(touched.get(hash) || 0, now)) return;
-	touched.set(hash, now);
+	capped(touched, hash, now);
 	if (!ctx?.waitUntil) return;
 	ctx.waitUntil(
 		env.DB.prepare(
@@ -149,7 +155,8 @@ export async function mintKey(env, label) {
 	return { key, prefix: keyPrefix(key) };
 }
 
-// 撤銷要立刻生效，所以連 KV 那層一起清掉，不是只把 D1 標記起來。
+// D1 是唯一的事實來源，所以撤銷就是把它標記起來。順手清掉這個 isolate 的記憶體
+// 快取，讓發出撤銷指令的那個人立刻看到效果；其他 isolate 最多 10 秒後跟上。
 export async function revokeKey(env, id) {
 	const row = await env.DB.prepare("SELECT hash FROM api_keys WHERE id = ?")
 		.bind(id)
@@ -158,7 +165,6 @@ export async function revokeKey(env, id) {
 	await env.DB.prepare("UPDATE api_keys SET revoked = ? WHERE id = ?")
 		.bind(new Date().toISOString(), id)
 		.run();
-	await env.NCCN_KV.delete("apikey:" + row.hash).catch(() => {});
 	mem.delete(row.hash);
 	return { ok: true, id };
 }

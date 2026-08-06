@@ -343,9 +343,18 @@ wrangler d1 execute nccn-search --remote \
 wrangler kv key get api:gen --binding NCCN_KV --remote     # current cache generation
 ```
 
-Revoking from the settings sheet is immediate: it marks D1 *and* deletes the KV
-entry. The only residue is up to 10 seconds of isolate memory on whichever
-instances already saw the key.
+Revoking marks D1 and takes effect within ~10 seconds (measured: 8). D1 is the
+only source of truth for whether a key is live — **key validation deliberately
+does not use KV**, unlike everything else here.
+
+That is not a style choice, it is a bug that shipped. The first version cached
+the validation result in KV and deleted that entry on revoke, which looks
+airtight. In production a revoked key kept working for over 24 seconds with D1
+already marked and the KV entry already gone: KV reads have their own edge cache
+and KV is eventually consistent, so "this key is dead" propagates on KV's
+schedule, not yours. A cache layer can hold data; it must not hold *may this
+caller in*. `test/apiflow.test.js` asserts nothing under `apikey:` is ever
+written to KV.
 
 | Symptom | Cause | Fix |
 |---|---|---|

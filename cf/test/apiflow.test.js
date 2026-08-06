@@ -180,6 +180,15 @@ describe("認證", () => {
 		expect((await revokeKey(env, 999)).ok).toBe(false);
 	});
 
+	// 這是這個功能唯一出過的安全 bug，所以釘死它。驗證結果曾經被快取進 KV，撤銷時
+	// 把那個 key 刪掉，看起來很合理。實測是被撤銷的金鑰照樣通行超過 24 秒——KV 的
+	// 讀取在邊緣節點另有一層快取，而 KV 本來就是最終一致的。
+	// 快取層可以放資料，不能放「這個人能不能進來」。
+	it("驗證結果絕不進 KV", async () => {
+		await call(env, "/api/v1/catalogue", key);
+		expect([...env._kv.keys()].some((k) => k.startsWith("apikey:"))).toBe(false);
+	});
+
 	it("用過之後 last_used 與 calls 會留下痕跡", async () => {
 		await call(env, "/api/v1/catalogue", key);
 		const rows = await listKeys(env);
