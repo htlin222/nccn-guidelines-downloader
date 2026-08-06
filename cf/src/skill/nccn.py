@@ -47,14 +47,26 @@ def die(msg, code=1):
     sys.exit(code)
 
 
+# urllib 預設會送 "Python-urllib/3.x"，而 Cloudflare 的 bot 防護擋掉那個字串——
+# 回的是 403 error code 1010，看起來完全像認證失敗，實際上跟金鑰無關。所以一定要
+# 覆蓋掉。不必偽裝成瀏覽器，任何不是 Python-urllib 的字串都放行，這裡就老實說自己
+# 是誰。改動這一行前先確認 403 沒有回來。
+UA = "nccn-skill/1.0 (+https://nccn.hsiehting.com)"
+
+
 def fetch(url, key, binary=False):
-    req = urllib.request.Request(url, headers={"Authorization": "Bearer " + key})
+    req = urllib.request.Request(
+        url, headers={"Authorization": "Bearer " + key, "User-Agent": UA}
+    )
     try:
         with urllib.request.urlopen(req, timeout=120) as res:
             return res.read() if binary else json.load(res)
     except urllib.error.HTTPError as e:
         if e.code == 401:
             die("金鑰無效或已撤銷——請到站上重新產生這個 skill。")
+        if e.code == 403:
+            die("HTTP 403：被 Cloudflare 的 bot 防護擋下，不是金鑰的問題。"
+                "檢查上面的 UA 常數還在不在。")
         die("HTTP %d %s：%s" % (e.code, e.reason, url))
     except urllib.error.URLError as e:
         die("連不上 %s：%s" % (url, e.reason))
