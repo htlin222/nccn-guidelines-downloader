@@ -28,14 +28,17 @@ def flush():
     open(os.path.join(work, f'chunk_{cn:03d}.sql'), 'w', encoding='utf-8').write(
         "\n".join(chunk) + "\n")
     chunk, size = [], 0
-# Chunks are now capped by BYTES, not statement count. Each page emits two rows
-# (the 2000-char FTS body and the untruncated page_text body), so a fixed
-# 50-statement chunk could balloon past what `wrangler d1 execute --file` will
-# take. 150 KB keeps every chunk comfortably inside it.
+# Chunks are capped by BYTES, not statement count. Each page emits two rows (the
+# 2000-char FTS body and the untruncated page_text body), so a fixed 50-statement
+# chunk balloons past what `wrangler d1 execute --file` will accept.
+# 80 KB, not 150: the first run at 150 KB lost 1 chunk in 388 to an oversized
+# request. The old 50-statement cap worked out to ~100 KB, so this stays under
+# what was already proven. It roughly doubles the chunk count — that is the real
+# cost of storing each page twice, and it is paid once a week.
 def add(stmt):
     global size
     chunk.append(stmt); size += len(stmt)
-    if size >= 150000: flush()
+    if size >= 80000: flush()
 def esc(s): return s.replace("'", "''")
 
 # The per-page NCCN banner is stripped from the TEXT, not trusted to be absent
@@ -134,10 +137,23 @@ for f in "$WORK"/chunk_*.sql; do
   # The chunks are written against the live table names; retarget both at staging.
   sed -e 's/^INSERT INTO pages(/INSERT INTO pages_new(/' \
       -e 's/^INSERT INTO page_text(/INSERT INTO page_text_new(/' "$f" > "$f.staged"
-  if wrangler d1 execute "$DB" --file="$f.staged" --remote >/dev/null 2>&1; then
+  # Retry before giving up. One chunk failing throws away the whole 20-minute
+  # rebuild, and the usual cause is a transient D1 error, not bad SQL — losing
+  # the run to a blip that a 5-second wait would have cleared is a bad trade.
+  # The error text is captured rather than sent to /dev/null: the first failure
+  # here was undiagnosable because the reason had been discarded.
+  ok_chunk=0
+  for attempt in 1 2 3; do
+    if err=$(wrangler d1 execute "$DB" --file="$f.staged" --remote 2>&1 >/dev/null); then
+      ok_chunk=1; break
+    fi
+    echo "chunk $i/$n attempt $attempt failed: $(echo "$err" | tr '\n' ' ' | cut -c1-300)" | tee -a "$LOG"
+    sleep $((attempt * 5))
+  done
+  if [ "$ok_chunk" -eq 1 ]; then
     echo "chunk $i/$n ok" | tee -a "$LOG"
   else
-    bad=$((bad+1)); echo "chunk $i/$n FAIL" | tee -a "$LOG"
+    bad=$((bad+1)); echo "chunk $i/$n FAIL after 3 attempts ($(wc -c < "$f.staged") bytes)" | tee -a "$LOG"
   fi
 done
 echo "DONE loaded $((n - bad))/$n chunks" | tee -a "$LOG"
