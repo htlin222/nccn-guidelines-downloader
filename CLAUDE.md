@@ -143,7 +143,7 @@ everything else still demands a login. Two things to keep straight:
 
 ```bash
 cd cf && pnpm install
-pnpm test            # 201 tests — pure helpers, plus an end-to-end pass over /api/v1
+pnpm test            # 241 tests — pure helpers, plus an end-to-end pass over /api/v1
 pnpm run deploy      # = bash deploy.sh
 ```
 
@@ -385,6 +385,22 @@ so a cron refresh can never put the banner back on a cleaned PDF — and it also
 means a freshly-pulled PDF is not visible to readers until the next weekly run
 (≤ 6 days).
 
+**`/pdf/:id` is browser-cached for 24 h** (`private, max-age=86400,
+stale-while-revalidate=604800`, plus R2's ETag and a 304 on `If-None-Match`).
+These files are 5–80 MB and change once a week, and the old
+`private, max-age=0, must-revalidate` re-downloaded the whole thing on every
+single visit. Two consequences worth knowing before you go debugging:
+
+- After a rebuild, a reader who already has a copy keeps seeing the old one for
+  up to a day. That is intended. A hard reload (or the ETag revalidation, once
+  `max-age` lapses) picks up the new bytes immediately.
+- It is deliberately `private`, so the Cloudflare edge does **not** hold these
+  PDFs. Flipping it to `public` would add a geographic win, but caching NCCN's
+  copyrighted PDFs at the edge is a policy decision, not a performance one.
+
+`/dl/:id` stays uncached on purpose — its filename carries the current date, and
+a cached attachment would hand back a stale one.
+
 Inspect an object's age without downloading it:
 
 ```bash
@@ -412,6 +428,7 @@ curl -sI -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
 | Action green but nothing changed | A script exiting 0 on total failure | All five now end with `[ "$ok" -gt 0 ]` — if you add a sixth, do the same |
 | Every R2/D1 read is empty in CI | Token missing or under-scoped | §1; the "Check the token" step catches this now |
 | `Invalid access token` on deploy | OAuth creds revoked | Use the API token, not `wrangler login` |
+| A rebuilt PDF still looks old in the browser | `/pdf/:id` is browser-cached for a day | §6 — hard-reload, or wait out `max-age` |
 | A guideline never refreshes | Parked after 3 consecutive failures | `wrangler kv key get cron_state --binding NCCN_KV --remote`; delete its entry to retry now |
 | Bell says "已 N 天沒有紀錄" | The Worker cron did not fire, or D1 writes are failing | `wrangler tail nccn-download` over a run; compare KV `cron_health` against the newest `cron` row in D1 |
 | Bell is empty on a working site | `sql/notify.sql` was never run | §2 — every read in `lib/notify.js` swallows the missing-table error by design |
@@ -424,7 +441,19 @@ curl -sI -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
 - Pure helpers go in `cf/src/lib/*` with unit tests in `cf/test/*`. Functions the
   browser also needs are injected verbatim via `.toString()` — those **must** stay
   self-contained (params + JS builtins only, no closures, no module-scope refs).
-  See `lib/cite.js`, `lib/toc.js`, `lib/marks.js`.
+  See `lib/cite.js`, `lib/toc.js`, `lib/marks.js`, `lib/view.js`.
+- `lib/view.js` holds the viewer's render scheduling: which page you are on
+  (`pageAtOffset`), what to rasterise next (`prefetchPlan`), whether you are
+  scrolling too fast to bother (`scrollIntent`), and what to drop when canvases
+  exceed the pixel budget (`evictPlan`). They live outside the view template
+  because the inline versions they replaced were the viewer's main sources of
+  scroll jank and there was no way to prove a rewrite behaved the same.
+- Anything that changes what the reader sees mid-render is a **timing** change,
+  and `pnpm test` cannot see it. Measure it in a real browser before believing
+  it. Deferring a page's canvas until its render finished — so it could crossfade
+  instead of flashing white — measured 463 ms → 1305 ms to first pixels, because
+  the browser can no longer paint pdf.js's progress. A page's *first* canvas now
+  goes straight into the DOM; only replacements get the crossfade.
 - Views are single template literals in `cf/src/views/*`. There is no build step
   for the front end; `node --check` the extracted `<script>` block if you change
   much of it.

@@ -118,7 +118,10 @@ export async function refreshBatch(env, n) {
 			uploaded: o.uploaded ? o.uploaded.toISOString() : null,
 		};
 	}
-	const state = await readJson(env, CRON_STATE_KEY, { fails: {}, deferred: {} });
+	const state = await readJson(env, CRON_STATE_KEY, {
+		fails: {},
+		deferred: {},
+	});
 	const ids = pickStalest(GUIDELINES, cached, n, state.deferred);
 	const results = [];
 	for (const id of ids) results.push(await refreshOne(env, id));
@@ -134,9 +137,7 @@ export async function refreshBatch(env, n) {
 		ok,
 		fail: results.length - ok,
 		ids,
-		errors: results
-			.filter((r) => !r.ok)
-			.map((r) => `${r.id}: ${r.error}`),
+		errors: results.filter((r) => !r.ok).map((r) => `${r.id}: ${r.error}`),
 	};
 	await env.NCCN_KV.put(CRON_HEALTH_KEY, JSON.stringify(health));
 	// KV 只留最後一次，看不出「上週是不是也壞了」。同一份結果再寫一列進 D1 的
@@ -159,17 +160,45 @@ export async function servePdf(env, id, { download, request, raw }) {
 	// root object, so fall back to raw/ rather than 404 on it.
 	let key = raw ? `raw/${id}.pdf` : `${id}.pdf`;
 	let isClean = !raw;
-	if (!raw && !(await env.PDFS.head(key))) {
+	// One head() in the common case. The old shape probed the clean key, threw
+	// the result away, then probed again below — two or three round trips before
+	// a single byte moved, on the hottest route the site has.
+	let head = await env.PDFS.head(key);
+	if (!head && !raw) {
 		key = `raw/${id}.pdf`;
 		isClean = false;
+		head = await env.PDFS.head(key);
 	}
 	const today = new Date().toISOString().slice(0, 10);
 	const filename = `NCCN-${id}${isClean ? "" : "-raw"}-${today}.pdf`;
 	const disposition = `${download ? "attachment" : "inline"}; filename="${filename}"`;
 	const rangeHeader = request ? request.headers.get("Range") : null;
 
-	const head = await env.PDFS.head(key);
 	if (head) {
+		// These PDFs change once a week at most (gen_clean.sh, in the Monday
+		// rebuild), and they are 5–80 MB. The old header was
+		// `private, max-age=0, must-revalidate`, i.e. re-download the whole thing
+		// on every single visit — the single most expensive line in the viewer's
+		// load path. A day of freshness plus an ETag revalidation costs nothing:
+		// a rebuild changes the R2 etag, so the next revalidation misses.
+		//
+		// Deliberately `private`: /pdf sits behind Cloudflare Access, and keeping
+		// NCCN's copyrighted PDFs out of the shared edge cache is a policy call,
+		// not a performance one. Flipping this to `public` is a separate decision.
+		const CACHE = "private, max-age=86400, stale-while-revalidate=604800";
+		const etag = head.httpEtag;
+
+		// A revalidation that hits saves the entire body. Range requests are
+		// excluded: pdf.js does not send If-None-Match with them, and answering a
+		// Range with 304 would need If-Range semantics to be correct.
+		if (!rangeHeader && etag && request) {
+			const inm = request.headers.get("If-None-Match");
+			if (inm && inm.split(",").some((t) => t.trim() === etag))
+				return new Response(null, {
+					status: 304,
+					headers: { etag, "cache-control": CACHE },
+				});
+		}
 		// HTTP Range → 206 so pdf.js can lazily fetch page data (mcq-bank style).
 		if (rangeHeader && !download) {
 			const m = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim());
@@ -201,7 +230,8 @@ export async function servePdf(env, id, { download, request, raw }) {
 						"content-range": `bytes ${start}-${end}/${total}`,
 						"accept-ranges": "bytes",
 						"content-disposition": disposition,
-						"cache-control": "private, max-age=86400",
+						"cache-control": CACHE,
+						...(etag ? { etag } : {}),
 					},
 				});
 			}
@@ -212,7 +242,14 @@ export async function servePdf(env, id, { download, request, raw }) {
 		headers.set("content-length", String(obj.size));
 		headers.set("content-disposition", disposition);
 		headers.set("accept-ranges", "bytes");
-		headers.set("cache-control", "private, max-age=0, must-revalidate");
+		// /dl stays uncached: its filename carries today's date, and a cached
+		// attachment would hand back a stale one. It is a one-shot action anyway
+		// — the route worth caching is /pdf, which the viewer hammers.
+		headers.set(
+			"cache-control",
+			download ? "private, max-age=0, must-revalidate" : CACHE,
+		);
+		if (etag) headers.set("etag", etag);
 		headers.set("x-nccn-clean", isClean ? "1" : "0");
 		if (obj.uploaded) headers.set("x-r2-uploaded", obj.uploaded.toISOString());
 		return new Response(obj.body, { status: 200, headers });

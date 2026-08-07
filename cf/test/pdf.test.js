@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { MAX_FAILS, nextCronState, pickStalest } from "../src/lib/pdf.js";
+import {
+	MAX_FAILS,
+	nextCronState,
+	pickStalest,
+	servePdf,
+} from "../src/lib/pdf.js";
 
 const G = ["a", "b", "c", "d"].map((id) => ({ id }));
 const up = (o) => {
@@ -112,5 +117,94 @@ describe("nextCronState (failure bookkeeping)", () => {
 			fails: { a: 1 },
 			deferred: {},
 		});
+	});
+});
+
+// ── servePdf caching ─────────────────────────────────────────────────────────
+// These PDFs are 5–80 MB and change once a week. The route used to send
+// `private, max-age=0, must-revalidate`, so every visit to a guideline
+// re-downloaded the whole file before pdf.js could draw a single page.
+describe("servePdf caching", () => {
+	const ETAG = '"abc123"';
+	const bucket = (keys) => ({
+		head: async (k) =>
+			keys[k] ? { size: keys[k], httpEtag: ETAG, uploaded: new Date(0) } : null,
+		get: async (k, opts) =>
+			keys[k]
+				? {
+						size: keys[k],
+						uploaded: new Date(0),
+						body: opts?.range ? "part" : "whole",
+					}
+				: null,
+	});
+	const env = (keys) => ({ PDFS: bucket(keys) });
+	const req = (headers = {}) => new Request("https://x/pdf/aml", { headers });
+
+	it("lets the browser hold an inline PDF for a day, with an ETag", async () => {
+		const r = await servePdf(env({ "aml.pdf": 100 }), "aml", {
+			download: false,
+			request: req(),
+		});
+		expect(r.status).toBe(200);
+		expect(r.headers.get("cache-control")).toContain("max-age=86400");
+		expect(r.headers.get("etag")).toBe(ETAG);
+	});
+
+	// The whole point of the ETag: a revalidation that hits costs no body.
+	it("answers a matching If-None-Match with 304 and no body", async () => {
+		const r = await servePdf(env({ "aml.pdf": 100 }), "aml", {
+			download: false,
+			request: req({ "If-None-Match": ETAG }),
+		});
+		expect(r.status).toBe(304);
+		expect(await r.text()).toBe("");
+	});
+
+	it("serves the body again once the object changes", async () => {
+		const r = await servePdf(env({ "aml.pdf": 100 }), "aml", {
+			download: false,
+			request: req({ "If-None-Match": '"stale"' }),
+		});
+		expect(r.status).toBe(200);
+	});
+
+	it("handles a multi-value If-None-Match", async () => {
+		const r = await servePdf(env({ "aml.pdf": 100 }), "aml", {
+			download: false,
+			request: req({ "If-None-Match": `"other", ${ETAG}` }),
+		});
+		expect(r.status).toBe(304);
+	});
+
+	// /dl's filename carries today's date; a cached attachment would hand back a
+	// stale one, and it is a one-shot action with nothing to gain from caching.
+	it("does not cache the download route", async () => {
+		const r = await servePdf(env({ "aml.pdf": 100 }), "aml", {
+			download: true,
+			request: req(),
+		});
+		expect(r.headers.get("cache-control")).toContain("max-age=0");
+	});
+
+	// pdf.js sends Range without If-None-Match; a 304 there would need If-Range
+	// semantics to be correct, so ranges always return bytes.
+	it("never 304s a Range request", async () => {
+		const r = await servePdf(env({ "aml.pdf": 100 }), "aml", {
+			download: false,
+			request: req({ Range: "bytes=0-9", "If-None-Match": ETAG }),
+		});
+		expect(r.status).toBe(206);
+		expect(r.headers.get("cache-control")).toContain("max-age=86400");
+		expect(r.headers.get("etag")).toBe(ETAG);
+	});
+
+	it("still falls back to raw/ when no cleaned copy exists", async () => {
+		const r = await servePdf(env({ "raw/aml.pdf": 100 }), "aml", {
+			download: false,
+			request: req(),
+		});
+		expect(r.status).toBe(200);
+		expect(r.headers.get("x-nccn-clean")).toBe("0");
 	});
 });
