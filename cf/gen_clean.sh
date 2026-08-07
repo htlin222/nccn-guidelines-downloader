@@ -16,6 +16,12 @@
 # in meta/clean.json; the strip is byte-deterministic (no_new_id=True) so an
 # unchanged input really does mean an unchanged output.
 #
+# NCCN only — deliberately reads guidelines.json and not algorithms.json. MD
+# Anderson's PDFs carry no such banner, so there is nothing to strip and no raw/
+# copy to strip it from: refresh_mda.sh writes those straight to the R2 root
+# (see lib/pdf.js refreshKey). Adding them here would look for raw/mda-*.pdf
+# objects that by design do not exist.
+#
 #   bash gen_clean.sh          # incremental
 #   FORCE=1 bash gen_clean.sh  # rebuild every id
 #   LIMIT=5 bash gen_clean.sh  # only the first 5 ids (smoke test)

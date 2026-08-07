@@ -1,4 +1,5 @@
 import { GUIDELINES } from "../data/guidelines.js";
+import { ALGORITHMS, ALGO_CATS } from "../data/algorithms.js";
 import { CATS } from "../data/categories.js";
 import { PER_DAY, BUILD_TIME } from "../lib/constants.js";
 import { escapeHtml } from "../lib/http.js";
@@ -8,8 +9,17 @@ import { hayHit } from "../lib/search.js";
 
 export function renderPage(request) {
 	const user = request.headers.get("cf-access-authenticated-user-email") || "";
-	const data = JSON.stringify(GUIDELINES);
-	const cats = JSON.stringify(CATS);
+	// 兩份目錄各自成組地送到前端。合成一個陣列再靠 src 欄位篩看起來更省，但每次切
+	// 分頁都要重掃 178 筆——分開存，切換就只是換一個指標。
+	const srcs = JSON.stringify({
+		nccn: { label: "NCCN", title: "NCCN Guidelines", data: GUIDELINES, cats: CATS },
+		mda: {
+			label: "MD Anderson",
+			title: "Clinical Management Algorithms",
+			data: ALGORITHMS,
+			cats: ALGO_CATS,
+		},
+	});
 	return `<!doctype html>
 <html lang="zh-Hant">
 <head>
@@ -67,6 +77,16 @@ export function renderPage(request) {
     background:hsl(var(--primary));color:hsl(var(--primary-foreground));font-size:16px;}
   .brand small{font-weight:500;font-size:.72rem;color:hsl(var(--muted-foreground));display:block;letter-spacing:0;}
   .spacer{flex:1;}
+  /* 來源分頁。刻意做成底線式而不是又一排 pill：底下的分類 chip 已經是 pill 了，
+     兩排長得一樣的東西並排，看不出哪一排是「換一整套目錄」、哪一排是「篩這一套」。 */
+  .srctabs{display:flex;gap:2px;border-bottom:1px solid hsl(var(--border));margin-bottom:12px;}
+  .srctab{position:relative;font:inherit;font-size:.86rem;font-weight:600;cursor:pointer;
+    border:0;background:transparent;color:hsl(var(--muted-foreground));padding:8px 14px 10px;}
+  .srctab:hover{color:hsl(var(--foreground));}
+  .srctab.act{color:hsl(var(--foreground));}
+  .srctab.act::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;
+    border-radius:2px;background:hsl(var(--primary));}
+  .srctab b{font-weight:600;margin-left:5px;color:hsl(var(--muted-foreground));font-size:.76rem;}
   .iconbtn{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;cursor:pointer;flex:0 0 auto;
     border:1px solid hsl(var(--border));background:hsl(var(--card));color:hsl(var(--foreground));font-size:18px;}
   .iconbtn:hover{background:hsl(var(--accent));}
@@ -195,12 +215,13 @@ ${TOAST_CSS}
 <header>
   <div class="wrap">
     <div class="htop">
-      <div class="brand"><span class="logo" id="logo"></span><span>NCCN Guidelines<small id="sub">${GUIDELINES.length} 份 · R2 · PWA</small></span></div>
+      <div class="brand"><span class="logo" id="logo"></span><span><span id="brandName">NCCN Guidelines</span><small id="sub">${GUIDELINES.length} 份 · R2 · PWA</small></span></div>
       <div class="spacer"></div>
       <button class="iconbtn" id="bell" title="通知"></button>
       <button class="iconbtn" id="settings" title="設定"></button>
       <button class="iconbtn" id="theme" title="切換主題"></button>
     </div>
+    <div class="srctabs" id="srctabs"></div>
     <div class="searchrow">
       <span class="si" id="searchicon"></span>
       <input id="q" type="search" placeholder="搜尋病名、分類或 PDF 內文（如 trastuzumab）…" autocomplete="off">
@@ -215,12 +236,16 @@ ${TOAST_CSS}
 <div id="notifModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>通知</b><span style="flex:1"></span><button class="btn" id="notifAll">全部已讀</button><button class="xbtn" id="notifClose">✕</button></div><span class="chip" id="notifAlive">⏱ 讀取中…</span><div class="nlist" id="notifList"></div></div></div>
 <div id="setModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>設定</b><button class="xbtn" id="setClose">✕</button></div><span class="chip" id="cookieStatus">🔑 檢查 cookie…</span><span class="chip" id="cronStatus">⏱ 檢查每日更新…</span><div class="setlabel">更新 NCCN cookie（過期時使用）</div><p class="sethint">登入 <a href="https://www.nccn.org/login" target="_blank" rel="noopener">nccn.org</a>，用 cookie-cook 擴充功能複製 <b>Http Header value</b> 貼在下方存檔。</p><textarea id="cookieInput" placeholder="ASP.NET_SessionId=…; …"></textarea><div><button class="btn" id="saveCookie">儲存 cookie</button> <span id="saveMsg" style="font-size:.8rem;margin-left:6px"></span></div><div class="setlabel">Claude Code skill</div><p class="sethint">產生一個內嵌金鑰的 <code>nccn.skill</code>，解壓到 <code>~/.claude/skills/nccn/</code> 後，Claude Code 就能直接讀目錄、章節全文、本版更新與 PDF，<b>不需要再登入</b>。每次產生都是一把獨立的金鑰——換裝置就再產一把，弄丟了就撤銷那一把。</p><div><input class="kin" id="skillLabel" placeholder="這把要給誰用？例如 MacBook" maxlength="40"> <button class="btn" id="makeSkill">產生並下載</button> <span id="skillMsg" style="font-size:.8rem;margin-left:6px"></span></div><div id="keyList"></div></div></div>
 <footer>
-  透過你的 NCCN 登入 cookie 代理下載官方 PDF。${user ? "登入身分：" + escapeHtml(user) + " · " : ""}
-  每日 cron 輪流更新 ${PER_DAY} 份 · 資料屬 © NCCN，僅供個人臨床使用。<br>部署時間：${BUILD_TIME}
+  透過你的 NCCN 登入 cookie 代理下載官方 PDF；MD Anderson 的 clinical management
+  algorithms 為公開文件，不需登入。${user ? "登入身分：" + escapeHtml(user) + " · " : ""}
+  NCCN 每日 cron 輪流更新 ${PER_DAY} 份、MD Anderson 每月全量更新 ·
+  資料分屬 © NCCN 與 © The University of Texas MD Anderson Cancer Center，僅供個人臨床使用。<br>部署時間：${BUILD_TIME}
 </footer>
 <script>
-const DATA = ${data};
-const CATS = ${cats};
+const SRCS = ${srcs};
+// 上次看的是哪一邊。回站時停在原地，而不是每次都被丟回 NCCN。
+var SRC='nccn';try{var _s=localStorage.getItem('nccnsrc');if(_s&&SRCS[_s])SRC=_s;}catch(e){}
+var DATA=SRCS[SRC].data, CATS=SRCS[SRC].cats;
 const ICONS = {
   droplet:'<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>',
   utensils:'<path d="M3 2v7c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',
@@ -250,11 +275,17 @@ const ICONS = {
   circlex:'<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>',
 };
 function svg(name){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[name]||'')+'</svg>';}
+// 顏色／圖示查表涵蓋兩個來源的分類，不是只有目前這一邊：搜尋下拉與收藏區都可能
+// 同時出現兩邊的項目，只填目前來源的話另一邊會退回灰色圓點。
 const COLOR = {}; const ICON = {};
-CATS.forEach(c=>{COLOR[c.name]=c.color;ICON[c.name]=c.icon;});
+Object.keys(SRCS).forEach(function(k){SRCS[k].cats.forEach(function(c){COLOR[c.name]=c.color;ICON[c.name]=c.icon;});});
 let R2 = {}, VER = {}, r2sig='';try{var _c=JSON.parse(localStorage.getItem('nccnr2')||'null');if(_c){R2=_c.cached||{};VER=_c.versions||{};r2sig=(_c.count||0)+':'+Object.keys(_c.versions||{}).length;}}catch(e){}
 const listEl=document.getElementById('list'), q=document.getElementById('q');
-var activeCat=null;try{activeCat=localStorage.getItem('nccncat')||null;}catch(e){}var filtersEl=document.getElementById('filters');
+// 分類篩選是每個來源各記一份。兩邊的分類名稱沒有一個重疊，共用一格的話切過去就
+// 是「篩到一個這裡不存在的分類」＝一片空白，而且看不出為什麼。
+function catKey(s){return 'nccncat:'+s;}
+var activeCat=null;try{activeCat=localStorage.getItem(catKey(SRC))||null;}catch(e){}
+var filtersEl=document.getElementById('filters');
 // 星號存 D1（跨裝置），localStorage 只是快取：開頁先照本地畫，/api/stars 回來再校正，
 // 免得每次進站都要等一次往返才看得到自己收藏的東西。
 var STARCAT='★';
@@ -289,12 +320,21 @@ function starSecHtml(items){
     +'<div class="grid">'+items.map(card).join('')+'</div></div>';
 }
 function starred(){return DATA.filter(function(g){return STARS[g.id];});}
+// 一份可以掛在不只一個分類底下。MD Anderson 的索引頁就把 hypoglycemia 同時列在
+// 「急症」與「兒科」、把 C. difficile 同時列在「兒科」與「非急症」——在哪一區找得到
+// 它，是上游的臨床判斷，照抄比自己挑一個主分類誠實。同一份仍然只有一個 id、一份
+// PDF、一個 /preview/ 網址，只是在格線上出現兩次。
+//
+// 只有卡片與「指南名稱命中」這半邊認得 cats。D1 的 pages 表每列只存一個 cat（主
+// 分類），所以在次要分類底下做內文搜尋不會撈到那兩份——影響範圍是 91 份裡的 2 份、
+// 而且只在「先選了次要分類再搜內文」時才看得到，不值得為它多開一張對照表。
+function inCat(g,name){var cs=g.cats||[g.cat];return cs.indexOf(name)>=0;}
 function buildGrid(){
   var html='';
   var st=starred();
   if(st.length)html+=starSecHtml(st);
   for(const c of CATS){
-    const items=DATA.filter(function(g){return g.cat===c.name;});
+    const items=DATA.filter(function(g){return inCat(g,c.name);});
     if(!items.length)continue;
     html+='<div class="catsec" data-cat="'+esc(c.name)+'"><div class="cat"><span class="ci" style="background:'+c.color+'22;color:'+c.color+'">'+svg(c.icon)+'</span><h2>'+esc(c.name)+'</h2><span class="count">'+items.length+'</span></div><div class="grid">'+items.map(card).join('')+'</div></div>';
   }
@@ -341,7 +381,7 @@ function fileHits(qq){
   var scat=searchCat();var onlyStar=activeCat===STARCAT;
   return DATA.filter(function(g){
     if(onlyStar&&!STARS[g.id])return false;
-    if(scat&&g.cat!==scat)return false;
+    if(scat&&!inCat(g,scat))return false;
     return hayHit(g.name+' '+g.id+' '+g.cat,qq);
   });
 }
@@ -390,7 +430,7 @@ q.addEventListener('keydown',function(e){if(e.key==='Escape'||e.keyCode===27)clo
 function doSearch(){
   var qq=q.value.trim();if(qq.length<2)return;
   var scat=searchCat();
-  var u='/api/search?q='+encodeURIComponent(qq)+(scat?'&cat='+encodeURIComponent(scat):'');
+  var u='/api/search?q='+encodeURIComponent(qq)+'&src='+encodeURIComponent(SRC)+(scat?'&cat='+encodeURIComponent(scat):'');
   fetch(u).then(function(r){return r.json();}).then(function(d){
     if((d.q||'')!==q.value.trim())return;
     ftCache=ftHtml(d,qq,scat);ftQ=qq;paintSearch();
@@ -413,7 +453,9 @@ function yankCite(id){
   var g=null;for(var i=0;i<DATA.length;i++){if(DATA[i].id===id){g=DATA[i];break;}}
   if(!g)return;
   var v=VER[id];
-  var txt=citeText({name:g.name,id:g.id,version:v&&v.v});
+  // src/file 決定引用掛在哪個機構、指向哪個網址。少了它們，一份 MD Anderson 的
+  // algorithm 會被抄成 NCCN 的出版品。
+  var txt=citeText({name:g.name,id:g.id,version:v&&v.v,src:SRC,file:g.file});
   copyText(txt).then(function(ok){showToast(ok?'已複製引用':'複製失敗，請手動選取',txt);});
 }
 document.addEventListener('click',function(e){
@@ -423,18 +465,47 @@ document.addEventListener('click',function(e){
   yankCite(t.getAttribute('data-cite'));
 });
 // 收藏數會變，所以這支要能重複呼叫；listener 因此掛在容器上一次就好，別放進來。
-function buildFilters(){var counts={};DATA.forEach(function(g){counts[g.cat]=(counts[g.cat]||0)+1;});
+function buildFilters(){var counts={};DATA.forEach(function(g){var cs=g.cats||[g.cat];for(var i=0;i<cs.length;i++)counts[cs[i]]=(counts[cs[i]]||0)+1;});
   var ns=starIds().length;
   // 收藏全清光時 ★ chip 會消失，篩選狀態不跟著放掉就會停在一片空白。
-  if(activeCat===STARCAT&&!ns){activeCat=null;try{localStorage.setItem('nccncat','');}catch(e){}}
+  if(activeCat===STARCAT&&!ns){activeCat=null;try{localStorage.setItem(catKey(SRC),'');}catch(e){}}
   var h='<button class="fchip'+(activeCat?'':' act')+'" data-cat="">全部 <b>'+DATA.length+'</b></button>';
   if(ns)h+='<button class="fchip'+(activeCat===STARCAT?' act':'')+'" data-cat="'+STARCAT+'" style="--cc:#f59e0b">'+svg('star')+'<span>已收藏</span> <b>'+ns+'</b></button>';
   CATS.forEach(function(c){if(!counts[c.name])return;h+='<button class="fchip'+(activeCat===c.name?' act':'')+'" data-cat="'+c.name+'" style="--cc:'+c.color+'">'+svg(c.icon)+'<span>'+esc(c.name)+'</span> <b>'+counts[c.name]+'</b></button>';});
   filtersEl.innerHTML=h;}
 filtersEl.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.fchip');if(!b)return;
-  activeCat=b.getAttribute('data-cat')||null;try{localStorage.setItem('nccncat',activeCat||'');}catch(e){}
+  activeCat=b.getAttribute('data-cat')||null;try{localStorage.setItem(catKey(SRC),activeCat||'');}catch(e){}
   // 分類一換，名稱命中與內文命中的範圍都變了，快取的那半塊不能再用。
   buildFilters();applyFilter();ftQ='';sHidden=false;paintSearch();doSearch();});
+
+// ---------------------------------------------------------------- 來源分頁
+var srcTabsEl=document.getElementById('srctabs');
+function cachedIn(list){var n=0;for(var i=0;i<list.length;i++)if(R2[list[i].id])n++;return n;}
+function buildTabs(){
+  var h='';
+  Object.keys(SRCS).forEach(function(k){
+    h+='<button class="srctab'+(k===SRC?' act':'')+'" data-src="'+k+'">'+esc(SRCS[k].label)
+      +'<b>'+SRCS[k].data.length+'</b></button>';
+  });
+  srcTabsEl.innerHTML=h;
+  var nm=document.getElementById('brandName');if(nm)nm.textContent=SRCS[SRC].title;
+  var sub=document.getElementById('sub');
+  if(sub)sub.textContent=cachedIn(DATA)+' / '+DATA.length+' 份 · R2 · PWA';
+}
+function switchSrc(k){
+  if(!SRCS[k]||k===SRC)return;
+  SRC=k;DATA=SRCS[k].data;CATS=SRCS[k].cats;
+  try{localStorage.setItem('nccnsrc',k);}catch(e){}
+  // 分類是各記各的（catKey），所以切回來時上次篩的那一類還在。
+  try{activeCat=localStorage.getItem(catKey(SRC))||null;}catch(e){activeCat=null;}
+  // 搜尋的兩半塊都跟來源綁定：名稱命中掃的是 DATA，內文命中送的是 src=。舊的那份
+  // 快取整個作廢，否則切過去的第一眼會看到上一個來源的結果。
+  ftQ='';ftCache='';
+  buildTabs();buildFilters();buildGrid();applyFilter();paintSearch();doSearch();
+}
+srcTabsEl.addEventListener('click',function(e){
+  var b=e.target.closest&&e.target.closest('.srctab');if(!b)return;
+  switchSrc(b.getAttribute('data-src'));});
 function toggleStar(id){
   var on=!STARS[id];
   if(on)STARS[id]=1;else delete STARS[id];
@@ -610,7 +681,9 @@ async function refreshR2(){
     R2=s.cached||{};VER=s.versions||{};
     if(s.notify){NOTIF={unread:s.notify.unread||0,alert:s.notify.alert||0};paintBell();}
     paintCron(s.health);
-    var sub=document.getElementById('sub');if(sub)sub.textContent=s.count+' / '+s.total+' 份 · R2 · PWA';
+    // 副標的分母是「目前這個分頁的份數」，不是整個桶。s.count/s.total 兩邊加總，
+    // 在 NCCN 分頁看到 178 只會讓人以為漏了一半。buildTabs 從剛更新的 R2 重算。
+    buildTabs();
     if(sig!==r2sig){r2sig=sig;buildGrid();applyFilter();}
   }catch(e){}
 }
@@ -625,7 +698,7 @@ document.getElementById('saveCookie').addEventListener('click',async()=>{
   }catch(e){msg.textContent='儲存失敗';}
   btn.disabled=false;
 });
-paintBell();buildFilters();buildGrid();applyFilter();refreshCookie();refreshR2();refreshStars();
+paintBell();buildTabs();buildFilters();buildGrid();applyFilter();refreshCookie();refreshR2();refreshStars();
 document.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&(e.key==='f'||e.key==='F')){e.preventDefault();q.focus();q.select();}});
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}
 </script>

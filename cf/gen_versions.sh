@@ -1,13 +1,22 @@
 #!/bin/bash
-# Extract the "Version X.YYYY — <date>" string from each cached PDF's first page
-# and publish a versions map to R2 as meta/versions.json (served by the Worker,
-# shown on the cards). Pulls PDFs from R2 — does NOT hit NCCN.
+# Extract each cached PDF's version stamp and publish a versions map to R2 as
+# meta/versions.json (served by the Worker, shown on the cards). Pulls PDFs from
+# R2 — does NOT hit NCCN.
+#
+# Two upstreams, two stamps, one map:
+#   NCCN  first page, "Version 3.2026 — May 1, 2026"
+#   MDA   every page footer, "Department of Clinical Effectiveness V14 Rev" plus
+#         "Approved by [Tt]he Executive Committee of the Medical Staff on
+#         07/15/2025" — note the inconsistent capitalisation of "the", which is
+#         why the grep below is case-insensitive.
+# Both land as the same {v, d} shape, so the cards and lib/notify.js's
+# versionEvents need no idea which side a guideline came from.
 set -u
 cd "$(dirname "$0")"
 [ -f ../.env ] && set -a && . ../.env && set +a  # load token if present
 del(){ command rip "$@" 2>/dev/null || find "$@" -delete 2>/dev/null; }
 BUCKET="nccn-pdfs"
-IDS=$(python3 -c "import json;print('\n'.join(g['id'] for g in json.load(open('guidelines.json'))))")
+IDS=$(python3 -c "import json;print('\n'.join(g['id'] for f in ('guidelines.json','algorithms.json') for g in json.load(open(f))))")
 WORK=$(mktemp -d)
 OUT="$WORK/versions.json"
 OLD="$WORK/old.json"
@@ -25,9 +34,20 @@ for id in $IDS; do
   if ! wrangler r2 object get "$BUCKET/$id.pdf" --file="$pdf" --remote >/dev/null 2>&1; then
     miss=$((miss+1)); echo "[$i/$total] GET-FAIL $id" | tee -a "$LOG"; continue
   fi
-  line=$(pdftotext -f 1 -l 3 "$pdf" - 2>/dev/null | grep -oiE 'version [0-9]+\.[0-9]{4}( . [A-Za-z]+ [0-9]{1,2}, [0-9]{4})?' | head -1)
-  ver=$(echo "$line" | grep -oiE '[0-9]+\.[0-9]{4}' | head -1)
-  date=$(echo "$line" | grep -oE '[A-Za-z]+ [0-9]{1,2}, [0-9]{4}' | head -1)
+  case "$id" in
+    mda-*)
+      # MDA 的版本印在每一頁的頁尾，不是首頁，所以整份都要看。取最後一次出現的：
+      # 前幾頁偶有引用到別份 algorithm 的頁尾片段，末頁那個才是這一份自己的。
+      txt=$(pdftotext -enc UTF-8 "$pdf" - 2>/dev/null)
+      ver=$(echo "$txt" | grep -oiE 'Department of Clinical Effectiveness V[0-9]+' | tail -1 | grep -oiE 'V[0-9]+$' | tr -d 'Vv')
+      date=$(echo "$txt" | grep -oiE 'Approved by [Tt]he Executive Committee of the Medical Staff on [0-9]{1,2}/[0-9]{1,2}/[0-9]{4}' | tail -1 | grep -oE '[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}')
+      ;;
+    *)
+      line=$(pdftotext -f 1 -l 3 "$pdf" - 2>/dev/null | grep -oiE 'version [0-9]+\.[0-9]{4}( . [A-Za-z]+ [0-9]{1,2}, [0-9]{4})?' | head -1)
+      ver=$(echo "$line" | grep -oiE '[0-9]+\.[0-9]{4}' | head -1)
+      date=$(echo "$line" | grep -oE '[A-Za-z]+ [0-9]{1,2}, [0-9]{4}' | head -1)
+      ;;
+  esac
   if [ -n "$ver" ]; then
     ok=$((ok+1)); printf '%s\t%s\t%s\n' "$id" "$ver" "$date" >> "$WORK/pairs.txt"
     echo "[$i/$total] OK $id → $ver ${date:+($date)}" | tee -a "$LOG"
@@ -56,7 +76,8 @@ if wrangler r2 object put "$BUCKET/meta/versions.json" --file="$OUT" \
     import { readFileSync } from 'node:fs';
     const { versionEvents } = await import('./src/lib/notify.js');
     const j = (p) => { try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return {}; } };
-    const names = Object.fromEntries(j('./guidelines.json').map((g) => [g.id, g.name]));
+    const names = Object.fromEntries(
+      [...j('./guidelines.json'), ...j('./algorithms.json')].map((g) => [g.id, g.name]));
     for (const e of versionEvents(j('$OLD'), j('$OUT'), names, new Date().toISOString()))
       console.log([e.title, JSON.stringify(e.body)].join('\t'));
   " 2>/dev/null > "$WORK/news.tsv" || : > "$WORK/news.tsv"

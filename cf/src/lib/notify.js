@@ -78,6 +78,11 @@ export function cronEvents(health, now) {
 	return out;
 }
 
+// 一次進來太多「首次取得版本」時，收斂成一則摘要的門檻。整份新目錄上線就是這個
+// 情形：MD Anderson 那 91 份第一次被索引時，逐份發等於把通知中心洗掉。真正的改版
+// （from → to）永遠逐份發，不受這個門檻影響——那才是需要一份一份看的東西。
+export const NEW_VERSION_DIGEST_AT = 10;
+
 // 比對新舊 meta/versions.json，只回「版本號真的變了」的那幾份。
 // 舊表是空的（第一次跑、或 R2 上還沒有檔）就回空陣列——否則首次執行會一口氣
 // 發出整份目錄的通知，把通知中心一開始就洗成沒人想看的樣子。
@@ -88,21 +93,42 @@ export function versionEvents(oldMap, newMap, nameById, now) {
 	const names = nameById || {};
 	const at = now || new Date().toISOString();
 	const out = [];
+	const fresh = [];
 	for (const id of Object.keys(b).sort()) {
 		const to = b[id] && b[id].v;
 		if (!to) continue;
 		const from = a[id] && a[id].v;
 		if (from === to) continue;
 		const name = names[id] || id;
+		if (!from) {
+			fresh.push({ id, name, to, date: (b[id] && b[id].d) || "" });
+			continue;
+		}
 		out.push({
 			kind: "version",
 			level: "info",
-			title: from
-				? `${name} 版本更新 v${from} → v${to}`
-				: `${name} 首次取得版本 v${to}`,
-			body: { id, from: from || null, to, date: (b[id] && b[id].d) || "" },
+			title: `${name} 版本更新 v${from} → v${to}`,
+			body: { id, from, to, date: (b[id] && b[id].d) || "" },
 			created: at,
 		});
+	}
+	if (fresh.length >= NEW_VERSION_DIGEST_AT) {
+		out.push({
+			kind: "version",
+			level: "info",
+			title: `${fresh.length} 份首次取得版本`,
+			body: { ids: fresh.map((f) => f.id) },
+			created: at,
+		});
+	} else {
+		for (const f of fresh)
+			out.push({
+				kind: "version",
+				level: "info",
+				title: `${f.name} 首次取得版本 v${f.to}`,
+				body: { id: f.id, from: null, to: f.to, date: f.date },
+				created: at,
+			});
 	}
 	return out;
 }

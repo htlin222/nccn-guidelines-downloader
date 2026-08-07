@@ -6,6 +6,15 @@
 // → "1. National Comprehensive Cancer Network. NCCN Clinical Practice Guidelines
 //    in Oncology: Breast Cancer. Version 5.2026. Accessed July 28, 2026.
 //    https://www.nccn.org/professionals/physician_gls/pdf/breast.pdf"
+//
+// With { src: "mda", file: "clinical-management/clin-management-sepsis-…pdf" }:
+// → "1. The University of Texas MD Anderson Cancer Center. Clinical Management
+//    Algorithm: Sepsis Management - Adult. Version 12. Accessed July 28, 2026.
+//    https://www.mdanderson.org/content/dam/…/clin-management-sepsis-…pdf"
+//
+// 來源要分開，因為引用的重點就是「這句話出自哪裡」：把一份 MD Anderson 的
+// algorithm 掛上 NCCN 的機構名與網址，是錯的引用，不是格式不漂亮而已。
+//
 // `version` may be missing (PDF not cached yet) — then the Version sentence is
 // simply dropped rather than printed empty. `accessed` defaults to today.
 export function citeText(g) {
@@ -25,14 +34,23 @@ export function citeText(g) {
 	];
 	var d = g.accessed || new Date();
 	var when = M[d.getMonth()] + " " + d.getDate() + ", " + d.getFullYear();
-	var out = [
-		"1. National Comprehensive Cancer Network.",
-		"NCCN Clinical Practice Guidelines in Oncology: " + g.name + ".",
-	];
+	var mda = g.src === "mda";
+	var out = mda
+		? [
+				"1. The University of Texas MD Anderson Cancer Center.",
+				"Clinical Management Algorithm: " + g.name + ".",
+			]
+		: [
+				"1. National Comprehensive Cancer Network.",
+				"NCCN Clinical Practice Guidelines in Oncology: " + g.name + ".",
+			];
 	if (g.version) out.push("Version " + g.version + ".");
 	out.push("Accessed " + when + ".");
 	out.push(
-		"https://www.nccn.org/professionals/physician_gls/pdf/" + g.id + ".pdf",
+		mda
+			? "https://www.mdanderson.org/content/dam/mdanderson/documents/for-physicians/algorithms/" +
+					(g.file || "")
+			: "https://www.nccn.org/professionals/physician_gls/pdf/" + g.id + ".pdf",
 	);
 	return out.join(" ");
 }

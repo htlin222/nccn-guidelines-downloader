@@ -113,6 +113,29 @@ describe("versionEvents", () => {
 	it("ignores entries that lost their version string", () => {
 		expect(versionEvents({ aml: { v: "2.2026" } }, { aml: { v: "" } }, NAMES, AT)).toEqual([]);
 	});
+
+	// 整份新目錄上線（MD Anderson 那 91 份）會一次帶進幾十筆「首次取得版本」。逐份
+	// 發等於把通知中心洗掉，而它們合起來只是一件事。
+	it("collapses a flood of first sightings into one digest", () => {
+		const b = { aml: { v: "2.2026" } };
+		for (let i = 0; i < 12; i++) b["mda-x" + i] = { v: String(i + 1) };
+		const evs = versionEvents({ aml: { v: "2.2026" } }, b, NAMES, AT);
+		expect(evs).toHaveLength(1);
+		expect(evs[0].title).toBe("12 份首次取得版本");
+		expect(evs[0].body.ids).toHaveLength(12);
+		expect(evs[0].level).toBe("info");
+	});
+
+	// 真正的改版永遠逐份發，不管同一輪裡有多少新面孔——那才是需要一份一份看的。
+	it("never folds a real version bump into the digest", () => {
+		const b = { aml: { v: "3.2026" } };
+		for (let i = 0; i < 12; i++) b["mda-x" + i] = { v: "1" };
+		const evs = versionEvents({ aml: { v: "2.2026" } }, b, NAMES, AT);
+		expect(evs.map((e) => e.title)).toEqual([
+			"Acute Myeloid Leukemia 版本更新 v2.2026 → v3.2026",
+			"12 份首次取得版本",
+		]);
+	});
 });
 
 describe("staleEvent", () => {

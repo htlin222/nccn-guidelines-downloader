@@ -5,6 +5,10 @@
 # per-page footer label, then parse the Discussion TOC (2-column, -layout) into
 # {title, ms, page, level}. Pulls PDFs from R2 — does NOT hit NCCN.
 # Set ONLY=<id> to process a single guideline (debug).
+#
+# NCCN only — deliberately reads guidelines.json and not algorithms.json. A
+# Discussion section is an NCCN structure; MD Anderson's algorithms have none, so
+# adding them here would buy 91 consecutive "no-toc" lines and nothing else.
 set -u
 cd "$(dirname "$0")"
 [ -f ../.env ] && set -a && . ../.env && set +a

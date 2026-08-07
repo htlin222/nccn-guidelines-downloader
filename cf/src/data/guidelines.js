@@ -223,5 +223,5 @@ export const GUIDELINES = [
 	},
 ];
 
-export const VALID_IDS = new Set(GUIDELINES.map((g) => g.id));
-export const NAME_BY_ID = Object.fromEntries(GUIDELINES.map((g) => [g.id, g.name]));
+// VALID_IDS / NAME_BY_ID 搬到 data/catalog.js 了 —— 它們現在要涵蓋 NCCN 與
+// MD Anderson 兩份目錄，掛在這支底下名實不符。這裡只描述 NCCN。

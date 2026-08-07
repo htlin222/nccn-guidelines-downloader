@@ -2,6 +2,10 @@
 # Build the D1 full-text search index: pull each cached PDF from R2, extract
 # per-page text with pdftotext, and load it into the D1 FTS5 `pages` table.
 # Pulls PDFs from R2 — does NOT hit NCCN. Set LIMIT=N to index only the first N.
+#
+# Covers BOTH catalogues (guidelines.json + algorithms.json). Search is the one
+# place where mixing sources is the point: "neutropenic fever" should find NCCN's
+# infection guideline and MD Anderson's four inpatient algorithms in one list.
 set -u
 cd "$(dirname "$0")" || exit 1
 [ -f ../.env ] && set -a && . ../.env && set +a  # load token if present
@@ -18,7 +22,7 @@ del(){ command rip "$@" 2>/dev/null || find "$@" -delete 2>/dev/null; }
 python3 - "$WORK" "$LIMIT" <<'PY'
 import sys, os, json, subprocess, re
 work, limit = sys.argv[1], int(sys.argv[2])
-guides = json.load(open('guidelines.json'))
+guides = json.load(open('guidelines.json')) + json.load(open('algorithms.json'))
 if limit > 0: guides = guides[:limit]
 chunk, cn, size = [], 0, 0
 def flush():

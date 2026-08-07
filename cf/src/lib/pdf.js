@@ -1,25 +1,27 @@
-// R2-backed PDF serving + the daily cron refresh. Pulls from NCCN only on a
-// cache miss (or explicit refresh) using the stored cookie.
+// R2-backed PDF serving + the daily cron refresh. Pulls from upstream only on a
+// cache miss (or explicit refresh); NCCN needs the stored cookie, MD Anderson
+// does not.
 import { GUIDELINES } from "../data/guidelines.js";
+import { FILE_BY_ID, sourceOf } from "../data/catalog.js";
 import { COOKIE_KEY, CRON_HEALTH_KEY, CRON_STATE_KEY } from "./constants.js";
 import { notifyCron } from "./notify.js";
 
-export async function fetchLive(env, id) {
-	const cookie = await env.NCCN_KV.get(COOKIE_KEY);
-	if (!cookie) return { ok: false, error: "no-cookie" };
-	const upstream = await fetch(
-		`https://www.nccn.org/professionals/physician_gls/pdf/${id}.pdf`,
-		{
-			headers: {
-				authority: "www.nccn.org",
-				accept:
-					"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-				"accept-language": "zh-TW,zh;q=0.9",
-				"cache-control": "max-age=0",
-				cookie,
-			},
-		},
-	);
+export const MDA_ALGO_ROOT =
+	"https://www.mdanderson.org/content/dam/mdanderson/documents/for-physicians/algorithms/";
+
+// 上游網址。NCCN 從 id 直接組得出來；MDA 只能查表——上游檔名不規則到無法從 id 反
+// 推（少了 -web、有一份在 survivorship/、有一份帶 %20），見 data/algorithms.js。
+export function upstreamUrl(id) {
+	if (sourceOf(id) === "mda") {
+		const file = FILE_BY_ID[id];
+		return file ? MDA_ALGO_ROOT + file : null;
+	}
+	return `https://www.nccn.org/professionals/physician_gls/pdf/${id}.pdf`;
+}
+
+// 回應是不是一份真的 PDF。cookie 過期時 NCCN 回的是登入頁的 HTML，不是 4xx，所以
+// 光看 status 會把一份 HTML 存進 R2 當成 PDF。
+async function readPdf(upstream) {
 	const ctype = (upstream.headers.get("content-type") || "").toLowerCase();
 	if (!upstream.ok || !ctype.includes("pdf"))
 		return { ok: false, status: upstream.status, ctype };
@@ -30,24 +32,68 @@ export async function fetchLive(env, id) {
 	return { ok: true, buf };
 }
 
-// Freshly-fetched NCCN PDFs carry the per-page disclaimer banner, so they land
-// under raw/. The root <id>.pdf is the banner-free copy that gen_clean.sh
-// derives from raw/ in CI — writing the original there would put the banner
-// back on every guideline the cron happened to touch.
-// One transient hiccup at NCCN used to cost a guideline a whole cycle, so try
+export async function fetchLive(env, id) {
+	const url = upstreamUrl(id);
+	if (!url) return { ok: false, error: "unknown-id" };
+
+	// MD Anderson 的 algorithm PDF 是公開的，不帶任何憑證。這裡刻意不去讀 cookie：
+	// NCCN 的 cookie 過期時，MDA 這一側必須照樣抓得到。
+	if (sourceOf(id) === "mda") {
+		return readPdf(
+			await fetch(url, {
+				headers: {
+					accept: "application/pdf,*/*;q=0.8",
+					// 預設的 Workers UA 會被擋，跟 nccn.py 當初踩到的是同一件事。
+					"user-agent":
+						"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+				},
+			}),
+		);
+	}
+
+	const cookie = await env.NCCN_KV.get(COOKIE_KEY);
+	if (!cookie) return { ok: false, error: "no-cookie" };
+	return readPdf(
+		await fetch(url, {
+			headers: {
+				authority: "www.nccn.org",
+				accept:
+					"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+				"accept-language": "zh-TW,zh;q=0.9",
+				"cache-control": "max-age=0",
+				cookie,
+			},
+		}),
+	);
+}
+
+// 抓回來的東西該寫進哪個 R2 鍵。
+//
+// NCCN 的 PDF 每頁蓋了 disclaimer banner，所以原件落在 raw/，根目錄的 <id>.pdf 是
+// gen_clean.sh 從 raw/ 導出的乾淨版——把原件直接寫進根目錄，等於把 banner 貼回每一
+// 份 cron 剛好碰到的 guideline。
+//
+// MDA 沒有那層 banner，沒有東西要剝，所以不存 raw/：多一份只是白花 ~85 MB，而且
+// gen_clean.sh 會多出 91 次無事可做的來回。這也是 gen_clean.sh 只讀
+// guidelines.json、永遠碰不到 mda- 開頭的 id 的原因。
+export function refreshKey(id) {
+	return sourceOf(id) === "mda" ? `${id}.pdf` : `raw/${id}.pdf`;
+}
+
+// One transient hiccup upstream used to cost a guideline a whole cycle, so try
 // twice. A missing cookie is not transient — retrying it just wastes a request.
 export async function refreshOne(env, id, tries = 2) {
 	let last = { error: "no-attempt" };
 	for (let k = 0; k < tries; k++) {
 		const r = await fetchLive(env, id);
 		if (r.ok) {
-			await env.PDFS.put(`raw/${id}.pdf`, r.buf, {
+			await env.PDFS.put(refreshKey(id), r.buf, {
 				httpMetadata: { contentType: "application/pdf" },
 			});
 			return { id, ok: true, size: r.buf.byteLength, tries: k + 1 };
 		}
 		last = r;
-		if (r.error === "no-cookie") break;
+		if (r.error === "no-cookie" || r.error === "unknown-id") break;
 	}
 	return { id, ok: false, error: last.error || `${last.status} ${last.ctype}` };
 }
@@ -158,19 +204,27 @@ export async function servePdf(env, id, { download, request, raw }) {
 	// raw/<id>.pdf is the untouched original the cron pulls from NCCN. ?raw=1
 	// asks for the original. If a guideline has never been cleaned there is no
 	// root object, so fall back to raw/ rather than 404 on it.
-	let key = raw ? `raw/${id}.pdf` : `${id}.pdf`;
-	let isClean = !raw;
+	//
+	// MD Anderson has no raw/ copy at all — nothing is stamped on those PDFs, so
+	// the root object *is* the original (see refreshKey). ?raw=1 there asks for a
+	// distinction that does not exist, so it collapses to the root object rather
+	// than 404ing; the file it hands back really is untouched.
+	const wantRaw = raw && sourceOf(id) !== "mda";
+	let key = wantRaw ? `raw/${id}.pdf` : `${id}.pdf`;
+	let isClean = !wantRaw;
 	// One head() in the common case. The old shape probed the clean key, threw
 	// the result away, then probed again below — two or three round trips before
 	// a single byte moved, on the hottest route the site has.
 	let head = await env.PDFS.head(key);
-	if (!head && !raw) {
+	if (!head && !wantRaw) {
 		key = `raw/${id}.pdf`;
 		isClean = false;
 		head = await env.PDFS.head(key);
 	}
 	const today = new Date().toISOString().slice(0, 10);
-	const filename = `NCCN-${id}${isClean ? "" : "-raw"}-${today}.pdf`;
+	// MDA 的 id 本來就以 mda- 開頭，再冠一次來源就變成 MDA-mda-sepsis…，所以前綴只
+	// 加在 NCCN 那一側；MDA 那批靠自己的命名空間就分得出來。
+	const filename = `${sourceOf(id) === "mda" ? "" : "NCCN-"}${id}${isClean ? "" : "-raw"}-${today}.pdf`;
 	const disposition = `${download ? "attachment" : "inline"}; filename="${filename}"`;
 	const rangeHeader = request ? request.headers.get("Range") : null;
 

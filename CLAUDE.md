@@ -143,7 +143,7 @@ everything else still demands a login. Two things to keep straight:
 
 ```bash
 cd cf && pnpm install
-pnpm test            # 241 tests — pure helpers, plus an end-to-end pass over /api/v1
+pnpm test            # 265 tests — pure helpers, plus an end-to-end pass over /api/v1
 pnpm run deploy      # = bash deploy.sh
 ```
 
@@ -161,7 +161,7 @@ is dirty afterwards; that is expected and not committed back.
 
 ---
 
-## 5. The two schedules
+## 5. The three schedules
 
 ### Daily — the Worker's own cron (`0 3 * * *`)
 
@@ -232,6 +232,35 @@ visible on the home page.
 
 Run it by hand: `gh workflow run update-versions.yml`, then
 `gh run watch $(gh run list --workflow=update-versions.yml --limit 1 --json databaseId -q '.[0].databaseId')`.
+
+Steps 2–4 (`gen_versions.sh`, `gen_thumbs.sh`, `build_index.sh`) cover **both**
+catalogues. Steps 5–7 (`build_toc.sh`, `build_updates.sh`, `gen_clean.sh`) are
+NCCN-only by design — see §5.7.
+
+### Monthly — `.github/workflows/update-mda.yml` (1st of the month, 05:23 UTC)
+
+Re-pulls **every** MD Anderson algorithm into R2, and refreshes the catalogue
+from the upstream index page. Not a stalest-N queue like the daily cron, because
+the reason that queue exists does not apply here: no cookie can expire, and a
+full pull of 91 public PDFs is cheap.
+
+It does **not** rebuild thumbnails, versions or the search index. Those belong to
+the weekly run, so a freshly-pulled algorithm becomes visible to readers on the
+following Monday — the same contract NCCN already has.
+
+The one step worth understanding is the second: `gen_mda_catalogue.sh` rewrites
+`cf/algorithms.json` and `cf/src/data/algorithms.js`, and if either moved, the
+workflow **commits them back to `main`**. The catalogue is compiled into the
+Worker, so a new algorithm only reaches readers through a redeploy — that push
+is what triggers `deploy.yml`. It is a deliberate chain, not a side effect, and
+it is why this workflow (alone among the three) needs `permissions: contents:
+write`.
+
+```bash
+gh workflow run update-mda.yml
+cd cf && bash gen_mda_catalogue.sh --dry-run   # 目錄變了沒有，不寫檔
+LIMIT=3 bash refresh_mda.sh                    # 抓三份試試（需要 R2 token）
+```
 
 ---
 
@@ -366,19 +395,88 @@ written to KV.
 
 ---
 
+## 5.7 The MD Anderson module
+
+The second source: **Clinical Management Algorithms** — 91 PDFs from
+[mdanderson.org](https://www.mdanderson.org/for-physicians/clinical-tools-resources/clinical-practice-algorithms/clinical-management-algorithms.html),
+in four categories, behind their own tab on the home page. Same R2, same D1
+index, same pdf.js viewer.
+
+### The four decisions that shape it
+
+- **`mda-` namespaces every id.** Both catalogues contain `vte`, `pain` and
+  `distress`, and every source shares one R2 root for `<id>.pdf`. Without the
+  prefix the collision is not a lookup bug, it is one PDF overwriting another.
+- **The id comes from the *filename*, never the title.** The upstream names are
+  irregular in four different ways — some lack `-web`, one lives under
+  `survivorship/` rather than `clinical-management/`, one contains `%20`. So the
+  catalogue stores `file` verbatim (the path under `…/for-physicians/algorithms/`)
+  and that string is the single fetch truth. Anything that reconstructs a URL
+  from an id will 404 on exactly those few.
+- **No cookie, and no `raw/` copy.** These PDFs are public and carry no
+  disclaimer banner, so there is nothing for `gen_clean.sh` to strip and no
+  reason to store the same bytes twice. `refresh_mda.sh` writes straight to the
+  R2 root (`lib/pdf.js` `refreshKey`).
+- **The catalogue is source, not a derived artifact.** It is bundled into the
+  Worker, so the monthly workflow commits changes back to `main` (§5).
+
+### In-document link navigation
+
+The algorithms cross-reference each other, and the viewer turns those into local
+navigation. `lib/view.js` `internalLinkId` is the whole rule:
+
+| link in the PDF | becomes |
+|---|---|
+| `…/physician_gls/pdf/breast.pdf` | `/preview/breast` |
+| `…/for-physicians/algorithms/clinical-management/clin-management-pert-web-algorithm.pdf` | `/preview/mda-pert` |
+| `mdandersonorg.sharepoint.com/…` (hospital intranet) | left external |
+| `…/algorithms/cancer-treatment/…` (the sibling family, not ingested) | left external |
+
+The NCCN rule can slice the id out of the URL because the filename *is* the id.
+The MDA rule **cannot**, and looks the path up in `ID_BY_FILE` instead — keyed on
+the same `file` string used to fetch, so link resolution and fetching cannot
+drift apart. Within-document jumps (`see Appendix A` → page 4) need no rule at
+all: they are pdf.js `dest` annotations and the viewer already followed those.
+
+### Operating it
+
+```bash
+cd cf
+bash gen_mda_catalogue.sh --dry-run    # 索引頁動了沒有（列出新增／消失的 id）
+python3 -c "import json;d=json.load(open('algorithms.json'));print(len(d))"
+LIMIT=3 SLEEP=0 bash refresh_mda.sh    # 抓三份（需要 R2 token）
+```
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| An algorithm's card says 未快取 forever | Its `file` no longer exists upstream | `bash gen_mda_catalogue.sh` — a renamed file shows up as one `-` and one `+` |
+| A cross-reference inside a PDF opens mdanderson.org instead of staying on-site | That target is not in the catalogue (a `cancer-treatment` algorithm, or the catalogue is stale) | expected for `cancer-treatment`; otherwise regenerate the catalogue and redeploy |
+| The MD Anderson tab is empty after a deploy | `src/data/algorithms.js` was not regenerated/committed | `bash gen_mda_catalogue.sh && pnpm run deploy` |
+| `gen_mda_catalogue.sh` exits non-zero with "refusing to overwrite" | The index page returned something that parses to <50 entries (redesign, or an error page) | Look at it by hand before touching the guard — the guard is what stops a truncated catalogue retiring 40 PDFs |
+| Cards show no version badge | `gen_versions.sh` has not run since these landed | wait for Monday, or run it |
+
+---
+
 ## 6. R2 layout
 
 ```
-<id>.pdf            banner-free copy — what /pdf/:id and /dl/:id serve
+<id>.pdf            NCCN: banner-free copy — what /pdf/:id and /dl/:id serve
+mda-<id>.pdf        MD Anderson: the untouched original (there is no banner to strip)
 raw/<id>.pdf        untouched original from NCCN — what the daily cron writes
-thumb/<id>.webp     first-page thumbnail
-meta/versions.json  {id: {v, d}}
-meta/clean.json     sha256 of each source, so gen_clean.sh can skip unchanged ids
-meta/toc/<id>.json  Discussion table of contents
-meta/updates/<id>.json  "Summary of the Guidelines Updates", parsed into items
+thumb/<id>.webp     first-page thumbnail (both sources)
+meta/versions.json  {id: {v, d}} (both sources)
+meta/clean.json     sha256 of each source, so gen_clean.sh can skip unchanged ids (NCCN only)
+meta/toc/<id>.json  Discussion table of contents (NCCN only)
+meta/updates/<id>.json  "Summary of the Guidelines Updates", parsed into items (NCCN only)
 meta/notify/*.jsonl notifications older than 90 days, one month per object
 asset/*.png         PWA icons
 ```
+
+There is deliberately **no `raw/mda-*.pdf`**: `raw/` exists so `gen_clean.sh` has
+an untouched source to strip NCCN's per-page disclaimer from, and MD Anderson's
+PDFs carry no such banner. A second copy would be ~90 MB of R2 holding identical
+bytes. `/pdf/mda-x?raw=1` therefore collapses to the root object rather than
+404ing — the file it returns really is the original.
 
 The cron writes **only** to `raw/`. The root object is produced by `gen_clean.sh`,
 so a cron refresh can never put the banner back on a cleaned PDF — and it also
@@ -425,7 +523,7 @@ curl -sI -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
 | Preview returns 502 | Cookie expired | Re-paste the cookie (§5) |
 | Gear has a warning dot | Cookie missing, or the last cron failed / is stale | Open settings — the chip says which |
 | Search returns nothing | Index rebuild wiped it | Re-run `build_index.sh`; the staging swap should now prevent this |
-| Action green but nothing changed | A script exiting 0 on total failure | All five now end with `[ "$ok" -gt 0 ]` — if you add a sixth, do the same |
+| Action green but nothing changed | A script exiting 0 on total failure | Every `gen_*.sh` / `refresh_*.sh` ends with `[ "$ok" -gt 0 ]` — if you add another, do the same |
 | Every R2/D1 read is empty in CI | Token missing or under-scoped | §1; the "Check the token" step catches this now |
 | `Invalid access token` on deploy | OAuth creds revoked | Use the API token, not `wrangler login` |
 | A rebuilt PDF still looks old in the browser | `/pdf/:id` is browser-cached for a day | §6 — hard-reload, or wait out `max-age` |
@@ -433,6 +531,9 @@ curl -sI -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
 | Bell says "已 N 天沒有紀錄" | The Worker cron did not fire, or D1 writes are failing | `wrangler tail nccn-download` over a run; compare KV `cron_health` against the newest `cron` row in D1 |
 | Bell is empty on a working site | `sql/notify.sql` was never run | §2 — every read in `lib/notify.js` swallows the missing-table error by design |
 | The Claude Code skill stopped working | Key revoked, `sql/api.sql` missing, or the Access bypass changed | §5.6 has its own symptom table |
+| Anything about the MD Anderson tab | — | §5.7 has its own symptom table |
+| Search in one tab returns the other source's PDFs | `/api/search` was called without `src=` | the home page always sends it; a hand-rolled call has to as well |
+| Some cards say 未快取 although R2 has the file | `R2.list` truncated at 1000 objects | fixed by the cursor loop in `/api/r2-status`; if it comes back, the bucket has grown past what one page can hold *plus* the loop is broken |
 
 ---
 
@@ -459,6 +560,17 @@ curl -sI -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
   much of it.
 - New D1 tables get their own `sql/*.sql` with `CREATE TABLE IF NOT EXISTS`, never
   an addition to `schema.sql`.
+- There are two catalogues and one merge point. `data/guidelines.js` describes
+  NCCN, `data/algorithms.js` describes MD Anderson (**generated** — regenerate it,
+  do not hand-edit), and `data/catalog.js` is the only place that combines them:
+  `VALID_IDS`, `NAME_BY_ID`, `SOURCE_BY_ID`, `FILE_BY_ID`, `ID_BY_FILE`. Import
+  from `catalog.js` unless you specifically mean one source — `lib/pdf.js` still
+  imports `GUIDELINES` directly, because the daily cron is NCCN's alone.
+- Adding a **third** source means: a `data/<x>.js` + its `<x>.json`, an entry in
+  `SOURCES` and in the home page's `SRCS`, a `refreshKey`/`upstreamUrl` branch, a
+  rule in `internalLinkId`, a `gen_versions.sh` case, and a decision about each of
+  `build_toc` / `build_updates` / `gen_clean`. Everything else follows from the id
+  namespace.
 - `src/skill/*` is the *content* of the `.skill` package, pulled into the bundle as
   Text modules. It lives under `src/` because that is where wrangler's module rules
   can reach it — read the two warnings above `rules` in `wrangler.jsonc` before
