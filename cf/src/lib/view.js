@@ -108,3 +108,46 @@ export function scrollIntent(dy, dt, prev, fastPx) {
 	var lim = fastPx == null ? 2 : fastPx;
 	return { dir: dir, speed: speed, fast: speed > lim };
 }
+
+// PDF 內的一個外部連結 → 站內要開哪一份，或 null（就照原樣外開）。
+//
+// 這是「文件內連結導航」的全部判斷。兩個上游各有一種跨檔連結的長相：
+//   NCCN  https://www.nccn.org/professionals/physician_gls/pdf/breast.pdf
+//   MDA   https://www.mdanderson.org/content/dam/mdanderson/documents/
+//         for-physicians/algorithms/clinical-management/clin-management-pert-web-algorithm.pdf
+//
+// NCCN 那條可以從網址裁出 id，因為它的檔名就是 id。MDA 那條**不行**，所以走查表：
+// 上游檔名不規則（有的少了 -web、有一份在 survivorship/ 而不是 clinical-management/、
+// 有一份帶 %20），任何「裁掉前後綴再猜」的寫法都會在那幾份上安靜地失敗，連到一個
+// 不存在的 /preview/。fileIds 的鍵是 data/algorithms.js 裡的 file 欄位，也就是抓檔
+// 用的同一個字串——連結解析與抓取因此不可能各自漂走。
+//
+// 站外連結（MDA 的 sharepoint 院內網、CDC、期刊）一律回 null。頁內跳轉不走這裡，
+// 那是 annotation 的 dest 分支，pdf.js 自己就給得出目標頁。
+//
+// 跟 view.js 其他函式一樣會被 `.toString()` 注入頁面，必須自給自足。
+export function internalLinkId(url, valids, fileIds) {
+	var u = String(url || "");
+	var V = valids || {};
+
+	var nk = "/physician_gls/pdf/";
+	var ni = u.indexOf(nk);
+	if (ni >= 0) {
+		var rest = u.slice(ni + nk.length);
+		var dot = rest.indexOf(".pdf");
+		if (dot < 0) return null;
+		var cand = rest.slice(0, dot);
+		return V[cand] ? cand : null;
+	}
+
+	var mk = "/for-physicians/algorithms/";
+	var mi = u.indexOf(mk);
+	if (mi >= 0) {
+		// 只取路徑，丟掉 ?query 與 #fragment——上游偶爾在連結尾巴掛追蹤參數。
+		var tail = u.slice(mi + mk.length).split("?")[0].split("#")[0];
+		var id = (fileIds || {})[tail];
+		return id && V[id] ? id : null;
+	}
+
+	return null;
+}

@@ -9,7 +9,8 @@
 // 順序保證：驗證在最前面，沒過的請求走不到讀快取那一行。
 
 import { CATS } from "../data/categories.js";
-import { GUIDELINES, NAME_BY_ID, VALID_IDS } from "../data/guidelines.js";
+import { ALGO_CATS } from "../data/algorithms.js";
+import { CATALOG, NAME_BY_ID, SOURCES, VALID_IDS } from "../data/catalog.js";
 import { remember } from "./cache.js";
 import { parseBearer, verifyKey } from "./apikey.js";
 import { servePdf } from "./pdf.js";
@@ -209,14 +210,20 @@ async function catalogue(env, ctx) {
 			has("meta/toc/"),
 			has("meta/updates/"),
 		]);
+		// `guidelines` 保留原名與原本的欄位，只多一個 src——已經裝好的 skill 讀的是
+		// 這個鍵，改名等於讓所有舊版一次壞掉。MD Anderson 那批就併在同一個陣列裡，
+		// 有 src 可以篩。toc/updates 對 MDA 永遠是 false（那兩樣是 NCCN 專屬結構），
+		// 不是漏建。
 		return {
 			ok: true,
-			count: GUIDELINES.length,
-			cats: CATS.map((c) => c.name),
-			guidelines: GUIDELINES.map((g) => ({
+			count: CATALOG.length,
+			sources: SOURCES.map((s) => s.key),
+			cats: [...CATS, ...ALGO_CATS].map((c) => c.name),
+			guidelines: CATALOG.map((g) => ({
 				id: g.id,
 				name: g.name,
 				cat: g.cat,
+				src: g.src,
 				version: versions[g.id]?.v || null,
 				date: versions[g.id]?.d || null,
 				clean: !!clean[g.id],

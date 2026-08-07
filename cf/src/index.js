@@ -7,7 +7,7 @@
 //         /api/{cookie,cookie-status,r2-status,search,refresh,toc,insight},
 //         /api/{bookmark,bookmarks,star,stars},
 //         /api/notifications(/read).
-import { GUIDELINES, NAME_BY_ID, VALID_IDS } from "./data/guidelines.js";
+import { CATALOG, NAME_BY_ID, VALID_IDS } from "./data/catalog.js";
 import {
 	COOKIE_KEY,
 	META_KEY,
@@ -195,16 +195,24 @@ export default {
 		}
 
 		if (pathname === "/api/r2-status" && request.method === "GET") {
-			const listed = await env.PDFS.list({ limit: 1000 });
+			// 分頁到底，不是只拿第一批 1000 個。R2 的 1000 是單次上限，而這個桶裡
+			// 除了 PDF 還有縮圖、toc/updates 的 JSON——加進 MD Anderson 那 91 份之後
+			// 總物件數逼近 700，離截斷不遠了。被截掉的那幾份會在首頁顯示成「未快取」，
+			// 而檔案其實好端端在 R2 裡，是最難查的那種錯。
 			const map = {};
-			for (const o of listed.objects) {
-				if (!o.key.endsWith(".pdf")) continue;
-				const id = o.key.replace(/\.pdf$/, "");
-				map[id] = {
-					size: o.size,
-					uploaded: o.uploaded ? o.uploaded.toISOString() : null,
-				};
-			}
+			let cursor;
+			do {
+				const listed = await env.PDFS.list({ limit: 1000, cursor });
+				for (const o of listed.objects) {
+					if (!o.key.endsWith(".pdf")) continue;
+					const id = o.key.replace(/\.pdf$/, "");
+					map[id] = {
+						size: o.size,
+						uploaded: o.uploaded ? o.uploaded.toISOString() : null,
+					};
+				}
+				cursor = listed.truncated ? listed.cursor : null;
+			} while (cursor);
 			const health = await env.NCCN_KV.get(CRON_HEALTH_KEY, "json").catch(
 				() => null,
 			);
@@ -221,7 +229,7 @@ export default {
 				versions,
 				clean,
 				count: Object.keys(map).length,
-				total: GUIDELINES.length,
+				total: CATALOG.length,
 				// 最近一次 cron 的結果。前端據此顯示警示，不用等到一輪跑完才發現壞掉。
 				health: health || null,
 				perDay: PER_DAY,
@@ -252,6 +260,7 @@ export default {
 			const q = (url.searchParams.get("q") || "").trim();
 			const gid = url.searchParams.get("id");
 			const cat = url.searchParams.get("cat");
+			const src = url.searchParams.get("src");
 			if (q.length < 2) return json({ q, results: [] });
 			const match = buildMatch(q);
 			if (!match) return json({ q, results: [] });
@@ -262,6 +271,11 @@ export default {
 				sql += " AND gid = ?";
 				binds.push(gid);
 			}
+			// 首頁一次只顯示一個來源的卡片，下拉的內文命中也就該跟著收斂——不然在
+			// MD Anderson 分頁搜尋，回來的一半是點下去會切走分頁的 NCCN 結果。
+			// pages 表沒有 src 欄位，但 gid 的命名空間前綴就是來源。
+			if (src === "mda") sql += " AND gid LIKE 'mda-%'";
+			else if (src === "nccn") sql += " AND gid NOT LIKE 'mda-%'";
 			if (cat) {
 				sql += " AND cat = ?";
 				binds.push(cat);

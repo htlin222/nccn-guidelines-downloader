@@ -1,0 +1,125 @@
+name: Refresh MD Anderson algorithms
+
+# 每月一次，把 MD Anderson 的 clinical management algorithms 全量重抓進 R2。
+#
+# 為什麼是「每月全量」而不是像 NCCN 那樣「每日三份最舊的」：NCCN 那套排程存在的
+# 理由是 cookie 會過期、抓取常態性失敗，所以需要一個會自我修復的佇列。MDA 這批是
+# 公開 PDF，沒有憑證會過期，一次抓 91 份的失敗率低到不值得為它設計佇列。
+#
+# 這支刻意不重建衍生產物（縮圖／版本／搜尋索引）——那是每週 update-versions.yml
+# 的工作。跟 NCCN 現在的契約一致：新抓下來的 PDF 最多等到下一個週一才對讀者可見。
+
+on:
+  schedule:
+    - cron: "23 5 1 * *" # 每月 1 日 05:23 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write # 目錄有變時要 commit 回 main
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Install wrangler
+        run: npm install -g wrangler
+
+      # 跟每週那支同一個理由：權限不足的 token 會讓每一次 R2 寫入靜靜地變成 no-op，
+      # 而整輪還是綠的。第一步就證明它真的動得了 R2。
+      - name: Check the token is set and actually works
+        working-directory: cf
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+        run: |
+          set -e
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::error::repo secret CLOUDFLARE_API_TOKEN is empty — every R2 write below would be a silent no-op"
+            exit 1
+          fi
+          wrangler r2 object get nccn-pdfs/meta/versions.json --remote --file=/dev/null \
+            || { echo "::error::token cannot read R2 (needs Workers R2 Storage: Edit)"; exit 1; }
+          echo "token reaches R2"
+
+      # 目錄是「原始碼」不是衍生產物：它被編進 Worker，所以上游改了條目，必須經由
+      # 一次重新部署才會到讀者眼前。commit 回 main → deploy.yml 收到 push → 部署。
+      # 這條鏈是刻意的，不是副作用。
+      - name: Regenerate the catalogue from the index page
+        id: catalogue
+        working-directory: cf
+        run: |
+          set -eo pipefail   # 不加 pipefail 的話，腳本的退出碼會被 tee 蓋掉
+          bash gen_mda_catalogue.sh | tee /tmp/cat.log
+          if grep -q "CHANGED=1" /tmp/cat.log; then
+            echo "changed=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit the catalogue if it moved
+        if: steps.catalogue.outputs.changed == '1'
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add cf/algorithms.json cf/src/data/algorithms.js
+          git commit -m "MDA catalogue: the index page moved, so the bundled copy did too"
+          git push
+          echo "catalogue committed — deploy.yml will pick it up"
+
+      - name: Pull every algorithm PDF → R2
+        working-directory: cf
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+        run: SLEEP=1 bash refresh_mda.sh
+
+      # 抓完之後只驗一件事：R2 裡的 mda- 物件數要蓋得住目錄。單份漏抓是常態（上游
+      # 偶爾 502），整批對不上就是壞了。
+      - name: Verify the result
+        working-directory: cf
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+        run: |
+          set -e
+          total=$(python3 -c "import json;print(len(json.load(open('algorithms.json'))))")
+          ok=$(sed -n 's/^DONE ok=\([0-9]*\).*/\1/p' refresh_mda.log)
+          echo "fetched ${ok:-0} / $total algorithms"
+          echo "MDA_OK=${ok:-0}" >> "$GITHUB_ENV"
+          echo "MDA_TOTAL=$total" >> "$GITHUB_ENV"
+          [ "${ok:-0}" -ge $((total * 9 / 10)) ] \
+            || { echo "::error::only ${ok:-0}/$total algorithms landed — see refresh_mda.log"; exit 1; }
+
+      # 成敗都寫一則進通知中心。always() 是重點：默默壞掉的每月更新，在首頁上完全
+      # 看不出來。kind 用 ci —— 這本來就是一次 CI 執行，而 lib/notify.js 的 KINDS
+      # 是給前端篩選用的白名單，多開一個 kind 只會多一處要同步的地方。
+      - name: Notify the result
+        working-directory: cf
+        if: always()
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+          STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ "$STATUS" = "success" ]; then
+            bash notify.sh ci info "MD Anderson 每月更新完成（${MDA_OK:-0}/${MDA_TOTAL:-0} 份）" \
+              "{\"rows\":${MDA_OK:-0},\"url\":\"$RUN_URL\"}"
+          else
+            bash notify.sh ci error "MD Anderson 每月更新失敗（$STATUS）" \
+              "{\"errors\":[\"見 GitHub Actions 記錄\"],\"url\":\"$RUN_URL\"}"
+          fi
+
+      - name: Show result
+        working-directory: cf
+        if: always()
+        run: |
+          tail -3 gen_mda_catalogue.log || true
+          tail -5 refresh_mda.log || true

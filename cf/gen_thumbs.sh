@@ -1,11 +1,12 @@
 #!/bin/bash
 # Generate first-page thumbnails for every cached PDF and upload to R2 as
 # thumb/<id>.webp. Pulls PDFs from R2 (already seeded) — does NOT hit NCCN.
+# Covers both catalogues: pdftoppm does not care where the PDF came from.
 set -u
 cd "$(dirname "$0")"
 [ -f ../.env ] && set -a && . ../.env && set +a  # load token if present
 BUCKET="nccn-pdfs"
-IDS=$(python3 -c "import json;print('\n'.join(g['id'] for g in json.load(open('guidelines.json'))))")
+IDS=$(python3 -c "import json;print('\n'.join(g['id'] for f in ('guidelines.json','algorithms.json') for g in json.load(open(f))))")
 WORK=$(mktemp -d)
 LOG="gen_thumbs.log"; : > "$LOG"
 ok=0; fail=0; i=0; total=$(echo "$IDS" | wc -l | tr -d ' ')
