@@ -4,6 +4,10 @@
 # in this version". Pulls PDFs from R2 — does NOT hit NCCN.
 # Parsing lives in build_updates.py; this is just the R2 round trip.
 # Set ONLY=<id> to process a single guideline (dry run, prints the JSON).
+#
+# NCCN only — deliberately reads guidelines.json and not algorithms.json.
+# "Summary of the Guidelines Updates" is an NCCN section; MD Anderson's
+# algorithms carry a version stamp in the footer but no changelog pages.
 set -u
 cd "$(dirname "$0")" || exit 1
 [ -f ../.env ] && set -a && . ../.env && set +a

@@ -11,10 +11,12 @@ NCCN cookie 代理抓取）。
 - **KV**：`NCCN_KV`（id `f1c25d8c3a604b3c9fb56d4ddc5f24bb`），存 `cookie`、`cookie_meta`、`cron_health`、`cron_state`
 - **R2**：`nccn-pdfs`（binding `PDFS`），存 `<id>.pdf` 快取
 - **Cron**：`0 3 * * *`（每天 UTC 03:00），刷新最舊的 `PER_DAY=3` 份 → 約每月一輪
+- **第二個來源**：MD Anderson clinical management algorithms（91 份，首頁分頁切換，
+  每月全量更新）——見下方專節
 
 ## 運作
 
-- `GET /` — 可搜尋的 guideline 清單（86 項），每項有「預覽」與「下載」；標示是否已 R2 快取 + 更新日
+- `GET /` — 可搜尋的清單，來源分頁（NCCN 87 份 / MD Anderson 91 份），每項有「預覽」與「下載」；標示是否已 R2 快取 + 更新日
 - `GET /preview/:id` — 內嵌 **pdf.js** 線上預覽（含縮放、下載鍵）
 - `GET /pdf/:id` — inline 供預覽用：優先讀 R2 快取，沒有才即時回 NCCN 抓並順手寫入 R2
 - `GET /dl/:id` — attachment 下載，同樣 R2 優先、fallback 即時抓
@@ -172,12 +174,60 @@ bash deploy.sh
 
 （Account ID 已寫在 workflow 內。）之後手動觸發一次：Actions 分頁 → _Update guideline versions_ → _Run workflow_。
 
+## MD Anderson Clinical Management Algorithms（第二個來源）
+
+首頁標題列下有一組來源分頁：**NCCN** 與 **MD Anderson**。後者是 MD Anderson 的
+[Clinical Management Algorithms](https://www.mdanderson.org/for-physicians/clinical-tools-resources/clinical-practice-algorithms/clinical-management-algorithms.html)，
+91 份、四個分類，跟 NCCN 共用同一個 R2 桶、同一份 D1 索引、同一個 pdf.js viewer。
+
+- **目錄**：`gen_mda_catalogue.sh`（→ `gen_mda_catalogue.py`）抓索引頁解析出
+  `algorithms.json` 與 `src/data/algorithms.js`。目錄是**原始碼**不是衍生產物——它被
+  編進 Worker，所以每月的 workflow 在目錄有變時會 commit 回 `main` 觸發重新部署。
+- **抓取**：`refresh_mda.sh`，每月 1 日全量拉一次
+  （`.github/workflows/update-mda.yml`）。**不需要 cookie**，也因此不需要 NCCN 那套
+  「每天最舊的 3 份、失敗會自我修復」的佇列。
+- **R2**：直接寫根層 `mda-<id>.pdf`，**沒有 `raw/` 副本**——MDA 的 PDF 沒有頁首橫幅
+  可剝，多存一份只是白花約 90 MB。
+- **版本徽章**：來源是每頁頁尾的 `Department of Clinical Effectiveness V<N>` 與
+  `Approved by [Tt]he Executive Committee of the Medical Staff on MM/DD/YYYY`
+  （`the` 的大小寫上游不一致，所以 grep 是 case-insensitive 的）。
+- **沒有的東西**：Discussion 目錄與「本版更新」是 NCCN 專屬的文件結構，MDA 兩者皆無，
+  所以 `build_toc.sh` / `build_updates.sh` / `gen_clean.sh` 刻意只讀 `guidelines.json`。
+
+### id 為什麼從檔名造，而不是從標題
+
+上游檔名不規則，而且不規則的方式有四種：多數是
+`clin-management-<slug>-web-algorithm.pdf`，但有的少了 `-web`
+（`clin-management-nephrostomy-algorithm.pdf`）、有一份前綴完全不同且放在別的資料夾
+（`survivorship/survivorship-ovarian-toxicity-web-algorithm.pdf`）、還有一份帶
+`%20`。所以目錄裡的 `file` 欄位**原樣保留上游路徑**，它是唯一的抓取真相；`id` 從
+`file` 導出並冠上 `mda-` 命名空間——兩邊都有 `vte`、`pain`、`distress`，而 R2 根層
+是所有來源共用的，少了前綴撞的是實際物件而不只是查表。
+
+### 文件內連結導航
+
+MDA 的 algorithm 彼此大量互相引用，viewer 會把這些連結變成站內導航。判斷全部在
+`lib/view.js` 的 `internalLinkId`：
+
+| PDF 裡的連結 | 變成 |
+|---|---|
+| `…/physician_gls/pdf/breast.pdf` | `/preview/breast` |
+| `…/algorithms/clinical-management/clin-management-pert-web-algorithm.pdf` | `/preview/mda-pert` |
+| `mdandersonorg.sharepoint.com/…`（院內網） | 維持外開 |
+| `…/algorithms/cancer-treatment/…`（這次沒收的姊妹系列） | 維持外開 |
+
+NCCN 那條可以從網址裁出 id，因為檔名就是 id；MDA 那條**不行**，改用 `ID_BY_FILE`
+查表，鍵值就是抓檔用的同一個 `file` 字串——連結解析與抓取因此不可能各自漂走。
+頁內跳轉（`see Appendix A` → 第 4 頁）不需要任何規則，那是 pdf.js 的 `dest`
+annotation，viewer 本來就處理。
+
 ## 全文內容搜尋（D1 + FTS5）
 
 搜尋框輸入時，除了即時過濾病名/分類，還會**搜尋 PDF 內文**：命中的頁面列在上方（含 highlight 片段），點擊直接跳到該頁（`/preview/:id?page=N`）。
 
-- **索引**：`build_index.sh` 從 R2 拉每份 PDF → `pdftotext` 逐頁抽文字 → 分塊灌進 **Cloudflare D1** 的 FTS5 虛擬表 `pages`（`gid,page,name,cat,body`，porter+unicode61 分詞）。D1 不允許 SQL 交易，故用單筆 INSERT 分塊（每塊 50 筆）。
+- **索引**：`build_index.sh` 從 R2 拉每份 PDF → `pdftotext` 逐頁抽文字 → 分塊灌進 **Cloudflare D1** 的 FTS5 虛擬表 `pages`（`gid,page,name,cat,body`，porter+unicode61 分詞）。D1 不允許 SQL 交易，故用單筆 INSERT 分塊（每塊 80 KB）。**兩個來源都建進同一張表**——搜尋是最該混在一起的地方。
 - **查詢**：Worker `GET /api/search?q=...` → `... WHERE pages MATCH ? ORDER BY rank`，每 token 加 `"tok"*` 前綴比對，回傳 `snippet()` 片段 + 頁碼。
+- **限定來源**：`&src=nccn|mda`。首頁一次只顯示一個來源的卡片，下拉的內文命中就該跟著收斂，不然在 MD Anderson 分頁搜尋會回一半點下去會切走分頁的結果。`pages` 沒有 `src` 欄位（加一欄要整張重建），但 `gid` 的命名空間前綴本身就是來源，所以這是一個 `gid LIKE 'mda-%'`。
 - **schema**：`sql/schema.sql`（`wrangler d1 execute nccn-search --file=sql/schema.sql --remote`）。
 - **重建**：`bash build_index.sh`（本地）或 GitHub Action（每週自動，與版本更新同一個 workflow）。
 

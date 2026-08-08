@@ -110,7 +110,13 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
         run: |
           set -e
-          total=$(python3 -c "import json;print(len(json.load(open('guidelines.json'))))")
+          # 兩個分母，因為兩個產物涵蓋的範圍本來就不同：
+          #   versions.json 兩邊都有（索引、縮圖、版本都跨來源）
+          #   clean.json    只有 NCCN——MDA 的 PDF 沒有 banner 要剝，gen_clean.sh
+          #                 根本不會走到它們（見 lib/pdf.js 的 refreshKey）
+          # 用聯集去驗 clean.json 會讓這一步在完全正常的情況下永遠紅。
+          nccn=$(python3 -c "import json;print(len(json.load(open('guidelines.json'))))")
+          total=$(python3 -c "import json;print(sum(len(json.load(open(f))) for f in ('guidelines.json','algorithms.json')))")
           rows=$(wrangler d1 execute nccn-search --remote --json \
             --command "SELECT COUNT(*) AS n FROM pages" 2>/dev/null \
             | tr -d ' \n' | sed -n 's/.*"n":\([0-9]*\).*/\1/p')
@@ -126,13 +132,16 @@ jobs:
           echo "page_text rows: ${prows:-0}"
           [ "${prows:-0}" -eq "${rows:-0}" ] \
             || { echo "::error::page_text has ${prows:-0} rows but pages has ${rows:-0} — the API and search disagree"; exit 1; }
-          for f in meta/versions.json meta/clean.json; do
+          check_manifest() {
+            f="$1"; denom="$2"
             wrangler r2 object get "nccn-pdfs/$f" --remote --file="/tmp/$(basename "$f")" \
               || { echo "::error::$f missing from R2"; exit 1; }
             n=$(python3 -c "import json,sys;print(len(json.load(open(sys.argv[1]))))" "/tmp/$(basename "$f")")
-            echo "$f: $n entries"
-            [ "$n" -ge $((total / 2)) ] || { echo "::error::$f only covers $n/$total guidelines"; exit 1; }
-          done
+            echo "$f: $n entries (of $denom)"
+            [ "$n" -ge $((denom / 2)) ] || { echo "::error::$f only covers $n/$denom guidelines"; exit 1; }
+          }
+          check_manifest meta/versions.json "$total"
+          check_manifest meta/clean.json "$nccn"
 
       # /api/v1 的 KV 快取全部帶著這個世代號當 key 前綴，所以改寫它一次就等於整批
       # 失效（KV 沒有「刪掉某個前綴」，逐鍵刪又慢又貴；孤兒項目靠 30 天 TTL 自己

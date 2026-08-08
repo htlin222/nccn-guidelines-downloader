@@ -1,4 +1,10 @@
-import { NAME_BY_ID, VALID_IDS } from "../data/guidelines.js";
+import {
+	FILE_BY_ID,
+	ID_BY_FILE,
+	NAME_BY_ID,
+	VALID_IDS,
+	sourceOf,
+} from "../data/catalog.js";
 import { escapeHtml } from "../lib/http.js";
 import { tocGroups, tocBestIndex } from "../lib/toc.js";
 import { citeText, copyText, showToast, TOAST_CSS } from "../lib/cite.js";
@@ -6,6 +12,7 @@ import { bookmarkMd } from "../lib/marks.js";
 import { annotRect, annotNextNum, annotHit, annotDraw } from "../lib/annot.js";
 import {
 	evictPlan,
+	internalLinkId,
 	pageAtOffset,
 	prefetchPlan,
 	scrollIntent,
@@ -13,12 +20,13 @@ import {
 
 export function renderViewer(id) {
 	const name = NAME_BY_ID[id] || id;
+	const src = sourceOf(id);
 	return `<!doctype html>
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>${escapeHtml(name)} — NCCN 預覽</title>
+<title>${escapeHtml(name)} — ${src === "mda" ? "MD Anderson" : "NCCN"} 預覽</title>
 <meta name="theme-color" content="#0b0f19">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <script>(function(){try{var t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t;}catch(e){}})();</script>
@@ -279,7 +287,14 @@ ${TOAST_CSS}
 <script>
 // 根層 <id>.pdf 就是去掉頁首橫幅的版本，所以連截圖成筆記／總覽匯出的圖都不帶橫幅。
 var PDF_URL='/pdf/${encodeURIComponent(id)}';
-var GID=${JSON.stringify(id)};var GNAME=${JSON.stringify(name)};var VALIDS=${JSON.stringify(Object.fromEntries([...VALID_IDS].map((x) => [x, 1])))};
+var GID=${JSON.stringify(id)};var GNAME=${JSON.stringify(name)};var GSRC=${JSON.stringify(src)};var GFILE=${JSON.stringify(FILE_BY_ID[id] || "")};var VALIDS=${JSON.stringify(Object.fromEntries([...VALID_IDS].map((x) => [x, 1])))};
+// PDF 內的跨檔連結帶的是上游路徑（…/algorithms/clinical-management/xxx.pdf），要靠
+// 這張表換成站內 id。刻意不從網址裁字串猜 id：上游檔名不規則（少了 -web、一份在
+// survivorship/、一份帶 %20），猜出來的會是查無此份。
+var MDA_FILE_ID=${JSON.stringify(ID_BY_FILE)};
+// 匯出檔名的前綴。GID 本身已經帶著 mda- 命名空間，所以 MDA 這邊不用再冠一次來源，
+// 否則存下來的會是 NCCN-mda-sepsis-management-adult-p3.png——說錯機構的檔名。
+var SPFX=GSRC==='mda'?'':'NCCN-';
 (function(){
 window.addEventListener('error',function(ev){var m=document.getElementById('msg');if(m){m.style.display='';m.textContent='執行錯誤：'+(ev.message||(ev.error&&ev.error.message)||ev);}});
 if('scrollRestoration' in history){try{history.scrollRestoration='manual';}catch(e){}}
@@ -338,7 +353,7 @@ var hBack=[],hFwd=[],hlTerms=[],TOC=[],TOCR=[];var VERSION='';fetch('/api/r2-sta
 var citeText=${citeText.toString()};
 var copyText=${copyText.toString()};
 var showToast=${showToast.toString()};
-function yankCite(){var txt=citeText({name:GNAME,id:GID,version:VERSION});
+function yankCite(){var txt=citeText({name:GNAME,id:GID,version:VERSION,src:GSRC,file:GFILE});
   copyText(txt).then(function(ok){showToast(ok?'已複製引用':'複製失敗，請手動選取',txt);});}
 $('gtitle').onclick=yankCite;$('tver').onclick=yankCite;
 fetch('/api/toc?id='+encodeURIComponent(GID)).then(function(r){return r.json();}).then(function(d){TOC=(d&&d.length)?d:[];if(TOC.length){buildTOC();$('tocBtn').hidden=false;}}).catch(function(){});
@@ -416,6 +431,7 @@ var pageAtOffset=${pageAtOffset.toString()};
 var prefetchPlan=${prefetchPlan.toString()};
 var scrollIntent=${scrollIntent.toString()};
 var evictPlan=${evictPlan.toString()};
+var internalLinkId=${internalLinkId.toString()};
 
 // rootMargin 從 1000px 收到 300px：它現在只負責「已經快看得到的」，真正的預取
 // 交給 prefetchPlan——1000px 的對稱抓取等於往回也抓三頁，而讀的人幾乎不會回頭。
@@ -474,7 +490,7 @@ function paintPage(i){ var p=pages[i]; if(!p||!p.pg||p.done)return Promise.resol
   var tl=document.createElement('div'); tl.className='textLayer'; tl.style.setProperty('--scale-factor',sc); p.el.appendChild(tl); p.el.style.setProperty('--scale-factor',sc);
   p.pg.getTextContent().then(function(tc){ try{ var td=[]; var tk=pdfjsLib.renderTextLayer({textContent:tc,container:tl,viewport:vp,textDivs:td}); (tk&&tk.promise?tk.promise:Promise.resolve()).then(function(){ hlOne(tl); }).catch(function(){}); }catch(e){} }).catch(function(){});
   var al=document.createElement('div'); al.className='annotationLayer'; p.el.appendChild(al);
-  p.pg.getAnnotations().then(function(anns){ anns.forEach(function(a){ if(a.subtype!=='Link')return; var v=vp.convertToViewportRectangle(a.rect); var x=Math.min(v[0],v[2]),y=Math.min(v[1],v[3]),w=Math.abs(v[2]-v[0]),h=Math.abs(v[3]-v[1]); var L=document.createElement('a'); L.style.cssText='left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;'; if(a.url){var _u=a.url,_mk='/physician_gls/pdf/',_ix=_u.indexOf(_mk),_id=null;if(_ix>=0){var _r=_u.slice(_ix+_mk.length),_d=_r.indexOf('.pdf');if(_d>=0){var _c=_r.slice(0,_d);if(VALIDS[_c])_id=_c;}}if(_id){L.href='/preview/'+encodeURIComponent(_id);L.title='本站開啟：'+_id;}else{L.href=_u;L.target='_blank';L.rel='noopener';}}else if(a.dest){L.href='#';(function(dest){L.addEventListener('click',function(e){e.preventDefault();var pr=(typeof dest==='string')?pdfDoc.getDestination(dest):Promise.resolve(dest);Promise.resolve(pr).then(function(dd){if(!dd||!dd[0])return;pdfDoc.getPageIndex(dd[0]).then(function(idx){jumpTo(idx+1,true);});});});})(a.dest);} al.appendChild(L); }); }).catch(function(){});
+  p.pg.getAnnotations().then(function(anns){ anns.forEach(function(a){ if(a.subtype!=='Link')return; var v=vp.convertToViewportRectangle(a.rect); var x=Math.min(v[0],v[2]),y=Math.min(v[1],v[3]),w=Math.abs(v[2]-v[0]),h=Math.abs(v[3]-v[1]); var L=document.createElement('a'); L.style.cssText='left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;'; if(a.url){var _id=internalLinkId(a.url,VALIDS,MDA_FILE_ID);if(_id){L.href='/preview/'+encodeURIComponent(_id);L.title='本站開啟：'+_id;}else{L.href=a.url;L.target='_blank';L.rel='noopener';}}else if(a.dest){L.href='#';(function(dest){L.addEventListener('click',function(e){e.preventDefault();var pr=(typeof dest==='string')?pdfDoc.getDestination(dest):Promise.resolve(dest);Promise.resolve(pr).then(function(dd){if(!dd||!dd[0])return;pdfDoc.getPageIndex(dd[0]).then(function(idx){jumpTo(idx+1,true);});});});})(a.dest);} al.appendChild(L); }); }).catch(function(){});
   }).catch(function(){ p.task=null; p.done=false; });
 }
 // 取消一次 render 不代表那頁不用畫了（縮放連按就會這樣），所以 catch 把 done
@@ -805,7 +821,7 @@ $('snapModal').addEventListener('click',function(e){if(e.target===$('snapModal')
 // Esc：先退掉工具（怕誤刪），沒有工具在用才關視窗。
 document.addEventListener('keydown',function(e){if(e.key!=='Escape'||$('snapModal').hidden)return;
   if(SNAP.tool){SNAP.tool='';annSync();}else $('snapModal').hidden=true;});
-$('snapPng').onclick=function(){var u=snapURL();if(u)dl2(u,'NCCN-'+GID+'-p'+cur+'.png');};
+$('snapPng').onclick=function(){var u=snapURL();if(u)dl2(u,SPFX+GID+'-p'+cur+'.png');};
 // 複製 PNG：Safari 只認「在點擊事件的同一個 tick 內就呼叫 clipboard.write」，先 await
 // 把 data: URL 轉成 blob 再寫，權限已經過期會被擋掉。所以這裡把 blob 當成 Promise
 // 直接塞進 ClipboardItem——規格允許，Chrome/Safari/Firefox 都吃這一招。
@@ -821,7 +837,7 @@ $('snapCopy').onclick=function(){
     btn.textContent='已複製 ✓';
     btn._t=setTimeout(function(){btn.textContent='複製 PNG';btn._t=null;},1600);
   }).catch(function(e){showToast('複製失敗',String(e&&e.message||e));});};
-$('snapMd').onclick=function(){var u=snapURL();var note=$('snapNote').value;var url=location.origin+'/preview/'+encodeURIComponent(GID)+'?page='+cur;var lines=['---','guideline: '+GNAME.split('"').join(''),'id: '+GID,'version: '+(VERSION||''),'page: '+cur,'source: '+url,'captured: '+new Date().toISOString(),'---','','# '+GNAME+' — p.'+cur+(VERSION?(' (v'+VERSION+')'):''),'','!['+GNAME+' p.'+cur+']('+u+')','',note,''];var md=lines.join(NL);var blob=new Blob([md],{type:'text/markdown;charset=utf-8'});dl2(URL.createObjectURL(blob),'NCCN-'+GID+'-p'+cur+'.md');};
+$('snapMd').onclick=function(){var u=snapURL();var note=$('snapNote').value;var url=location.origin+'/preview/'+encodeURIComponent(GID)+'?page='+cur;var lines=['---','guideline: '+GNAME.split('"').join(''),'id: '+GID,'version: '+(VERSION||''),'page: '+cur,'source: '+url,'captured: '+new Date().toISOString(),'---','','# '+GNAME+' — p.'+cur+(VERSION?(' (v'+VERSION+')'):''),'','!['+GNAME+' p.'+cur+']('+u+')','',note,''];var md=lines.join(NL);var blob=new Blob([md],{type:'text/markdown;charset=utf-8'});dl2(URL.createObjectURL(blob),SPFX+GID+'-p'+cur+'.md');};
 var fHits=[],fIdx=-1,fTimer=null;
 $('findBtn').innerHTML=svg('find');$('findIcon').innerHTML=svg('find');$('findPrev').innerHTML=svg('cl');$('findNext').innerHTML=svg('cr');
 $('findBtn').onclick=function(){var fb=$('findbar');fb.hidden=!fb.hidden;if(!fb.hidden){$('findInput').focus();$('findInput').select();}};
@@ -924,7 +940,7 @@ var bookmarkMd=${bookmarkMd.toString()};
 function bkExport(){var rows=bkRows();if(!rows.length)return;
   var md=bookmarkMd(rows,{origin:location.origin,scopeAll:bkAll,name:GNAME});
   dl2(URL.createObjectURL(new Blob([md],{type:'text/markdown;charset=utf-8'})),
-    'NCCN-bookmarks-'+(bkAll?'all':GID)+'.md');}
+    (bkAll?'NCCN-bookmarks-all':SPFX+'bookmarks-'+GID)+'.md');}
 $('bkAdd').onclick=bkToggle;
 $('bkBtn').onclick=function(){if(!showPane('bk'))return;
   if(bkAll)bkLoadAll();else bkRender();};
@@ -1125,7 +1141,7 @@ function aiExport(rows,scopeAll){
     for(var j=0;j<(r.bullets||[]).length;j++)out.push('- '+r.bullets[j]);
     out.push('');}
   var blob=new Blob([out.join(NL)],{type:'text/markdown;charset=utf-8'});
-  dl2(URL.createObjectURL(blob),'NCCN-AI-'+(scopeAll?'all':GID)+'.md');}
+  dl2(URL.createObjectURL(blob),(scopeAll?'NCCN-AI-all':SPFX+'AI-'+GID)+'.md');}
 $('aiSaved').onclick=function(){
   aiSavedOn=!aiSavedOn;$('aiSaved').classList.toggle('on',aiSavedOn);
   if(aiSavedOn)aiSavedLoad(false);else{aiPage=0;aiLoad(false);}};
