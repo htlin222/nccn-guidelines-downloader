@@ -29,7 +29,11 @@ export function renderViewer(id) {
 <title>${escapeHtml(name)} — ${src === "mda" ? "MD Anderson" : "NCCN"} 預覽</title>
 <meta name="theme-color" content="#0b0f19">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<script>(function(){try{var t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t;}catch(e){}})();</script>
+<!-- data-inv 也要在這裡就決定：#msg 裡那張佔位縮圖是 HTML 直接帶的，等到 pdf.js
+     載完才由 paintTheme() 補上的話，暗色模式下會先閃一張白圖再翻黑。 -->
+<script>(function(){try{var t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t;
+var d=(t||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))==='dark';
+document.documentElement.dataset.inv=(d&&localStorage.getItem('nccninv')!=='0')?'1':'0';}catch(e){}})();</script>
 <style>
   :root{ --bg:0 0% 96%; --fg:240 10% 3.9%; --bar:0 0% 100%; --border:240 5.9% 90%;
     --muted:240 4.8% 95.9%; --muted-fg:240 3.8% 46.1%; --primary:240 5.9% 10%; --primary-fg:0 0% 98%; --accent:240 4.8% 92%; --ring:240 5% 65%; }
@@ -53,6 +57,10 @@ export function renderViewer(id) {
   .btn:hover{background:hsl(var(--accent));}
   .btn.on{background:hsl(var(--accent));border-color:hsl(var(--ring));}
   .btn.off{opacity:.35;pointer-events:none;}
+  /* .btn 的 display:inline-flex 會蓋掉 UA 的 [hidden]{display:none}（作者樣式優先於
+     UA 樣式，跟優先權無關），所以標了 hidden 的按鈕其實還是看得見。#tocBtn 一直有
+     這個問題，反轉鈕也要靠 hidden 在亮色模式收起來，補一條規則兩個一起解決。 */
+  .btn[hidden]{display:none;}
   .findbar{display:flex;align-items:center;gap:6px;padding:7px 12px;background:hsl(var(--bar));border-bottom:1px solid hsl(var(--border));}
   .findbar[hidden]{display:none;}
   .findbar .fi{color:hsl(var(--muted-fg));font-size:15px;display:inline-flex;}
@@ -171,6 +179,20 @@ export function renderViewer(id) {
   .page canvas.fadein{position:absolute;left:0;top:0;opacity:0;transition:opacity .12s ease-out;}
   .page canvas.fadein.on{opacity:1;}
   @media (prefers-reduced-motion:reduce){ .page canvas.fadein{transition:none;} }
+  /* 暗色模式把 PDF 翻成白字黑底。invert 之後補一道 hue-rotate(180deg)：亮度翻過去
+     了，色相卻轉得回來——NCCN 用顏色編碼分類（藍框、紅字警示），純 invert 會把藍
+     變橘、紅變青，等於改掉臨床語意。
+     filter 只作用在顯示層，canvas 的像素一個都沒動，所以列印（printCanvas 另外離屏
+     重繪）和截圖筆記（makeSnapCanvas 走 drawImage 抄像素）拿到的都還是原色。 */
+  :root[data-inv="1"] .page canvas,
+  :root[data-inv="1"] .thumb canvas,
+  :root[data-inv="1"] .gcell canvas,
+  :root[data-inv="1"] .preview{filter:invert(1) hue-rotate(180deg);}
+  /* 上面那些元素自己的 background:#fff 會被自己的 filter 一起翻成黑，不必動；
+     .page／.gcell 是沒有 filter 的外框，白底得手動翻，否則 canvas 還沒畫好的那段
+     時間、以及 canvas 圓角外那一圈，會露出白邊。 */
+  :root[data-inv="1"] .page,
+  :root[data-inv="1"] .gcell{background:#000;}
   .textLayer{position:absolute;inset:0;overflow:hidden;line-height:1;pointer-events:auto;}
   .textLayer span{color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0 0;}
   .textLayer ::selection{background:rgba(37,99,235,.4);}
@@ -226,6 +248,7 @@ ${TOAST_CSS}
   <button class="btn" id="bkBtn" title="書籤清單"></button>
   <button class="btn" id="tocBtn" title="目錄（Discussion）" hidden></button>
   <button class="btn" id="aiBtn" title="AI 本頁重點"></button>
+  <button class="btn" id="invert" title="PDF 反轉" hidden></button>
   <button class="btn" id="theme" title="切換主題"></button>
   <a class="btn dl" href="/dl/${encodeURIComponent(id)}"><span id="dlic"></span>下載</a>
 </div>
@@ -315,6 +338,9 @@ var ICONS={
   fit:'<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
   moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  // path 上的 fill 是 presentation attribute，只會輸給直接指到 path 的 CSS 規則；
+  // svg{fill:none} 指的是 svg 自己，所以這半邊實心填得起來。
+  contrast:'<circle cx="12" cy="12" r="10"/><path fill="currentColor" stroke="none" d="M12 18a6 6 0 0 1 0-12z"/>',
   dl:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
   spark:'<path d="M9.9 2.6 8.5 6.9 4.2 8.3l4.3 1.4 1.4 4.3 1.4-4.3 4.3-1.4-4.3-1.4z"/><path d="M18 13.5 17.2 16l-2.5.8 2.5.8.8 2.5.8-2.5 2.5-.8-2.5-.8z"/>',
   redo:'<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',
@@ -340,10 +366,26 @@ function esc(s){var _d=document.createElement('div');_d.textContent=(s==null?'':
 $('back').innerHTML=svg('back');$('railBtn').innerHTML=svg('panel');$('gridBtn').innerHTML=svg('grid');$('tocBtn').innerHTML=svg('list');
 $('prev').innerHTML=svg('cl');$('next').innerHTML=svg('cr');
 $('zout').innerHTML=svg('minus');$('zin').innerHTML=svg('plus');$('fit').innerHTML=svg('fit');$('dlic').innerHTML=svg('dl');$('snap').innerHTML=svg('camera');$('histBack').innerHTML=svg('histb');$('histFwd').innerHTML=svg('histf');
-var themeBtn=$('theme');
+var themeBtn=$('theme'),invBtn=$('invert');
 function curTheme(){return document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');}
-function paintTheme(){themeBtn.innerHTML=svg(curTheme()==='dark'?'sun':'moon');}
+// 反轉預設跟著暗色模式走，記在 localStorage 的只有「使用者把它關掉了」這件事，
+// 所以亮色→暗色切回來時不必再問一次；沒有這支 key 就是預設開。
+var invOff=false;try{invOff=localStorage.getItem('nccninv')==='0';}catch(e){}
+function paintTheme(){
+  var dark=curTheme()==='dark',on=dark&&!invOff;
+  themeBtn.innerHTML=svg(dark?'sun':'moon');
+  document.documentElement.dataset.inv=on?'1':'0';
+  // 亮色模式下這顆按鈕沒有意義（白底本來就是白底），直接收起來不佔工具列。
+  invBtn.hidden=!dark;
+  invBtn.classList.toggle('on',on);
+  invBtn.title=on?'PDF 反轉中——點一下看原色':'PDF 顯示原色——點一下反轉成白字黑底';
+}
 themeBtn.onclick=function(){var nx=curTheme()==='dark'?'light':'dark';document.documentElement.dataset.theme=nx;try{localStorage.setItem('theme',nx);}catch(e){}paintTheme();};
+invBtn.innerHTML=svg('contrast');
+invBtn.onclick=function(){invOff=!invOff;try{localStorage.setItem('nccninv',invOff?'0':'1');}catch(e){}paintTheme();};
+// 沒有手動指定主題時，data-theme 是空的、跟著系統走——系統換色 CSS 會自己更新，
+// 但 data-inv 是 JS 寫的，得補一個監聽才會一起翻。
+try{matchMedia('(prefers-color-scheme:dark)').addEventListener('change',paintTheme);}catch(e){}
 paintTheme();
 
 var viewer=$('viewer'),rail=$('rail'),msg=$('msg');
