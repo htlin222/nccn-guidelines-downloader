@@ -24,7 +24,12 @@ export function renderPage(request) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="NCCN">
-<script>(function(){try{var t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t;}catch(e){}})();</script>
+<!-- data-inv 跟閱讀器共用 localStorage 的 nccninv，但首頁不放切換鈕：偏好只在「真的
+     在讀 PDF」的地方調（閱讀器工具列的 ◐），首頁只是照著跟。這裡要在 <head> 就決定，
+     不然卡片縮圖是 lazy <img>、暗色模式下會先閃一排白圖再翻黑。 -->
+<script>(function(){try{var t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t;
+var d=(t||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))==='dark';
+document.documentElement.dataset.inv=(d&&localStorage.getItem('nccninv')!=='0')?'1':'0';}catch(e){}})();</script>
 <style>
   :root{
     --background:0 0% 100%; --foreground:240 10% 3.9%;
@@ -129,6 +134,9 @@ export function renderPage(request) {
   .card:hover{border-color:hsl(var(--ring));transform:translateY(-2px);box-shadow:0 8px 24px -12px rgba(0,0,0,.4);}
   .thumb{position:relative;aspect-ratio:16/9;background:hsl(var(--muted));overflow:hidden;}
   .thumb img{width:100%;height:100%;object-fit:cover;object-position:top;display:block;animation:imgIn .5s ease both;}
+  /* 跟閱讀器同一道公式（見 views/viewer.js）：invert 翻亮度、hue-rotate 把色相轉回來。
+     .tag / .ver 兩顆徽章是 .thumb 的兄弟不是 img 的子孫，所以不會跟著翻。 */
+  :root[data-inv="1"] .thumb img{filter:invert(1) hue-rotate(180deg);}
   .thumb .tag{position:absolute;top:8px;left:8px;display:inline-flex;align-items:center;gap:5px;
     font-size:.66rem;font-weight:600;padding:3px 8px;border-radius:999px;color:#fff;backdrop-filter:blur(4px);}
   .thumb .ver{position:absolute;top:8px;right:8px;font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:999px;color:#fff;background:#000000aa;backdrop-filter:blur(4px);letter-spacing:.02em;}
@@ -455,9 +463,15 @@ function refreshStars(){
 
 const themeBtn=document.getElementById('theme');
 function curTheme(){return document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');}
-function paintThemeBtn(){themeBtn.innerHTML=svg(curTheme()==='dark'?'sun':'moon');}
+function paintThemeBtn(){const dark=curTheme()==='dark';themeBtn.innerHTML=svg(dark?'sun':'moon');
+  // 縮圖反轉只有暗色模式下才成立；關掉的旗標是閱讀器寫的，首頁只讀不寫。
+  let off=false;try{off=localStorage.getItem('nccninv')==='0';}catch(e){}
+  document.documentElement.dataset.inv=(dark&&!off)?'1':'0';}
 themeBtn.onclick=()=>{const next=curTheme()==='dark'?'light':'dark';document.documentElement.dataset.theme=next;try{localStorage.setItem('theme',next);}catch(e){}paintThemeBtn();
   document.querySelector('meta[name=theme-color]').setAttribute('content',next==='dark'?'#0b0f19':'#ffffff');};
+// 沒手動指定主題時 data-theme 是空的、跟著系統走；CSS 會自己更新，但 data-inv 是 JS
+// 寫的，得監聽才會一起翻。
+try{matchMedia('(prefers-color-scheme:dark)').addEventListener('change',paintThemeBtn);}catch(e){}
 paintThemeBtn();
 // 設定面板的接線以前縮在 themeBtn.onclick 的大括號裡，等於「先切一次主題，齒輪才會動」。
 document.getElementById('settings').onclick=function(){document.getElementById('setModal').hidden=false;loadKeys();};

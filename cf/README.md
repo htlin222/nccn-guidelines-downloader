@@ -126,6 +126,16 @@ pdf.js 打造、參考 [mcq-bank](https://github.com/htlin222/mcq-bank) 的 Embe
   走隱藏 iframe 而不是 `window.open`，不會被彈窗封鎖，也不會把閱讀器 UI 一起印進去。
 - **鍵盤**：←/→/PageUp/PageDown 翻頁、`+` / `-` 縮放
 - **light/dark 主題切換**（與首頁共用偏好）
+- **暗色模式反轉 PDF**（工具列 ◐，只在暗色模式出現）：`filter:invert(1) hue-rotate(180deg)`
+  蓋在 `.page canvas` / 縮圖 / 總覽格 / 佔位縮圖上。補那道 `hue-rotate` 是因為 NCCN 用
+  顏色編碼分類——純 invert 會把藍框變橘、紅字變青，等於改掉臨床語意。代價是 CSS 的
+  `hue-rotate` 只是線性矩陣近似，色相保得住、亮度保不住：黑白完美對調，藍紅變亮，
+  但橘色系會變暗（`#f59e0b` → `#a95100`），在黑底上對比比亮色模式差。
+  filter 只在顯示層，canvas 像素沒動，所以**列印與截圖筆記匯出的都還是原色**。
+  預設跟著暗色模式開，按鈕可關；`localStorage` 只記「使用者關掉了」（key `nccninv`）。
+  首頁的卡片縮圖讀同一支 key、套同一道公式，但**不放切換鈕**——偏好只在真的在讀 PDF
+  的地方調，首頁照著跟。兩邊都在 `<head>` 的 inline script 就決定 `data-inv`，否則暗色
+  模式下會先閃一排白圖再翻黑。
 
 後端 `/pdf/:id` 支援 **HTTP Range（206）**，讓 pdf.js 逐頁串流、首頁更快出現。
 
