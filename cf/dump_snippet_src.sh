@@ -88,12 +88,17 @@ if [ ! -s "$WORK/refs.tsv" ] && [ "$KIND" != "principles" ]; then
   }' "$WORK/refpage.tsv" | sort -t$'\t' -k2 -n > "$WORK/refs.tsv"
 fi
 
-n=0
+n=0; miss=0
 while IFS=$'\t' read -r ref page kind title; do
   [ -n "$ref" ] || continue
-  wrangler d1 execute nccn-search --remote --json \
-    --command "SELECT body FROM page_text WHERE gid='$GID' AND page=$page" 2>/dev/null \
-    | python3 -c "
+  # 重試三次。這一頁真的不在 page_text 裡（索引還沒重建到它）跟「D1 這次剛好沒回」
+  # 在輸出上長得一樣，而後者是暫時的——不重試的話，一次抖動就會讓這份清單的素材
+  # 永久缺席，接著 verify 報「找不到素材檔」，看起來像清單有問題而不像查詢有問題。
+  : > "$WORK/body.txt"
+  for try in 1 2 3; do
+    wrangler d1 execute nccn-search --remote --json \
+      --command "SELECT body FROM page_text WHERE gid='$GID' AND page=$page" 2>/dev/null \
+      | python3 -c "
 import sys, json
 try:
     r = json.load(sys.stdin)[0]['results']
@@ -101,8 +106,12 @@ try:
 except Exception:
     pass
 " > "$WORK/body.txt"
+    [ -s "$WORK/body.txt" ] && break
+    [ "$try" -lt 3 ] && sleep $((try * 2))
+  done
   if [ ! -s "$WORK/body.txt" ]; then
-    echo "MISS $ref (p$page) — page_text 沒有這一頁"
+    miss=$((miss+1))
+    echo "MISS $ref (p$page) — page_text 讀不到這一頁（已重試 3 次）"
     continue
   fi
   {
@@ -140,5 +149,12 @@ except Exception:
 done < "$WORK/refs.tsv"
 
 del "$WORK"
-echo "DONE $n refs → $OUT"
-[ "$n" -gt 0 ]
+echo "DONE $n refs, $miss miss → $OUT"
+# `n > 0` 擋得住「token 壞掉所以什麼都沒抓到」，擋不住「大半的頁讀不到」——後者
+# 會讓一份指引只留下零星幾個素材，而 verify 要到很後面才以「找不到素材檔」的形式
+# 冒出來，看起來像清單壞了。所以 miss 過半就直接在這裡紅。
+[ "$n" -gt 0 ] || { echo "  ERROR $GID 一個素材都沒產出" >&2; exit 1; }
+if [ "$miss" -gt "$n" ]; then
+  echo "  ERROR $GID 有 $miss 頁讀不到、只成功 $n 頁——page_text 或 D1 有問題" >&2
+  exit 1
+fi
