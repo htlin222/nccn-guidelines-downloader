@@ -26,7 +26,7 @@ NCCN cookie 代理抓取）。
 
 ### 更新排程（cron）
 
-每天挑 **R2 上最舊的 3 份**重抓（`pickStalest`），約 29 天走完全部 86 份。
+每天挑 **R2 上最舊的 3 份**重抓（`pickStalest`），約 31 天走完全部 91 份。
 要改頻率：調 `src/lib/constants.js` 的 `PER_DAY` 或 `wrangler.jsonc` 的 `triggers.crons` 後重新 deploy。
 
 **為什麼是「挑最舊的」而不是輪流走游標**：舊版用 KV 的 `cron_cursor` 依序前進，而且
@@ -83,7 +83,9 @@ bash deploy.sh          # 會自己載入 ../.env 並戳上建置時間
 
 ### 初始種子 / 手動全量刷新 R2
 
-一次把全部 86 份下載並寫入 R2（本地跑，用 ../cookie.txt，逐一間隔 2 秒）：
+一次把全部 91 份 NCCN 指引下載並寫入 R2 的 `raw/`（本地跑，cookie 以 KV 那份為準，
+讀不到才退回 `../cookie.txt`，逐一間隔 2 秒）。寫的是 `raw/` 不是根物件——根物件是
+`gen_clean.sh` 剝完橫幅的產物，也是 `/pdf/:id` 端出去的那一份：
 
 ```bash
 cd NCCN/cf
@@ -260,7 +262,7 @@ NCCN 在每一頁頁首蓋兩行 6pt 小字，做投影片時很干擾：
 `doc.save(..., no_new_id=True)` 保留來源 PDF 的 `/ID` 而不是每次重存都生一個新的，
 所以**同一份輸入永遠產生 byte-identical 的輸出**（實測兩次 sha256 相同）。
 有了這個保證，`gen_clean.sh` 才能用來源 PDF 的 sha256 判斷「沒變就跳過」，
-不然每週 CI 都會把 86 份全部重傳一次。
+不然每週 CI 都會把 91 份全部重傳一次。
 
 ### R2 佈局：根層就是乾淨版
 

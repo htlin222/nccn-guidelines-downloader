@@ -105,8 +105,10 @@ wrangler r2 bucket create nccn-pdfs
 # set the custom domain / route in wrangler.jsonc, then:
 wrangler deploy
 
-# seed the cache + thumbnails (needs ../cookie.txt):
-bash seed_r2.sh          # download all 86 PDFs into R2
+# seed the cache + thumbnails (cookie comes from KV, or ../cookie.txt):
+bash seed_r2.sh          # download all 91 NCCN PDFs into R2 under raw/
+bash refresh_mda.sh      # and the 91 MD Anderson algorithms
+bash gen_clean.sh        # strip the banner -> the root <id>.pdf readers get
 bash gen_thumbs.sh       # render first-page thumbnails into R2
 
 # gate the hostname to your emails (Cloudflare Access), e.g. via cf-gate:
@@ -118,7 +120,9 @@ Full command reference, cron tuning (`PER_DAY`), and troubleshooting: **[`cf/REA
 ### Day-to-day
 
 - **Cookie expired?** Open the site → *Update NCCN cookie* → paste → save. Done.
-- **Force a full refresh:** `bash cf/seed_r2.sh` (or `POST /api/refresh?n=25` while logged in).
+- **Force a full refresh:** `bash cf/seed_r2.sh`, then `bash cf/gen_clean.sh` —
+  the first writes `raw/`, the second is what produces the banner-free copy
+  readers actually get. (Or `POST /api/refresh?n=25` while logged in.)
 - **Watch the cron:** `wrangler tail nccn-download`.
 
 ---
