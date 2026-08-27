@@ -68,6 +68,25 @@ for p in paths:
             )
             nfacet += 1
 
+# 沒跑過對抗性審查的清單，review 標成 'unaudited'。四關是機械規則，擋不住
+# 「把 positive margins 寫成 margins」這一類——所以未審與已審不是同一個東西，
+# 即使它們長得一模一樣。把狀態放進 D1，而不是放在某個人的記憶裡。
+pending = set()
+try:
+    for line in open(os.path.join("snippets", "_pending-audit.txt"), encoding="utf-8"):
+        line = line.strip()
+        if line and not line.startswith("#"):
+            pending.add(line)
+except FileNotFoundError:
+    pass
+for item in sorted(pending):
+    gid, _, ref = item.partition("/")
+    stmts.append("UPDATE snippets SET review='unaudited' WHERE gid=%s AND ref=%s;"
+                 % (q(gid), q(ref)))
+# 反過來也要：從清單移除之後，重載要把 'unaudited' 清掉，否則它會永遠黏著
+stmts.append("UPDATE snippets SET review=NULL WHERE review='unaudited' AND (gid||'/'||ref) NOT IN (%s);"
+             % (", ".join(q(x) for x in sorted(pending)) or "''"))
+
 # 別名字典每次重建：它是手寫檔，改了就該直接生效
 vocab = json.load(open(os.path.join("snippets", "_vocab.json"), encoding="utf-8"))
 stmts.append("DELETE FROM facet_alias;")

@@ -31,6 +31,8 @@ cd cf && bash snippets_status.sh
 cd cf && set -a && . ../.env && set +a
 
 # 1. 素材（新的指引才需要；素材不進版控，是 page_text 的衍生檔）
+#    它會自動把 TOC 沒列、但主頁引用到的註腳頁（AML-4A、GAST-2A…）整頁附在後面。
+#    NCCN 很愛把整頁註腳拆出去，而註腳正是它藏限定條件最多的地方。
 bash dump_snippet_src.sh <gid>
 
 # 2. 待辦清單。輸出直接餵給下一步
@@ -93,6 +95,28 @@ BCR-ABL、t(9;22)、17p/TP53、MRD 這些現在都不在字典裡。
 是讓清單出現在不該出現的搜尋結果裡，而一個點開發現不適用的清單會讓人不信任整套。
 
 ---
+
+## 先做這件事：補跑 21 份的對抗性審查
+
+`snippets/_pending-audit.txt` 列著 21 份「生成完成、但審查沒跑成」的清單
+（2026-08-27 撞到 session limit）。它們四關全過，在 D1 裡 `review='unaudited'`。
+
+**未審與已審不是同一個東西，即使它們長得一模一樣。** 四關擋得住編出來的藥名與
+數字，擋不住這三類——全部實際發生過，而且全部四關通過：
+
+- 把 `positive margins` 寫成 `margins`（任何 margin 結果都變成高風險）
+- 把 `± pertuzumab` 寫成 `Add pertuzumab`（可選變必須）
+- 憑空生成一句總結規則（讀起來像好文件，把人從核對推向推論）
+
+補法就是把那 21 個 ref 丟回生成 workflow 跑一遍（會重新生成再審查一次）：
+
+```
+Workflow({ scriptPath: "<repo>/cf/snippets/_workflow-generate.js",
+           args: ["hodgkins/HODG-6", "mds/MDS-3", ...] })
+```
+
+跑完把 `_pending-audit.txt` 裡對應的行刪掉，重新 `bash load_snippets.sh`——
+它會把 `unaudited` 清掉。
 
 ## 還沒做的事
 

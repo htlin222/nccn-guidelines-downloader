@@ -1,0 +1,38 @@
+# 生成完成、但對抗性審查沒跑成的清單，一行一個 <gid>/<ref>。
+#
+# 為什麼要有這個檔：四關是機械規則，擋得住編出來的藥名與數字，擋不住「把
+# positive margins 寫成 margins」「把 ± pertuzumab 寫成 Add pertuzumab」「憑空
+# 生成一句總結規則」。那三類都實際發生過，而且全部四關通過。所以沒跑過審查的
+# 清單跟跑過的不是同一個東西，即使它們長得一模一樣。
+#
+# load_snippets.sh 讀這個檔，把這些清單的 review 設成 'unaudited'，讓狀態在 D1
+# 裡看得見而不是只存在於某個人的記憶裡。
+#
+# 補跑之後把該行刪掉，重新 load 即可：
+#   Workflow({ scriptPath: "cf/snippets/_workflow-generate.js",
+#              args: [...這些 ref...] })
+# 那支 script 會重新生成再審查一次。只想補審不想重生成的話，在 audit 階段單獨
+# 跑也可以，但重跑一遍比較省事，而且生成本來就會受惠於當時已經修好的工具。
+#
+# 2026-08-27：這 21 份是撞到 session limit 時，生成已完成但 audit 全數失敗的。
+hodgkins/HODG-6
+hodgkins/HODG-7
+mds/MDS-3
+mds/MDS-4
+mds/MDS-7
+mds/MDS-8
+mpn/MPN-1
+mpn/MPN-2
+mpn/MF-1
+mpn/MF-2
+mpn/MF-3
+mpn/PV-1
+mpn/PV-2
+mpn/ET-1
+mpn/ET-2
+t-cell/PTCL-1
+t-cell/TPLL-1
+t-cell/ATLL-1
+t-cell/ENKL-1
+t-cell/INTCL-1
+t-cell/ST-1
