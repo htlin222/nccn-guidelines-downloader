@@ -11,7 +11,8 @@ see_also     = ["COL-8", "COL-A", "COL-B", "COL-E", "COL-F", "COL-G", "COL-H"]
 
 [facets]
 disease   = "colon"
-stage     = ["0", "II", "III"]
+stage     = ["0", "I", "II", "III"]
+biomarker = ["dmmr", "msi-h", "tmb-high", "pik3ca"]
 timepoint = ["adjuvant", "surveillance"]
 
 [[variables]]

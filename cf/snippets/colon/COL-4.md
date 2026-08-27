@@ -12,7 +12,7 @@ see_also     = ["COL-2", "COL-3", "COL-8"]
 [facets]
 disease   = "colon"
 stage     = ["0", "I", "II", "III"]
-biomarker = "pik3ca"
+biomarker = ["pik3ca", "pmmr", "mss"]
 timepoint = "adjuvant"
 intent    = "curative"
 

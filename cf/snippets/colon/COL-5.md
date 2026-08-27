@@ -11,7 +11,9 @@ see_also     = ["COL-6", "COL-7", "COL-C", "COL-D"]
 
 [facets]
 disease   = "colon"
+histology = "adenocarcinoma"
 stage     = "IV"
+biomarker = ["pmmr", "mss"]
 timepoint = "metastatic"
 
 [[variables]]

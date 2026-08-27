@@ -12,6 +12,7 @@ see_also     = ["COL-9", "COL-8", "COL-A", "COL-C", "COL-D", "COL-E"]
 [facets]
 disease   = "colon"
 stage     = ["recurrent", "IV"]
+biomarker = ["pmmr", "mss"]
 timepoint = ["metastatic", "primary-treatment", "neoadjuvant", "adjuvant"]
 
 [[variables]]

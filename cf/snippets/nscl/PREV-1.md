@@ -10,7 +10,8 @@ generated    = "2026-08-27"
 see_also     = ["NSCL-1"]
 
 [facets]
-disease = "nscl"
+disease   = "nscl"
+timepoint = ["prevention", "screening"]
 
 [[variables]]
 name = "smoking_status"

@@ -12,6 +12,7 @@ see_also     = ["NSCL-2", "NSCL-4", "NSCL-8", "NSCL-13", "NSCL-17"]
 [facets]
 disease   = "nscl"
 stage     = ["I", "II", "III"]
+biomarker = ["egfr", "alk", "ret", "pd-l1"]
 timepoint = ["workup", "staging", "primary-treatment"]
 intent    = "curative"
 

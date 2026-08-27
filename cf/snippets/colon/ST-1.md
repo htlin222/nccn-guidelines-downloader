@@ -11,6 +11,7 @@ see_also     = ["COL-1", "COL-2", "COL-4"]
 
 [facets]
 disease   = "colon"
+stage     = "any"
 timepoint = "staging"
 
 [[variables]]

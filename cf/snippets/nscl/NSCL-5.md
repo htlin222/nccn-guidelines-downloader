@@ -12,6 +12,7 @@ see_also     = ["NSCL-6", "NSCL-7", "NSCL-8", "NSCL-13", "NSCL-14", "NSCL-15", "
 [facets]
 disease   = "nscl"
 stage     = ["II", "III"]
+biomarker = ["egfr", "alk", "ret", "pd-l1"]
 timepoint = ["workup", "staging"]
 
 [[variables]]

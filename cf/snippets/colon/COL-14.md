@@ -11,7 +11,9 @@ see_also     = ["COL-8", "COL-16", "COL-A", "COL-C", "COL-D", "COL-E"]
 
 [facets]
 disease   = "colon"
+histology = "adenocarcinoma"
 stage     = "IV"
+biomarker = ["dmmr", "msi-h", "tmb-high"]
 timepoint = ["metastatic", "adjuvant"]
 
 [[variables]]

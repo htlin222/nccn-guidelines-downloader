@@ -11,6 +11,8 @@ see_also     = ["COL-4", "COL-8", "COL-A", "COL-C", "COL-D", "COL-E"]
 
 [facets]
 disease   = "colon"
+stage     = ["I", "II", "III"]
+biomarker = ["pmmr", "mss"]
 timepoint = ["primary-treatment", "neoadjuvant", "adjuvant"]
 intent    = "curative"
 

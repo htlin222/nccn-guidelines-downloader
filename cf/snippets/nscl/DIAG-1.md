@@ -11,7 +11,7 @@ see_also     = ["DIAG-2", "DIAG-3", "DIAG-A"]
 
 [facets]
 disease   = "nscl"
-timepoint = "workup"
+timepoint = ["diagnosis", "workup"]
 
 [[variables]]
 name = "age"

@@ -11,7 +11,10 @@ see_also     = ["NSCL-18", "NSCL-20", "NSCL-A", "NSCL-H", "NSCL-I"]
 
 [facets]
 disease   = "nscl"
-timepoint = ["workup", "metastatic"]
+histology = ["adenocarcinoma", "large-cell", "squamous"]
+stage     = ["IV", "recurrent"]
+biomarker = ["egfr", "alk", "kras", "ros1", "braf", "ntrk", "met", "ret", "pd-l1"]
+timepoint = ["diagnosis", "workup", "metastatic"]
 
 [[variables]]
 name = "age"

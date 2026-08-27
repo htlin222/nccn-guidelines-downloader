@@ -11,6 +11,8 @@ see_also     = ["COL-4", "COL-13"]
 
 [facets]
 disease   = "colon"
+stage     = "I"
+biomarker = ["dmmr", "pmmr", "msi-h", "mss"]
 timepoint = ["workup", "primary-treatment"]
 
 [[variables]]

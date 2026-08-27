@@ -26,7 +26,8 @@
         "neuroendocrine",
         "signet-ring",
         "gist",
-        "carcinoid"
+        "carcinoid",
+        "nsclc-nos"
       ]
     },
     "stage": {
@@ -69,7 +70,12 @@
         "met",
         "pd-l1",
         "tmb-high",
-        "her2-amplified"
+        "her2-amplified",
+        "pole",
+        "pold1",
+        "dpyd",
+        "erbb2",
+        "nrg1"
       ]
     },
     "timepoint": {
@@ -154,7 +160,10 @@
       "gist": "gist",
       "間質瘤": "gist",
       "類癌": "carcinoid",
-      "carcinoid": "carcinoid"
+      "carcinoid": "carcinoid",
+      "nsclc-nos": "nsclc-nos",
+      "非小細胞肺癌": "nsclc-nos",
+      "nsclc": "nsclc-nos"
     },
     "stage": {
       "零期": "0",
@@ -227,7 +236,14 @@
       "pd-l1": "pd-l1",
       "pdl1": "pd-l1",
       "腫瘤突變負荷": "tmb-high",
-      "tmb": "tmb-high"
+      "tmb": "tmb-high",
+      "pole": "pole",
+      "pold1": "pold1",
+      "dpyd": "dpyd",
+      "dpd": "dpyd",
+      "dpd缺乏": "dpyd",
+      "erbb2": "erbb2",
+      "nrg1": "nrg1"
     },
     "timepoint": {
       "檢查": "workup",
