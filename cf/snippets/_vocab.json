@@ -7,6 +7,7 @@
     },
     "histology": {
       "values": [
+        "any",
         "dcis",
         "invasive-ductal",
         "invasive-lobular",
@@ -18,7 +19,14 @@
         "cribriform",
         "metaplastic",
         "micropapillary",
-        "any"
+        "adenocarcinoma",
+        "squamous",
+        "small-cell",
+        "large-cell",
+        "neuroendocrine",
+        "signet-ring",
+        "gist",
+        "carcinoid"
       ]
     },
     "stage": {
@@ -35,6 +43,7 @@
     "biomarker": {
       "note": "各癌別自己的清單，共用的放前面。",
       "values": [
+        "any",
         "hr-positive",
         "hr-negative",
         "her2-positive",
@@ -43,12 +52,32 @@
         "brca",
         "pik3ca",
         "esr1",
-        "any"
+        "dmmr",
+        "pmmr",
+        "msi-h",
+        "mss",
+        "kras",
+        "nras",
+        "braf",
+        "ntrk",
+        "ret",
+        "kit",
+        "pdgfra",
+        "egfr",
+        "alk",
+        "ros1",
+        "met",
+        "pd-l1",
+        "tmb-high",
+        "her2-amplified"
       ]
     },
     "timepoint": {
       "note": "這個病人現在走到哪一步。門診檢索最常用的軸。",
       "values": [
+        "prevention",
+        "screening",
+        "diagnosis",
         "workup",
         "staging",
         "primary-treatment",
@@ -108,7 +137,24 @@
       "化生性癌": "metaplastic",
       "metaplastic": "metaplastic",
       "微乳頭": "micropapillary",
-      "micropapillary": "micropapillary"
+      "micropapillary": "micropapillary",
+      "腺癌": "adenocarcinoma",
+      "adenocarcinoma": "adenocarcinoma",
+      "鱗狀細胞癌": "squamous",
+      "鱗癌": "squamous",
+      "squamous": "squamous",
+      "小細胞": "small-cell",
+      "small cell": "small-cell",
+      "大細胞": "large-cell",
+      "large cell": "large-cell",
+      "神經內分泌": "neuroendocrine",
+      "neuroendocrine": "neuroendocrine",
+      "印戒細胞": "signet-ring",
+      "signet ring": "signet-ring",
+      "gist": "gist",
+      "間質瘤": "gist",
+      "類癌": "carcinoid",
+      "carcinoid": "carcinoid"
     },
     "stage": {
       "零期": "0",
@@ -156,7 +202,32 @@
       "tnbc": "tnbc",
       "triple negative": "tnbc",
       "brca": "brca",
-      "遺傳": "brca"
+      "遺傳": "brca",
+      "微衛星不穩定": "msi-h",
+      "msi-h": "msi-h",
+      "msi": "msi-h",
+      "錯配修復缺失": "dmmr",
+      "dmmr": "dmmr",
+      "mmr缺失": "dmmr",
+      "錯配修復完整": "pmmr",
+      "pmmr": "pmmr",
+      "mss": "mss",
+      "微衛星穩定": "mss",
+      "kras": "kras",
+      "nras": "nras",
+      "braf": "braf",
+      "ntrk": "ntrk",
+      "ret": "ret",
+      "kit": "kit",
+      "pdgfra": "pdgfra",
+      "egfr": "egfr",
+      "alk": "alk",
+      "ros1": "ros1",
+      "met": "met",
+      "pd-l1": "pd-l1",
+      "pdl1": "pd-l1",
+      "腫瘤突變負荷": "tmb-high",
+      "tmb": "tmb-high"
     },
     "timepoint": {
       "檢查": "workup",
@@ -186,7 +257,13 @@
       "轉移治療": "metastatic",
       "metastatic": "metastatic",
       "支持": "supportive",
-      "supportive": "supportive"
+      "supportive": "supportive",
+      "預防": "prevention",
+      "prevention": "prevention",
+      "篩檢": "screening",
+      "screening": "screening",
+      "診斷": "diagnosis",
+      "diagnosis": "diagnosis"
     },
     "intent": {
       "根治": "curative",

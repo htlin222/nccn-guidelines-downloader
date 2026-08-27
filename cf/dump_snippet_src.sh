@@ -29,6 +29,10 @@ for x in json.load(open(toc, encoding="utf-8")):
     if x.get("sec") != "algorithm":
         continue
     ref = x.get("ref") or ""
+    # ABBR 是縮寫對照表，做成核對清單沒有意義：它沒有決策、沒有條件、也沒有出口，
+    # 只是一頁 term = definition。它的 ref 尾碼是數字，所以不排除的話會被當成決策節點。
+    if ref.startswith("ABBR"):
+        continue
     # 數字結尾（含 2A 這種續頁）= 決策節點；純字母結尾 = principles 附錄
     k = "decision" if re.search(r"-\d+[A-Z]?$", ref) else "principles"
     if kind != "all" and k != kind:

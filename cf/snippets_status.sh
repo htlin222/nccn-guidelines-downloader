@@ -35,15 +35,32 @@ import os, sys, glob, re
 gid_filter, mode, limit = sys.argv[1], sys.argv[2], int(sys.argv[3] or 0)
 root = "snippets"
 
-def page_of(path):
-    """素材檔第 3 行是 'page: N'，用它排序，讓待辦按指引裡的順序出現。"""
+def head(path):
+    """素材檔開頭的幾行 metadata：page 用來排序，kind 用來過濾。"""
+    meta = {}
     try:
         for line in open(path, encoding="utf-8"):
-            if line.startswith("page: "):
-                return int(line.split(": ", 1)[1])
+            if line.startswith("---"):
+                break
+            k, _, v = line.partition(": ")
+            meta[k.strip()] = v.strip()
     except Exception:
         pass
-    return 10**6
+    return meta
+
+
+def page_of(path):
+    try:
+        return int(head(path).get("page", 10**6))
+    except ValueError:
+        return 10**6
+
+
+def is_decision(path):
+    """只算決策節點。principles 附錄（BINV-A 這類）是查閱資料，不是門診情境，
+    現階段不生成——把它們算進分母的話，CI 會印出 24/42 而本地印 24/24，
+    同一個進度看起來像漏了 18 個。"""
+    return head(path).get("kind", "decision") == "decision"
 
 gids = sorted(
     os.path.basename(d) for d in glob.glob(os.path.join(root, "_src", "*"))
@@ -56,7 +73,9 @@ if not gids:
 todo_all, tot_src, tot_done = [], 0, 0
 rows = []
 for gid in gids:
-    srcs = {os.path.basename(p)[:-4]: p for p in glob.glob(os.path.join(root, "_src", gid, "*.txt"))}
+    srcs = {os.path.basename(p)[:-4]: p
+            for p in glob.glob(os.path.join(root, "_src", gid, "*.txt"))
+            if is_decision(p)}
     done = {os.path.basename(p)[:-3] for p in glob.glob(os.path.join(root, gid, "*.md"))}
     todo = sorted(set(srcs) - done, key=lambda r: page_of(srcs[r]))
     todo_all += [(gid, r) for r in todo]
