@@ -16,12 +16,18 @@ cd cf && bash snippets_status.sh
 
 優先順序（使用者定的，照這個順序做）：
 
-1. **乳癌、大腸癌、肺癌** — 主要照顧的癌別
+1. **乳癌、大腸癌、肺癌** — 主要照顧的癌別。**已完成 53 份。**
 2. **消化道其餘** — rectal、gastric、pancreatic、esophageal、btc、hcc、
-   appendiceal、small_bowel、ampullary、gist、anal
-3. **血液科** — 18 份指引，素材還沒 dump
+   appendiceal、small_bowel、ampullary、gist、anal。**已完成 116 份。**
+3. **血液科** — 18 份指引，素材全部已 dump。已完成 98 份，剩下是零散的小指引：
+   castleman 6、histiocytic_neoplasms 22、cutaneous_lymphomas 22、mlne 9、
+   mastocytosis 5、amyloidosis 4、hairy_cell 2。
+   （`waldenstroms` dump 出 0 個節點——TOC 裡沒有 algorithm 條目，還沒查是
+   那份指引真的沒有，還是 build_toc 漏了它。）
 
-`prostate` 的素材已備好但不在優先序上，先不做。
+`prostate` 的素材已備好（18 份）但不在優先序上，先不做。
+
+2026-08-27 收工時：**267/355（75%）**。
 
 ---
 
@@ -88,8 +94,9 @@ Workflow({ scriptPath: "<repo>/cf/snippets/_workflow-backfill-facets.js",
            args: ["<gid>", ...] })
 ```
 
-血液科開始前大概率要補：del(5q)、JAK2、CALR、MPL、FLT3、NPM1、IDH1/2、
-BCR-ABL、t(9;22)、17p/TP53、MRD 這些現在都不在字典裡。
+血液科的值已經補過了（biomarker 65、histology 36、timepoint 17、stage 12，
+別名 260）。**下一個新科別開始前，一樣先看一眼夠不夠**——這件事做在事前是十分鐘，
+做在事後是一整輪回填。
 
 回填的原則是**寧可留空也不要填一個該頁其實沒有分支的值**。填錯的代價不是漏掉，
 是讓清單出現在不該出現的搜尋結果裡，而一個點開發現不適用的清單會讓人不信任整套。
@@ -120,9 +127,9 @@ Workflow({ scriptPath: "<repo>/cf/snippets/_workflow-generate.js",
 
 ## 還沒做的事
 
-- **人工審閱。** `snippets.review` 現在全是 NULL。機械關與對抗性審查都是模型，
-  真正的臨床把關還沒發生。`load_snippets.sh` 刻意不覆寫 `review` 欄位，人審過的
-  結論不會被重載抹掉。
+- **人工審閱。** D1 現在是 246 份 `review=NULL`（跑過完整流程）與 21 份
+  `review='unaudited'`。兩者都還沒有人看過——機械四關與對抗性審查都是模型，
+  真正的臨床把關還沒發生。`load_snippets.sh` 刻意不覆寫人填的 `review` 值。
 - **參考附錄（principles）。** `BINV-A` 這類字母結尾的 ref 是查閱資料不是門診情境，
   目前不生成，只以 `see_also` 出現。確認真的需要再說。
 - **取用端點。** `/api/v1/snippet/...` 還沒寫。issue #4 記了傾向：預設只回
