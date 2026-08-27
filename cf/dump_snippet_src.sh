@@ -27,9 +27,25 @@ wrangler r2 object get "nccn-pdfs/meta/toc/$GID.json" --file="$WORK/toc.json" --
 # 限定條件，而且漏得很安靜：主頁只寫「Footnotes on AML-4A」。
 #
 # 每一頁的頁尾都印著自己的 ref，所以掃一次 page_text 就能建出完整的 ref → page 表。
-wrangler d1 execute nccn-search --remote --json \
-  --command "SELECT page, substr(body, -260) AS tail FROM page_text WHERE gid='$GID'" \
-  2>/dev/null > "$WORK/tails.json" || echo '[]' > "$WORK/tails.json"
+# 這是一次全表掃描，而 CI 一輪要對六十幾份指引各做一次。撞到暫時性失敗時原本會
+# 靜靜地變成空表，接著 fallback 產出 0 個 ref，最後由結尾的 `[ "$n" -gt 0 ]` 讓
+# 整輪 CI 紅掉——而 log 上只看得到「DONE 0 refs」，看不出是查詢掛了。所以重試，
+# 而且真的拿不到時要說出來。
+tails_ok=0
+for try in 1 2 3; do
+  if wrangler d1 execute nccn-search --remote --json \
+      --command "SELECT page, substr(body, -260) AS tail FROM page_text WHERE gid='$GID'" \
+      > "$WORK/tails.json" 2>"$WORK/tails.err"; then
+    tails_ok=1; break
+  fi
+  echo "  page_text 頁尾查詢失敗（第 $try 次），重試中" >&2
+  sleep $((try * 3))
+done
+if [ "$tails_ok" != "1" ]; then
+  echo "  WARN 取不到 $GID 的頁尾 ref 表，TOC fallback 將無法運作：" >&2
+  head -3 "$WORK/tails.err" >&2
+  echo '[]' > "$WORK/tails.json"
+fi
 python3 - "$WORK/tails.json" > "$WORK/refpage.tsv" <<'PY2'
 import json, re, sys
 try:
@@ -65,7 +81,7 @@ PY
 # 但全部是 discussion，而它的 PDF 裡確實有 LPL-1/LPL-2/AL-1/BNS-1 等九頁。
 # 這種時候退回用頁尾 ref 表：那張表是掃 page_text 建的，不依賴 TOC。
 if [ ! -s "$WORK/refs.tsv" ] && [ "$KIND" != "principles" ]; then
-  echo "TOC 沒有演算法條目，改用頁尾 ref 表" >&2
+  echo "TOC 沒有演算法條目，改用頁尾 ref 表（$(wc -l < "$WORK/refpage.tsv" | tr -d ' ') 個頁尾 ref）" >&2
   awk -F'\t' '$1 !~ /^MS-/ && $1 !~ /^ABBR/ {
     kind = ($1 ~ /-[0-9]+[A-Z]?$/) ? "decision" : "principles"
     print $1 "\t" $2 "\t" kind "\t"

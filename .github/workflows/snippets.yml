@@ -53,15 +53,35 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
         run: |
-          set -e
           # 只取目錄，而且跳過 _ 開頭的。snippets/ 底下還有 SPEC.md 與 _vocab.json，
           # 拿它們當 gid 會在第一輪就死在「no TOC for SPEC.md」。
+          #
+          # 刻意不用 set -e：一輪要 dump 六十幾份指引，每份都對 D1 做全表掃描，
+          # 暫時性失敗是常態而不是例外。一份掛掉就中止，代價是後面幾十份的素材
+          # 全部沒重建，而 verify 又必須靠素材——等於一次抖動讓整條鏈停擺。
+          # 所以收集失敗、跑完再判，而且判的是「壞了幾份」而不是「有沒有壞」。
+          bad=""
+          n=0
           for d in snippets/*/; do
             gid=$(basename "$d")
             case "$gid" in _*) continue ;; esac
             echo "--- $gid"
-            KIND=all bash dump_snippet_src.sh "$gid"
+            if KIND=all bash dump_snippet_src.sh "$gid"; then
+              n=$((n+1))
+            else
+              bad="$bad $gid"
+            fi
           done
+          echo "dumped $n guidelines, failed:${bad:- none}"
+          echo "SRC_FAILED=${bad# }" >> "$GITHUB_ENV"
+          # 少數幾份失敗時繼續走下去——verify 那一步會直接因為素材缺席而報出
+          # 「找不到素材檔」，那個訊息比這裡中止更明確。但大面積失敗代表 token
+          # 或 D1 出事了，那時候後面每一步都只會產出誤導人的結果。
+          [ "$n" -gt 0 ] || { echo "::error::沒有任何一份指引 dump 成功"; exit 1; }
+          case "$(echo "$bad" | wc -w)" in
+            0|1|2|3) ;;
+            *) echo "::error::$(echo "$bad" | wc -w) 份指引的素材沒重建成功:$bad"; exit 1 ;;
+          esac
 
       # 四關。來源關是唯一擋得住幻覺的一關，所以它必須在 CI 裡跑，而不是只在
       # 寫的當下跑過一次——素材會隨著 NCCN 改版而變，昨天有依據的句子今天可能沒有。
