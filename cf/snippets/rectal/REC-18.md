@@ -3,25 +3,27 @@ id           = "rectal/REC-18"
 gid          = "rectal"
 ref          = "REC-18"
 page         = 31
-title        = "dMMR/MSI-H or POLE/POLD1 ultrahypermutated rectal cancer with unresectable metastases: initial and subsequent treatment"
+title        = "dMMR/MSI-H or POLE/POLD1 unresectable metastases: initial and subsequent treatment, split by prior immunotherapy"
 nccn_version = "2.2026"
 nccn_date    = "04/07/26"
 generated    = "2026-08-27"
-see_also     = ["REC-17", "REC-10A", "REC-F"]
+see_also     = ["REC-15", "REC-10A", "REC-F"]
 
 [facets]
 disease   = "rectal"
 stage     = "IV"
 biomarker = ["dmmr", "msi-h", "pole", "pold1", "tmb-high"]
-timepoint = "metastatic"
+timepoint = ["metastatic", "surveillance"]
 
 [[variables]]
 name = "age"
 type = "number"
 [[variables]]
-name = "biomarker_status"
-type = "enum"
-options = ["dMMR/MSI-H", "POLE mutation with ultrahypermutated phenotype", "POLD1 mutation with ultrahypermutated phenotype"]
+name = "ctnm"
+type = "text"
+[[variables]]
+name = "mmr_status"
+type = "text"
 [[variables]]
 name = "tmb"
 type = "text"
@@ -31,16 +33,13 @@ type = "text"
 [[variables]]
 name = "immunotherapy_candidate"
 type = "enum"
-options = ["yes", "no"]
+options = ["candidate", "not a candidate"]
 [[variables]]
 name = "prior_immunotherapy"
 type = "enum"
-options = ["none", "checkpoint inhibitor monotherapy received", "other prior immunotherapy received"]
+options = ["none", "checkpoint inhibitor monotherapy", "combination immunotherapy"]
 [[variables]]
-name = "immunotherapy_duration"
-type = "text"
-[[variables]]
-name = "disease_status"
+name = "last_reevaluation"
 type = "text"
 +++
 
@@ -48,46 +47,46 @@ type = "text"
 
 - NCCN Rectal Cancer v2.2026, REC-18, p31
 - Applies to dMMR/MSI-H rectal cancer
-- Also applies to POLE/POLD1 mutation with ultrahypermutated phenotype (eg, TMB >50 mut/Mb)
+- Also applies to POLE/POLD1 mutation with ultrahypermutated phenotype, eg, TMB >50 mut/Mb
 - Applies to unresectable metastases
-- All recommendations are category 2A unless otherwise indicated
+- All recommendations category 2A unless otherwise indicated
 
 # Assessment
 
 - ___ (age) yo
-- ___ (biomarker_status)
-- TMB: ___ (tmb)
-- Unresectable metastases, sites: ___ (met_sites)
+- ___ (ctnm)
+- MMR/MSI status ___ (mmr_status)
+- POLE/POLD1 and TMB ___ (tmb)
+- Sites of unresectable metastatic disease: ___ (met_sites)
 - Candidate for immunotherapy: ___ (immunotherapy_candidate)
-- Prior immunotherapy: ___ (prior_immunotherapy)
-- Time on checkpoint inhibitor to date: ___ (immunotherapy_duration)
+- Prior immunotherapy received: ___ (prior_immunotherapy)
+    - Record whether checkpoint inhibitor monotherapy was previously received
+- Date of last disease status re-evaluation: ___ (last_reevaluation)
 
 # Initial treatment, candidate for immunotherapy and no prior immunotherapy received
 
 - Checkpoint inhibitor immunotherapy (REC-F 5 of 17)
-    - Manage toxicity per the NCCN Guidelines for Management of Immune Checkpoint Inhibitor-Related Toxicities
+    - Manage toxicity per NCCN Guidelines for Management of Immune Checkpoint Inhibitor-Related Toxicities
     - If disease response, consider discontinuing checkpoint inhibitor after 2 years of treatment
+- Re-evaluate disease status every 2-3 mo
 
-# Subsequent treatment, after initial checkpoint inhibitor immunotherapy
+# Subsequent treatment, after re-evaluation
 
-- Re-evaluate disease status every 2–3 mo
-    - Disease status at re-evaluation: ___ (disease_status)
-- Then one of the following
-    - Surveillance (REC-10A)
-    - Surgery ± RT
-    - Continue immunotherapy (REC-F 5 of 17)
-        - Manage toxicity per the NCCN Guidelines for Management of Immune Checkpoint Inhibitor-Related Toxicities
-        - If disease response, consider discontinuing checkpoint inhibitor after 2 years of treatment
-    - Ipilimumab + nivolumab, only if checkpoint inhibitor monotherapy was previously received
-    - Systemic therapy (REC-F)
+- Surveillance (REC-10A)
+- or Surgery, with or without RT
+- or Continue immunotherapy (REC-F 5 of 17)
+    - Manage toxicity per NCCN Guidelines for Management of Immune Checkpoint Inhibitor-Related Toxicities
+    - If disease response, consider discontinuing checkpoint inhibitor after 2 years of treatment
+- or Ipilimumab + nivolumab, if checkpoint inhibitor monotherapy was previously received
+- or Systemic therapy (REC-F)
 
 # Initial treatment, prior immunotherapy received
 
 - Systemic therapy (REC-F)
-- Ipilimumab + nivolumab, only if checkpoint inhibitor monotherapy was previously received
+- or Ipilimumab + nivolumab, if checkpoint inhibitor monotherapy was previously received
 
 # Next
 
-- Surveillance, go to REC-10A
-- Checkpoint inhibitor immunotherapy regimens, see REC-F 5 of 17
-- Systemic therapy regimens, see REC-F
+- Candidate for immunotherapy and no prior immunotherapy received, start checkpoint inhibitor immunotherapy (REC-F 5 of 17), then re-evaluate disease status every 2-3 mo
+- Prior immunotherapy received, systemic therapy (REC-F), or ipilimumab + nivolumab if checkpoint inhibitor monotherapy was previously received
+- After re-evaluation, if going to observation, surveillance following nonoperative management (REC-10A)

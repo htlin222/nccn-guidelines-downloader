@@ -22,6 +22,27 @@ del(){ command rip "$@" 2>/dev/null || find "$@" -delete 2>/dev/null; }
 wrangler r2 object get "nccn-pdfs/meta/toc/$GID.json" --file="$WORK/toc.json" --remote >/dev/null 2>&1 \
   || { echo "no TOC for $GID"; exit 1; }
 
+# NCCN 常把註腳放在自己的一頁（AML-4A、GAST-2A、REC-3A…），而那些頁在 TOC 裡
+# 沒有條目——它們不是決策節點，是決策節點的一部分。少了它們，清單會漏掉整頁的
+# 限定條件，而且漏得很安靜：主頁只寫「Footnotes on AML-4A」。
+#
+# 每一頁的頁尾都印著自己的 ref，所以掃一次 page_text 就能建出完整的 ref → page 表。
+wrangler d1 execute nccn-search --remote --json \
+  --command "SELECT page, substr(body, -260) AS tail FROM page_text WHERE gid='$GID'" \
+  2>/dev/null > "$WORK/tails.json" || echo '[]' > "$WORK/tails.json"
+python3 - "$WORK/tails.json" > "$WORK/refpage.tsv" <<'PY2'
+import json, re, sys
+try:
+    rows = json.load(open(sys.argv[1]))[0]["results"]
+except Exception:
+    rows = []
+for r in rows:
+    # 頁尾最後一個像 ref 的字串就是這一頁的編號
+    hits = re.findall(r"\b([A-Z]{2,}[A-Z0-9]*-[0-9]+[A-Z]?)\b", r.get("tail") or "")
+    if hits:
+        print("%s\t%s" % (hits[-1], r["page"]))
+PY2
+
 python3 - "$WORK/toc.json" "$KIND" > "$WORK/refs.tsv" <<'PY'
 import json, re, sys
 toc, kind = sys.argv[1], sys.argv[2]
@@ -65,6 +86,27 @@ except Exception:
     echo "title: $title"
     echo "---"
     cat "$WORK/body.txt"
+    # 這一頁引用到的註腳頁，整頁附在後面。它們是這一頁的一部分，不是另一份文件。
+    for fref in $(grep -oE "\b[A-Z]{2,}[A-Z0-9]*-[0-9]+[A-Z]\b" "$WORK/body.txt" | sort -u); do
+      [ "$fref" = "$ref" ] && continue
+      fpage=$(awk -F'\t' -v r="$fref" '$1==r{print $2; exit}' "$WORK/refpage.tsv")
+      [ -n "$fpage" ] || continue
+      wrangler d1 execute nccn-search --remote --json \
+        --command "SELECT body FROM page_text WHERE gid='$GID' AND page=$fpage" 2>/dev/null \
+        | python3 -c "
+import sys, json
+try:
+    r = json.load(sys.stdin)[0]['results']
+    sys.stdout.write(r[0]['body'] if r else '')
+except Exception:
+    pass
+" > "$WORK/f.txt"
+      if [ -s "$WORK/f.txt" ]; then
+        echo ""
+        echo "=== FOOTNOTES CONTINUED: $fref (page $fpage) ==="
+        cat "$WORK/f.txt"
+      fi
+    done
   } > "$OUT/$ref.txt"
   n=$((n+1))
   echo "OK $ref (p$page, $(wc -c < "$OUT/$ref.txt" | tr -d ' ') bytes)"

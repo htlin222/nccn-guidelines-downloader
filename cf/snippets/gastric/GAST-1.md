@@ -3,21 +3,19 @@ id           = "gastric/GAST-1"
 gid          = "gastric"
 ref          = "GAST-1"
 page         = 9
-title        = "Workup, clinical stage, and additional evaluation at initial presentation"
+title        = "Workup and additional evaluation at initial presentation, by clinical stage"
 nccn_version = "3.2026"
 nccn_date    = "06/03/26"
 generated    = "2026-08-27"
-see_also     = ["GAST-1A", "GAST-2", "GAST-9"]
+see_also     = ["GAST-2", "GAST-9", "ST-1"]
 
 [facets]
 disease   = "gastric"
+histology = "any"
 stage     = "any"
-biomarker = ["msi-h", "pd-l1", "erbb2"]
-timepoint = ["workup", "staging"]
+timepoint = ["workup", "staging", "diagnosis"]
+intent    = ["curative", "palliative"]
 
-[[variables]]
-name = "age"
-type = "number"
 [[variables]]
 name = "ctnm"
 type = "text"
@@ -28,7 +26,7 @@ type = "text"
 name = "msi_mmr"
 type = "text"
 [[variables]]
-name = "pdl1"
+name = "pd_l1"
 type = "text"
 [[variables]]
 name = "her2"
@@ -41,108 +39,101 @@ name = "h_pylori"
 type = "enum"
 options = ["positive", "negative", "not tested"]
 [[variables]]
-name = "fitness"
+name = "surgical_status"
 type = "enum"
 options = ["medically fit", "nonsurgical candidate"]
-[[variables]]
-name = "resectability"
-type = "enum"
-options = ["potentially resectable", "surgically unresectable"]
 +++
 
 # Source
 
 - NCCN Gastric Cancer v3.2026, GAST-1, p9
-- Applies at initial presentation, before assignment to a treatment pathway
-- Footnotes a through o for this page are on GAST-1A
+- Applies to workup and additional evaluation of newly diagnosed gastric cancer
+- Tumor classification: see Staging (ST-1)
+- Footnotes for this page are on GAST-1A
 - All recommendations are category 2A unless otherwise indicated
 
 # Assessment
 
-- ___ (age) yo
-- Clinical stage ___ (ctnm)
+- ___ (ctnm)
 - Siewert category ___ (siewert)
+    - Principles of Surgery (GAST-C)
 - MSI by PCR/NGS or MMR by IHC ___ (msi_mmr)
-- PD-L1 ___ (pdl1)
+- PD-L1 ___ (pd_l1)
 - HER2 (ERBB2) ___ (her2)
 - CLDN18.2 ___ (cldn18_2)
 - Helicobacter pylori ___ (h_pylori)
-- Medical fitness ___ (fitness)
-- Resectability ___ (resectability)
+- Surgical status ___ (surgical_status)
+    - Medically fit = medically able to tolerate major surgery
+    - Nonsurgical candidate = medically unable to tolerate major surgery, or medically fit but declines surgery
 
 # Workup
 
 - History and physical (H&P)
 - Esophagogastroduodenoscopy (EGD) and biopsy
-    - See footnote a on GAST-1A
-- Chest/abdomen/pelvis CT
-    - With oral contrast
-    - With IV contrast
-- FDG-PET/CT evaluation, skull base to mid-thigh
-    - For locally advanced or metastatic disease, see footnote b on GAST-1A
-    - Or if clinically indicated
-- CBC
-- Comprehensive chemistry profile
-- Endoscopic ultrasound (EUS), preferred
-    - Recommended if early-stage disease suspected
-    - Recommended if early versus locally advanced disease needs to be determined
+    - Principles of Endoscopic Staging and Therapy (GAST-A)
+- Chest/abdomen/pelvis CT with oral and IV contrast
+- FDG-PET/CT evaluation (skull base to mid-thigh)
+    - For locally advanced or metastatic disease, or if clinically indicated
+    - May not be appropriate for T1
+- CBC and comprehensive chemistry profile
+- Endoscopic ultrasound (EUS)
+    - Recommended if early-stage disease is suspected, or if early versus locally advanced disease needs to be determined (preferred)
 - Endoscopic resection (ER)
-    - Essential for the accurate staging of early-stage cancers (T1a or T1b), see footnote c on GAST-1A
+    - Essential for the accurate staging of early-stage cancers (T1a or T1b)
     - Early-stage cancers can best be diagnosed by ER
+    - ER may also be therapeutic for early-stage disease/lesions
 - Biopsy of metastatic disease as clinically indicated
 - Assess Siewert category
-    - See footnote f on GAST-1A
-
-# Biomarker testing
-
-- Universal testing for microsatellite instability (MSI) by polymerase chain reaction (PCR)/next-generation sequencing (NGS), or mismatch repair (MMR) by immunohistochemistry (IHC)
-    - Recommended in all newly diagnosed patients, see footnote d on GAST-1A
-- Universal testing for programmed death ligand 1 (PD-L1)
-    - Recommended in all newly diagnosed patients, see footnote d on GAST-1A
-- HER2 (ERBB2) testing
-    - If advanced/metastatic disease is documented/suspected, see footnotes d and e on GAST-1A
-- CLDN18.2 testing
-    - If advanced/metastatic disease is documented/suspected, see footnote d on GAST-1A
-- NGS should be considered
-    - See footnote d on GAST-1A
-
-# Supportive care and risk assessment
-
+    - Principles of Surgery (GAST-C)
 - Nutritional assessment and counseling
 - Smoking cessation advice, counseling, and pharmacotherapy as indicated
-    - See footnote g on GAST-1A
+    - NCCN Guidelines for Smoking Cessation
 - Screen for family history
-    - See footnote h on GAST-1A
+    - Principles of Genetic Risk Assessment for Gastric Cancer (GAST-D)
+    - Also see NCCN Guidelines for Colorectal Cancer Screening, and Genetic/Familial High-Risk Assessment: Breast, Ovarian, Pancreatic, and Prostate
 - Test for Helicobacter pylori infection
     - Eradicate in all patients with early gastric cancer if positive
     - Conduct genetic testing as needed
     - Recommend H. pylori testing of close family members
-    - See footnote i on GAST-1A
+    - If H. pylori testing is positive, discuss recommendations with family members as appropriate
+    - Principles of Surveillance (GAST-H)
 - Assess for distress
-    - See footnote j on GAST-1A
+    - Refer to the NCCN Distress Thermometer and Problem List, which includes social determinants of health
+    - NCCN Guidelines for Distress Management (DIS-A)
 
-# Clinical stage
+# Biomarker testing
 
-- See footnote k on GAST-1A
+- Universal testing for microsatellite instability (MSI) by polymerase chain reaction (PCR)/next-generation sequencing (NGS), or mismatch repair (MMR) by immunohistochemistry (IHC), is recommended in all newly diagnosed patients
+- Universal testing for programmed death ligand 1 (PD-L1) is recommended in all newly diagnosed patients
+- HER2 (ERBB2) testing if advanced/metastatic disease is documented/suspected
+    - Tumor Epstein-Barr virus status is emerging as a potential biomarker for personalized treatment strategies for gastric cancer, but is not currently recommended for clinical care
+    - EBV testing should be performed if the morphology of the tumor contains prominent lymphoid stroma
+- CLDN18.2 testing if advanced/metastatic disease is documented/suspected
+- NGS should be considered
+- All of the above: Principles of Pathologic Review and Biomarker Testing (GAST-B)
+
+# Additional evaluation by clinical stage
+
 - cTis or cT1a
+    - Medically fit
+    - Nonsurgical candidate
 - Locoregional (cM0, Any N)
+    - Medically fit, potentially resectable
+        - Recommend laparoscopy with cytology
+    - Medically fit, surgically unresectable
+        - Consider laparoscopy with cytology
+    - Nonsurgical candidate
+    - Multidisciplinary review preferred
+        - Principles of Multidisciplinary Team Approach (GAST-E)
+    - Principles of Surgery (GAST-C) for resectability assessment
 - Stage IV (cM1)
-
-# Additional evaluation
-
-- cTis or cT1a
-    - Medically fit, see footnote l on GAST-1A
-    - Nonsurgical candidate, see footnote m on GAST-1A
-- Locoregional (cM0, Any N)
-    - Medically fit, potentially resectable, see footnotes f and l on GAST-1A
-        - Recommend laparoscopy with cytology, see footnote n on GAST-1A
-    - Medically fit, surgically unresectable, see footnotes f and l on GAST-1A
-        - Consider laparoscopy with cytology, see footnote n on GAST-1A
-    - Nonsurgical candidate, see footnote m on GAST-1A
-- Stage IV (cM1)
-    - Multidisciplinary review preferred, see footnote o on GAST-1A
+- Laparoscopy with cytology
+    - Performed to evaluate for peritoneal spread when considering local therapy
+    - Not indicated if a palliative resection is planned
+    - Indicated for clinical stage T1b or higher
 
 # Next
 
-- Medically fit, go to GAST-2
-- Nonsurgical candidate, go to Palliative Management (GAST-9)
+- cTis or cT1a, go to GAST-2
+- Locoregional (cM0, Any N), go to GAST-2
+- Stage IV (cM1), palliative management, go to GAST-9
