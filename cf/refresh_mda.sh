@@ -43,9 +43,12 @@ while IFS=$'\t' read -r id file; do
   [ -n "$id" ] || continue
   i=$((i+1))
   TMP=$(mktemp)
+  # --retry 只對連線錯誤與 5xx 生效，也就是「再試一次可能就好」的那一類；上游把
+  # 404 換成 200 + HTML 的情況它管不到，那是下面 %PDF 檢查的事。Verify 那步要求
+  # 91 份裡至少 82 份落地，一次網路瞬斷不該把整個月的更新推過那條線。
   code=$(curl -s -o "$TMP" -w "%{http_code}" -L "$BASE/$file" \
     -H "user-agent: $UA" -H 'accept: application/pdf,*/*;q=0.8' \
-    --compressed --max-time 120)
+    --compressed --max-time 120 --retry 2 --retry-delay 3)
   # A 200 is not proof of a PDF: a CDN error page or a redirect to the site's
   # 404 comes back 200 with HTML in it. Check the magic bytes, same as the
   # Worker's readPdf() does.
