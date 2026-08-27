@@ -6,7 +6,7 @@ page         = 7
 title        = "Diagnosis and prognostic risk stratification of MF, PV, and ET"
 nccn_version = "2.2026"
 nccn_date    = "06/16/26"
-generated    = "2026-08-27"
+generated    = "2026-08-28"
 see_also     = ["MPN-1", "MF-1", "MF-2", "PV-1", "PV-2", "ET-1", "ET-2"]
 
 [facets]
@@ -46,7 +46,7 @@ type = "text"
 # Source
 
 - NCCN Myeloproliferative Neoplasms v2.2026, MPN-2, p7
-- Applies once workup is complete and an MPN diagnosis is being assigned (MPN-1)
+- Applies to a newly established diagnosis of MF, PV, ET, or accelerated/blast phase MPN
 - Diagnosis of MPN is based on the 2022 WHO criteria and ICC criteria
 - All recommendations are category 2A unless otherwise indicated
 

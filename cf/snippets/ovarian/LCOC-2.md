@@ -3,17 +3,17 @@ id           = "ovarian/LCOC-2"
 gid          = "ovarian"
 ref          = "LCOC-2"
 page         = 16
-title        = "Adjuvant treatment of ovarian carcinosarcoma (MMMT), and the exit to maintenance or follow-up"
+title        = "Adjuvant treatment and follow-up of ovarian carcinosarcoma (malignant mixed Mullerian tumor)"
 nccn_version = "4.2026"
 nccn_date    = "04/10/26"
-generated    = "2026-08-27"
-see_also     = ["LCOC-1", "OV-3", "OV-5", "OV-6"]
+generated    = "2026-08-28"
+see_also     = ["OV-3", "OV-5", "OV-6", "OV-C", "OV-D", "OV-E", "OV-F"]
 
 [facets]
 disease   = "ovarian"
 stage     = ["I", "II", "III", "IV"]
 biomarker = ["brca", "any"]
-timepoint = ["adjuvant", "maintenance"]
+timepoint = ["adjuvant", "maintenance", "surveillance"]
 
 [[variables]]
 name = "age"
@@ -26,41 +26,41 @@ name = "surgical_staging_done"
 type = "enum"
 options = ["yes", "no"]
 [[variables]]
-name = "residual_disease"
-type = "text"
-[[variables]]
 name = "biomarker_testing_done"
 type = "enum"
 options = ["yes", "no"]
 [[variables]]
-name = "brca_status"
+name = "germline_brca"
 type = "text"
 [[variables]]
-name = "hr_status"
-type = "enum"
-options = ["deficient", "proficient", "unknown"]
+name = "somatic_brca"
+type = "text"
+[[variables]]
+name = "hrd_status"
+type = "text"
 +++
 
 # Source
 
-- NCCN Ovarian Cancer v4.2026, Less Common Ovarian Cancers, LCOC-2, p16
+- NCCN Ovarian Cancer v4.2026, LCOC-2, p16
 - Applies to carcinosarcoma (malignant mixed Mullerian tumors, MMMTs) of the ovary
-- Pathologic diagnosis per WHO Histologic Classification (OV-F)
-- Entered from LCOC-1
 - All recommendations category 2A unless otherwise indicated
 
 # Assessment
 
 - ___ (age) yo
+- Carcinosarcoma (MMMTs) of the ovary confirmed on pathologic diagnosis
 - Stage ___ (stage)
-- Surgical staging done: ___ (surgical_staging_done)
-- Residual disease: ___ (residual_disease)
-- Germline and somatic biomarker testing done: ___ (biomarker_testing_done)
-- BRCA1/2 status: ___ (brca_status)
-- HR status: ___ (hr_status)
+- Surgical staging and resection of residual disease previously done: ___ (surgical_staging_done)
+- Germline and somatic biomarker testing previously done: ___ (biomarker_testing_done)
+- Germline BRCA1/2 ___ (germline_brca)
+- Somatic BRCA1/2 ___ (somatic_brca)
+- HRD status ___ (hrd_status)
 
-# Before starting adjuvant treatment
+# Pathologic diagnosis
 
+- Carcinosarcoma (malignant mixed Mullerian tumors, MMMTs) of the ovary
+    - Classify by WHO Histologic Classification (OV-F)
 - If not previously done, consider surgical staging and resection of residual disease (OV-3)
 - If not previously done, consider germline and somatic biomarker testing (OV-C)
 - Germline and somatic BRCA1/2 status informs maintenance therapy
@@ -70,18 +70,16 @@ options = ["deficient", "proficient", "unknown"]
 # Adjuvant treatment
 
 - IV carboplatin/paclitaxel every 3 weeks (preferred)
-    - See Principles of Systemic Therapy (OV-D)
-    - See Management of Drug Reactions (OV-E)
-- or Other systemic therapy
+- Other systemic therapy
     - Stage I (OV-D, 5 of 12)
     - Stage II-IV (OV-D, 6 of 12)
-    - See Management of Drug Reactions (OV-E)
+- See Principles of Systemic Therapy (OV-D)
+- See Management of Drug Reactions (OV-E)
 
 # Next
 
 - Stage I
-    - Monitoring/Follow-up (including tumor biomarker testing) and Recurrence therapy (OV-6)
-- Stage II-IV
     - If known BRCA1/2 mutation, consider maintenance therapy (post-primary therapy) (OV-5)
-    - Monitoring/Follow-up (including tumor biomarker testing) and Recurrence therapy (OV-6)
-- Data are limited on primary and maintenance therapy for recurrent/persistent LCOC
+- Stage II-IV
+    - Monitoring/follow-up (including tumor biomarker testing) and recurrence therapy (OV-6)
+    - Data are limited on primary and maintenance therapy for recurrent/persistent LCOC

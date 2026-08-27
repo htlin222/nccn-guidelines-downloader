@@ -30,6 +30,7 @@ type = "text"
 # Source
 
 - NCCN Hematopoietic Growth Factors v3.2026, TGF-2, p25
+- Use of TPO-RA in patients post-hematopoietic cell transplant
 - Applies to thrombocytopenia post-hematopoietic cell transplant
 - All recommendations category 2A unless otherwise indicated
 
@@ -38,21 +39,20 @@ type = "text"
 - ___ (days_post_transplant) days post-hematopoietic cell transplant
 - ___ (transplant_type)
 - Platelet count ___ (platelet_count)
-- Evaluate for other potential causes of thrombocytopenia as indicated
-    - The other potential etiologies listed above (TGF-1)
-    - Primary or secondary graft failure
-    - Graft-versus-host disease (GVHD)
-    - Relapse of hematologic malignancy
-    - Transplant-associated TMA (TA-TMA)
-- ___ (underlying_cause)
+- Underlying cause identified ___ (underlying_cause)
+
+# Evaluate for other potential causes of thrombocytopenia as indicated
+
+- The other potential etiologies of thrombocytopenia listed above
+- Primary or secondary graft failure
+- Graft-versus-host disease (GVHD)
+- Relapse of hematologic malignancy
+- Transplant-associated TMA (TA-TMA)
 
 # Management
 
 - Treat underlying cause(s) as indicated
-
-# Primary or secondary failure of platelet recovery without other clear underlying causes
-
-- Consider
+- Primary or secondary failure of platelet recovery without other clear underlying causes, consider
     - Platelet transfusion per AABB guidelines
     - Clinical trial of TPO-RA
     - Eltrombopag

@@ -3,11 +3,11 @@ id           = "uterine/UTSARC-2"
 gid          = "uterine"
 ref          = "UTSARC-2"
 page         = 46
-title        = "Additional therapy following TH with or without BSO for low-grade ESS and adenosarcoma"
+title        = "Additional therapy following TH with or without BSO for low-grade ESS and adenosarcoma, by sarcomatous overgrowth and stage"
 nccn_version = "3.2026"
 nccn_date    = "06/16/26"
-generated    = "2026-08-27"
-see_also     = ["UTSARC-1", "UTSARC-3", "UTSARC-4", "UN-1"]
+generated    = "2026-08-28"
+see_also     = ["UTSARC-1", "UTSARC-3", "UTSARC-4", "UTSARC-A", "UTSARC-C", "UN-A"]
 
 [facets]
 disease   = "uterine"
@@ -38,51 +38,54 @@ options = ["yes", "no"]
 
 - NCCN Uterine Sarcoma v3.2026, UTSARC-2, p46
 - Applies to additional therapy following TH with or without BSO
-- Reached from primary treatment of low-grade ESS or adenosarcoma (UTSARC-1)
+- Pathologic findings and histologic grade per Principles of Pathology and Molecular Analysis (UTSARC-A 2 of 8)
+- Systemic therapy options: Systemic Therapy (UTSARC-C)
+- Radiation details: Principles of Radiation Therapy for Uterine Neoplasms (UN-A)
 - All recommendations are category 2A unless otherwise indicated
 
 # Assessment
 
 - ___ (age) yo
-- Hysterectomy done, with or without BSO
-- Pathologic findings / histologic grade: ___ (histology)
-    - Principles of Pathology and Molecular Analysis (UTSARC-A 2 of 8)
-    - Low-grade ESS, or adenosarcoma without sarcomatous overgrowth (SO), or adenosarcoma with SO
-- Stage: ___ (stage)
-- BSO already performed at prior surgery: ___ (prior_bso)
-- Residual measurable disease: ___ (residual_disease)
+- TH with or without BSO already performed
+- Pathologic findings and histologic grade ___ (histology)
+    - Graded per Principles of Pathology and Molecular Analysis (UTSARC-A 2 of 8)
+    - Low-grade ESS
+    - Adenosarcoma without sarcomatous overgrowth (SO)
+    - Adenosarcoma with SO
+- Stage ___ (stage)
+    - Stage I
+    - Stage II, III, IVA, IVB
+- BSO already performed at prior surgery ___ (prior_bso)
+- Residual measurable disease ___ (residual_disease)
 
-# Additional therapy, low-grade ESS or adenosarcoma without SO, stage I
+# Additional therapy, low-grade ESS or adenosarcoma without SO
 
-- BSO (preferred)
-- or observe, if prior BSO
+- Stage I
+    - BSO (preferred)
+    - or Observe, if prior BSO
+- Stage II, III, IVA, IVB
+    - BSO
+    - with or without Systemic endocrine therapy
+        - Systemic Therapy (UTSARC-C)
+    - with or without EBRT
+        - Palliative for stage IVB
+        - Category 2B for EBRT for stage II, III, IVA
 
-# Additional therapy, low-grade ESS or adenosarcoma without SO, stage II, III, IVA, IVB
+# Additional therapy, adenosarcoma with SO
 
-- BSO
-- With or without systemic endocrine therapy
-    - Systemic Therapy (UTSARC-C)
-- With or without EBRT
-    - Palliative for stage IVB
-    - Category 2B for EBRT for stage II, III, IVA
-
-# Additional therapy, adenosarcoma with SO, stage I
-
-- BSO
-- or observe, if prior BSO
-
-# Additional therapy, adenosarcoma with SO, stage II, III, IVA, IVB
-
-- BSO
-- Consider systemic therapy
-    - Recommended for residual measurable disease
-    - Systemic Therapy (UTSARC-C)
-- With or without EBRT
-    - Principles of Radiation Therapy for Uterine Neoplasms (UN-A)
-    - Palliative for stage IVB
-    - Category 2B for EBRT for stage II, III, IVA
+- Stage I
+    - BSO
+    - or Observe, if prior BSO
+- Stage II, III, IVA, IVB
+    - BSO
+    - Consider systemic therapy
+        - Recommended for residual measurable disease
+        - Systemic Therapy (UTSARC-C)
+    - with or without EBRT
+        - Principles of Radiation Therapy for Uterine Neoplasms (UN-A)
+        - Palliative for stage IVB
+        - Category 2B for EBRT for stage II, III, IVA
 
 # Next
 
-- Stage I, low-grade ESS or adenosarcoma without SO, after BSO or observation, surveillance (UTSARC-4)
-- Stage I, adenosarcoma with SO, after BSO or observation, surveillance (UTSARC-4)
+- Stage I, after BSO or observation, surveillance (UTSARC-4)

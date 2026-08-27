@@ -7,7 +7,6 @@ title        = "AJCC clinical N (cN) categories for the larynx"
 nccn_version = "2.2026"
 nccn_date    = "05/12/2026"
 generated    = "2026-08-28"
-see_also     = ["ST-8", "ST-10"]
 
 [facets]
 disease   = "head-and-neck"
@@ -41,8 +40,6 @@ options = ["U", "L", "not recorded"]
 - NCCN Head and Neck Cancers v2.2026, ST-9, p137
 - Table 5 continued, American Joint Committee on Cancer (AJCC) TNM Staging System for the Larynx, 8th ed., 2017
 - Regional lymph nodes (N), clinical N (cN) only
-    - Pathological N (pN) for the larynx is on ST-10
-    - Primary tumor (T) for the larynx is on ST-8
 - Does not apply to nonepithelial tumors such as those of lymphoid tissue, soft tissue, bone, and cartilage
 - Used with permission of the American College of Surgeons, Chicago, Illinois; the original source is the AJCC Cancer Staging Manual, Eighth Edition (2017), published by Springer International Publishing
 

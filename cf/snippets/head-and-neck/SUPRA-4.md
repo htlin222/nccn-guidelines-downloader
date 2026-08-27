@@ -36,19 +36,19 @@ options = ["fit", "unfit"]
 # Source
 
 - NCCN Head and Neck Cancers v2.2026, SUPRA-4, p55
-- Applies to cancer of the supraglottic larynx with node-positive disease
-- Clinical staging page: sorts node-positive disease to a treatment pathway
-- Arrived here from Clinical Staging (SUPRA-1)
-- All recommendations category 2A unless otherwise indicated
+- Cancer of the supraglottic larynx
+- Clinical staging of node-positive disease
+- This page only sorts node-positive disease to a treatment pathway; it carries no treatment recommendation of its own
+- All recommendations are category 2A unless otherwise indicated
 
 # Assessment
 
 - ___ (age) yo, cancer of the supraglottic larynx
 - Node-positive disease
 - Clinical stage ___ (ctnm)
-- Amenable to larynx-preserving (conservation) surgery: ___ (conservation_candidate)
-- Nodal disease: ___ (nodal_resectability)
-- Fitness for surgery: ___ (fit_for_surgery)
+- Amenable to larynx-preserving (conservation) surgery ___ (conservation_candidate)
+- Nodal disease ___ (nodal_resectability)
+- Fitness for surgery ___ (fit_for_surgery)
 
 # Clinical staging categories
 
@@ -67,4 +67,7 @@ options = ["fit", "unfit"]
 - Amenable to larynx-preserving (conservation) surgery (T1-2,N+ and selected T3,N1), go to Treatment of Primary and Neck (SUPRA-5)
 - Requiring (amenable to) total laryngectomy (most T3,N1-3), go to Treatment of Primary and Neck (SUPRA-6)
 - T4a,N1-N3, go to Treatment of Primary and Neck (SUPRA-8)
-- T4b,N1-3, or unresectable nodal disease, or unfit for surgery, go to Treatment of Head and Neck Cancer (ADV-1)
+- Go to Treatment of Head and Neck Cancer (ADV-1) for any of the following
+    - T4b, N1-3
+    - or Unresectable nodal disease
+    - or Unfit for surgery

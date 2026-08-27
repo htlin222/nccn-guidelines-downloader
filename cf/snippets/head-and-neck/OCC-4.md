@@ -7,7 +7,7 @@ title        = "Treatment after neck dissection for occult primary, by nodal sta
 nccn_version = "2.2026"
 nccn_date    = "05/12/2026"
 generated    = "2026-08-28"
-see_also     = ["OCC-3", "OCC-A", "SYST-A", "FOLL-A", "ADV-3"]
+see_also     = ["OCC-A", "SYST-A", "NASO-2", "ORPHPV-3", "ORPHPV-4", "FOLL-A", "ADV-3"]
 
 [facets]
 disease   = "head-and-neck"
@@ -32,7 +32,7 @@ type = "text"
 # Source
 
 - NCCN Head and Neck Cancers v2.2026, OCC-4, p79
-- Applies to occult primary after neck dissection (from OCC-3)
+- Applies to occult primary after neck dissection
 - All recommendations are category 2A unless otherwise indicated
 
 # Assessment

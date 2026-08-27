@@ -6,7 +6,7 @@ page         = 18
 title        = "Primary treatment of localized and metastatic giant cell tumor of bone"
 nccn_version = "1.2027"
 nccn_date    = "07/21/2026"
-generated    = "2026-08-27"
+generated    = "2026-08-28"
 see_also     = ["GCTB-1", "GCTB-3"]
 
 [facets]
@@ -36,7 +36,7 @@ options = ["yes", "no"]
 # Source
 
 - NCCN Bone Cancer v1.2027, Giant Cell Tumor of Bone, GCTB-2, p18
-- Applies to giant cell tumor of bone, localized or metastatic at presentation (GCTB-1)
+- Applies to giant cell tumor of bone, localized or metastatic at presentation
 - All recommendations category 2A unless otherwise indicated
 
 # Assessment
@@ -51,13 +51,13 @@ options = ["yes", "no"]
 
 - Excision
     - Intralesional excision with an effective adjuvant may be adequate
-- Then surveillance (GCTB-3)
+- Surveillance (GCTB-3)
 
 # Localized disease, resectable with unacceptable morbidity and/or unresectable axial lesions
 
 - Denosumab (preferred), and/or
     - May be continued until disease progression, in responding disease
-    - Systemic Therapy Agents (BONE-B)
+    - Bone Cancer Systemic Therapy Agents (BONE-B)
     - Consider consultation with dentist prior to initial therapy
 - Serial embolization (preferred), and/or
 - RT, and/or
@@ -69,11 +69,10 @@ options = ["yes", "no"]
 
 - Plain x-rays
 - Contrast-enhanced CT with or without MRI
-- Changes to resectable
-    - Long-term denosumab use may be associated with increased risk of local recurrence
-    - Excision
-    - Then surveillance (GCTB-3)
 - Stable/improved disease
+    - Changes to resectable
+        - Long-term denosumab use may be associated with increased risk of local recurrence
+    - Excision
     - Surveillance (GCTB-3)
 - Stable/improved disease with incomplete healing
     - Remains unresectable
@@ -83,7 +82,7 @@ options = ["yes", "no"]
     - Consider the following options
         - Denosumab (preferred)
             - May be continued until disease progression, in responding disease
-            - Systemic Therapy Agents (BONE-B)
+            - Bone Cancer Systemic Therapy Agents (BONE-B)
             - Consider consultation with dentist prior to initial therapy
         - RT
             - Principles of Radiation Therapy (BONE-C)
@@ -96,12 +95,13 @@ options = ["yes", "no"]
     - For primary tumor, treat as above
     - Consider excision of metastatic sites
         - Intralesional excision with an effective adjuvant may be adequate
-    - Then surveillance (GCTB-3)
+    - Surveillance (GCTB-3)
 - Unresectable
+    - For primary tumor, treat as above
     - Consider the following options
         - Denosumab (preferred)
             - May be continued until disease progression, in responding disease
-            - Systemic Therapy Agents (BONE-B)
+            - Bone Cancer Systemic Therapy Agents (BONE-B)
             - Consider consultation with dentist prior to initial therapy
         - RT
             - Principles of Radiation Therapy (BONE-C)
@@ -109,7 +109,8 @@ options = ["yes", "no"]
 
 # Next
 
-- Excision done, go to surveillance (GCTB-3)
-- Stable/improved disease, go to surveillance (GCTB-3)
+- Excision performed, go to surveillance (GCTB-3)
+- Stable/improved disease that changes to resectable, excise, then go to surveillance (GCTB-3)
+- Stable/improved disease with incomplete healing that remains unresectable, go to surveillance (GCTB-3)
 - Progressive disease, consider denosumab, RT, or observation as above
-- Local or metastatic recurrence later, see GCTB-3
+- Metastatic sites excised, go to surveillance (GCTB-3)

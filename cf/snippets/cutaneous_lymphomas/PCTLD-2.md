@@ -6,14 +6,14 @@ page         = 49
 title        = "Workup of primary cutaneous anaplastic large cell lymphoma (PC-ALCL)"
 nccn_version = "2.2026"
 nccn_date    = "02/13/26"
-generated    = "2026-08-27"
+generated    = "2026-08-28"
 see_also     = ["PCTLD-1", "PCTLD-4"]
 
 [facets]
 disease   = "cutaneous_lymphomas"
 histology = "t-cell"
 biomarker = "cd30"
-timepoint = ["workup", "staging"]
+timepoint = "workup"
 
 [[variables]]
 name = "age"
@@ -50,7 +50,7 @@ type = "text"
 # Source
 
 - NCCN Primary Cutaneous CD30+ T-Cell Lymphoproliferative Disorders v2.2026, PCTLD-2, p49
-- Applies to PC-ALCL identified at diagnosis (PCTLD-1)
+- Workup of PC-ALCL
 - All recommendations are category 2A unless otherwise indicated
 
 # Assessment

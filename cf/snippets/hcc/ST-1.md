@@ -3,11 +3,11 @@ id           = "hcc/ST-1"
 gid          = "hcc"
 ref          = "ST-1"
 page         = 30
-title        = "AJCC TNM staging and prognostic groups for hepatocellular cancer"
+title        = "AJCC TNM definitions and prognostic groups for hepatocellular cancer"
 nccn_version = "1.2026"
 nccn_date    = "03/10/26"
-generated    = "2026-08-27"
-see_also     = ["ST-2", "HCC-1", "HCC-2"]
+generated    = "2026-08-28"
+see_also     = ["HCC-1", "HCC-2"]
 
 [facets]
 disease   = "hcc"
@@ -56,16 +56,17 @@ type = "text"
 
 - NCCN Hepatocellular Carcinoma v1.2026, ST-1, p30
 - American Joint Committee on Cancer (AJCC) TNM staging for hepatocellular cancer, 8th ed., 2017
-- Table 1 defines T, N, M; Table 2 gives the prognostic groups
-- Used with permission of the American College of Surgeons; original source is the AJCC Cancer Staging Manual, Eighth Edition (2017)
-- Table continues on ST-2
+- Table 1 gives the definitions for T, N, M; Table 2 gives the AJCC prognostic groups
+- Used with permission of the American College of Surgeons, Chicago, Illinois
+- Original source is the AJCC Cancer Staging Manual, Eighth Edition (2017), published by Springer International Publishing
+- Table continued on the following page
 
 # Assessment
 
 - ___ (tumor_count) tumor(s)
 - Largest tumor ___ (largest_size) cm
 - Vascular invasion ___ (vascular_invasion)
-- Major branch of portal or hepatic vein involved ___ (major_vein)
+- Major branch of portal vein or hepatic vein involved ___ (major_vein)
 - Direct invasion of adjacent organs, or perforation of visceral peritoneum ___ (adjacent_organ)
 - T ___ (t_category) / N ___ (n_category) / M ___ (m_category)
 - Prognostic group ___ (stage_group)
@@ -104,8 +105,8 @@ type = "text"
 - Stage II, T2 N0 M0
 - Stage IIIA, T3 N0 M0
 - Stage IIIB, T4 N0 M0
-- Stage IVA, any T N1 M0
-- Stage IVB, any T any N M1
+- Stage IVA, any T, N1, M0
+- Stage IVB, any T, any N, M1
 
 # Histologic grade (G)
 
@@ -121,7 +122,3 @@ type = "text"
 - The scoring system uses a 0-6 scale
 - F0, fibrosis score 0-4 (none to moderate fibrosis)
 - F1, fibrosis score 5-6 (severe fibrosis or cirrhosis)
-
-# Next
-
-- Staging table continued, go to ST-2

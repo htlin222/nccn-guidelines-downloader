@@ -6,13 +6,13 @@ page         = 56
 title        = "First-line therapy and response assessment for SPTCL with HLH, systemic disease, or high tumor burden"
 nccn_version = "2.2026"
 nccn_date    = "02/13/26"
-generated    = "2026-08-27"
+generated    = "2026-08-28"
 see_also     = ["SPTCL-1", "SPTCL-3"]
 
 [facets]
 disease   = "cutaneous_lymphomas"
 histology = "t-cell"
-timepoint = ["primary-treatment", "maintenance", "relapsed-refractory", "transplant"]
+timepoint = ["primary-treatment", "maintenance", "transplant", "relapsed-refractory"]
 
 [[variables]]
 name = "hlh"
@@ -44,16 +44,15 @@ options = ["CR", "PR", "inadequate response", "relapse", "refractory"]
 # Source
 
 - NCCN Subcutaneous Panniculitis-Like T-Cell Lymphoma v2.2026, SPTCL-2, p56
-- Applies to SPTCL with HLH, systemic disease, or high tumor burden (widespread subcutaneous disease)
-- SPTCL without HLH and low tumor burden (localized or limited subcutaneous disease) is handled on SPTCL-3
-- Diagnosis and workup: SPTCL-1
+- Clinical presentation this page covers: SPTCL with HLH, systemic disease, or high tumor burden (widespread subcutaneous disease)
+- SPTCL without HLH and low tumor burden (localized or limited subcutaneous disease) is on SPTCL-3
 - All recommendations are category 2A unless otherwise indicated
 
 # Assessment
 
 - HLH: ___ (hlh)
 - Systemic disease: ___ (systemic_disease)
-- Tumor burden: ___ (tumor_burden)
+- Tumor burden (widespread versus localized or limited subcutaneous disease): ___ (tumor_burden)
 - Eligible for transplant: ___ (transplant_eligible)
 - First-line regimen given: ___ (first_line_regimen)
 - Prior therapies: ___ (prior_therapies)
@@ -78,18 +77,20 @@ options = ["CR", "PR", "inadequate response", "relapse", "refractory"]
     - ESHA + platinum (cisplatin or oxaliplatin)
     - ICE
 
-# Response assessment and additional therapy: CR or PR
+# Response assessment and additional therapy
 
-- Observation
-- or Maintenance therapy with single agents
-    - Patients with disease achieving a clinical benefit and/or those with disease responding to first-line therapy should be considered for maintenance or tapering of regimens to optimize response duration
-    - Cyclosporine
-    - Pralatrexate
-    - Romidepsin
-    - Methotrexate (PO/SC/IM)
-    - Bexarotene (PO)
-- or Consider allogeneic HCT in selected patients
-- On relapse after CR or PR, retreat with same regimen or alternate regimen not used in first-line therapy
+- CR or PR
+    - Observation
+    - or Maintenance therapy with single agents
+        - Patients with disease achieving a clinical benefit and/or those with disease responding to first-line therapy should be considered for maintenance or tapering of regimens to optimize response duration
+        - Cyclosporine
+        - Pralatrexate
+        - Romidepsin
+        - Methotrexate (PO/SC/IM)
+        - Bexarotene (PO)
+    - or Consider allogeneic HCT in selected patients
+- Relapse after CR or PR
+    - Retreat with same regimen or alternate regimen not used in first-line therapy
 
 # Inadequate response, or relapse or refractory disease after multiple previous therapies
 
@@ -99,8 +100,5 @@ options = ["CR", "PR", "inadequate response", "relapse", "refractory"]
 
 # Next
 
-- CR or PR, observation or maintenance therapy with single agents, or consider allogeneic HCT in selected patients
-- Relapse after CR or PR, retreat with same regimen or alternate regimen not used in first-line therapy
-- Inadequate response, use the clinical trial / allogeneic HCT / alternate regimen options above
-- Relapse or refractory disease after multiple previous therapies, use the same options above
-- SPTCL without HLH and low tumor burden, go to SPTCL-3
+- SPTCL without HLH and low tumor burden (localized or limited subcutaneous disease), go to SPTCL-3
+- Alternate regimens for inadequate response or for relapsed or refractory disease after multiple previous therapies, see PTCL-B 2 of 8

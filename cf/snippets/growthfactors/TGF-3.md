@@ -3,7 +3,7 @@ id           = "growthfactors/TGF-3"
 gid          = "growthfactors"
 ref          = "TGF-3"
 page         = 26
-title        = "Footnotes governing use of TPO-RA for CIT and for post-transplant thrombocytopenia"
+title        = "Footnotes governing use of TPO-RA for chemotherapy-induced thrombocytopenia and for post-transplant thrombocytopenia"
 nccn_version = "3.2026"
 nccn_date    = "12/05/25"
 generated    = "2026-08-28"
@@ -39,7 +39,7 @@ type = "text"
 # Source
 
 - NCCN Hematopoietic Growth Factors v3.2026, TGF-3, p26
-- Footnotes for the use of TPO-RA algorithms (TGF-1, TGF-2)
+- Footnotes for the use of TPO-RA
 - All recommendations category 2A unless otherwise indicated
 
 # Assessment
@@ -63,11 +63,9 @@ type = "text"
     - To maintain dose schedule and intensity of chemotherapy
     - Only when such benefit is thought to outweigh potential risks
 - Participation in clinical trials is strongly encouraged whenever possible
-- Agent choice
-    - Romiplostim
-    - Other TPO-RA agonists, including avatrombopag, have been evaluated in studies
-        - Insufficient data from these studies to recommend these agents
-        - Additional prospective studies are needed to determine safety, efficacy, and benefits of TPO-RA agonists
+- Other TPO-RA agonists, including avatrombopag, have been evaluated in studies
+    - Insufficient data from these studies to recommend these agents
+    - Additional prospective studies are needed to determine safety, efficacy, and benefits of TPO-RA agonists
 - Insufficient data are available to support routine use of TPO-RAs for CIT in pediatric patients
 
 # Romiplostim dosing for CIT

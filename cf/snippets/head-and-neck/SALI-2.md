@@ -3,7 +3,7 @@ id           = "head-and-neck/SALI-2"
 gid          = "head-and-neck"
 ref          = "SALI-2"
 page         = 83
-title        = "Resection by cancer site and T category, and the pathology result that directs adjuvant RT"
+title        = "Primary treatment of a salivary gland tumor by cancer site and stage, and the pathology result that decides adjuvant RT"
 nccn_version = "2.2026"
 nccn_date    = "05/12/2026"
 generated    = "2026-08-28"
@@ -21,8 +21,9 @@ name = "site"
 type = "enum"
 options = ["parotid gland", "other salivary glands"]
 [[variables]]
-name = "t_category"
-type = "text"
+name = "stage"
+type = "enum"
+options = ["clinically benign", "T1", "T2", "T3", "T4a", "T4b"]
 [[variables]]
 name = "pathology"
 type = "text"
@@ -31,8 +32,8 @@ type = "text"
 # Source
 
 - NCCN Head and Neck Cancers v2.2026, SALI-2, p83
-- Applies to a salivary gland tumor arriving from workup (SALI-1), clinically benign or carcinoma
-- Branches on cancer site and T category, then on the pathology result after resection
+- Applies to a salivary gland tumor presenting for primary treatment
+- Branches first on cancer site and stage, then on the pathology result after complete resection
 - All recommendations are category 2A unless otherwise indicated
 
 # Assessment
@@ -41,9 +42,9 @@ type = "text"
 - Cancer site ___ (site)
     - Parotid gland
     - Other salivary glands
-- ___ (t_category)
-- Clinically benign
-    - Characteristics of a benign tumor include mobile superficial lobe
+- Stage ___ (stage)
+- If clinically benign, confirm the characteristics of a benign tumor
+    - Mobile superficial lobe
     - Slow growth
     - Painless
     - V and/or VII intact
@@ -54,21 +55,24 @@ type = "text"
 
 - Complete resection
     - Resection of a clinically benign tumor includes no enucleation of lateral lobe
-    - Intraoperative communication with pathologist if indicated
-    - If incidental N+ disease is present, go to SALI-3
+    - Resection of a clinically benign tumor includes intraoperative communication with pathologist if indicated
+- If incidental N+ disease is present, go to SALI-3
 
 # Pathology result after complete resection
 
-- Benign or low grade
+- Benign
     - Follow-up as clinically indicated
+- Low grade
     - If tumor spillage or perineural invasion, consider RT (SALI-A)
-- Adenoid cystic, or intermediate or high grade
+- Adenoid cystic
+    - RT (SALI-A)
+- Intermediate or high grade
     - RT (SALI-A)
 
 # T3, T4a
 
 - Surgical evaluation
-- Cancer site treatment (SALI-3)
+- Treatment by cancer site (SALI-3)
 
 # T4b
 
@@ -78,7 +82,8 @@ type = "text"
 
 # Next
 
-- Follow-up (FOLL-A, 1 of 2)
-- Recurrent or persistent disease, go to SALI-4
+- After treatment of low grade, adenoid cystic, or intermediate or high grade disease
+    - Follow-up (FOLL-A, 1 of 2)
+    - Recurrent or persistent disease, go to SALI-4
 - T3, T4a, go to SALI-3
 - Incidental N+ disease, go to SALI-3

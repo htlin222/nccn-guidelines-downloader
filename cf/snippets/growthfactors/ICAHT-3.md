@@ -3,7 +3,7 @@ id           = "growthfactors/ICAHT-3"
 gid          = "growthfactors"
 ref          = "ICAHT-3"
 page         = 30
-title        = "References supporting the pre-treatment and post-treatment ICAHT recommendations"
+title        = "Reference list for the pre-treatment/post-treatment evaluation and assessment of suspected ICAHT"
 nccn_version = "3.2026"
 nccn_date    = "12/05/25"
 generated    = "2026-08-28"
@@ -22,13 +22,13 @@ options = ["pre-treatment", "post-treatment"]
 # Source
 
 - NCCN Hematopoietic Growth Factors v3.2026, ICAHT-3, p30
-- Reference list for the pre-treatment/post-treatment evaluation and assessment of suspected ICAHT
-- Carries no recommendations of its own; the recommendations these references support are on ICAHT-1 and ICAHT-2
+- References for pre-treatment/post-treatment evaluation and assessment of suspected ICAHT
+- This page is the reference list only; it carries no recommendation of its own
 - All recommendations category 2A unless otherwise indicated
 
 # Assessment
 
-- ICAHT evaluation being checked: ___ (evaluation_stage)
+- Evaluation being looked up: ___ (evaluation_stage)
 
 # References
 
@@ -51,8 +51,3 @@ options = ["pre-treatment", "post-treatment"]
 - 17 Mingot-Castellano ME, Reguera-Ortega JL, Torres DZ, et al. Use of eltrombopag to improve thrombocytopenia and transfusion requirement in anti-CD19 CAR-T Cell-Treated Patients. J Clin Med 2024;13:5117.
 - 18 Beyar-Katz O, Perry C, On YB, et al. Thrombopoietin receptor agonist for treating bone marrow aplasia following anti-CD19 CAR-T cells-single-center experience. Ann Hematol 2022;101:1769-1776.
 - 19 Drillet G, Lhomme F, De Guibert S, et al. Prolonged thrombocytopenia after CAR T-cell therapy: the role of thrombopoietin receptor agonists. Blood Adv 2023;7:537-540.
-
-# Next
-
-- Pre-treatment risk evaluation and prophylactic intervention, go to ICAHT-1
-- Post-treatment assessment of suspected ICAHT, go to ICAHT-2

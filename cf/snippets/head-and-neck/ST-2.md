@@ -3,7 +3,7 @@ id           = "head-and-neck/ST-2"
 gid          = "head-and-neck"
 ref          = "ST-2"
 page         = 130
-title        = "AJCC pathological N, distant metastasis, grade, and prognostic stage groups for the oral cavity"
+title        = "AJCC pathological N, distant metastasis, histologic grade, and prognostic stage groups for the oral cavity"
 nccn_version = "2.2026"
 nccn_date    = "05/12/2026"
 generated    = "2026-08-28"
@@ -54,7 +54,7 @@ type = "text"
 
 - NCCN Head and Neck Cancers v2.2026, ST-2, p130
 - Table 1 continued, American Joint Committee on Cancer (AJCC) TNM Staging Classification for the Oral Cavity (including mucosa of lip), 8th ed., 2017
-- Covers pathological N (pN), distant metastasis (M), histologic grade (G), and prognostic stage groups; primary tumor (T) and clinical N are on ST-1
+- Covers pathological N (pN), distant metastasis (M), histologic grade (G), and prognostic stage groups
 - Does not apply to nonepithelial tumors such as those of lymphoid tissue, soft tissue, bone, and cartilage
 - Does not apply to mucosal melanoma
 - Does not apply to cutaneous squamous cell carcinoma of the vermilion lip
@@ -62,7 +62,7 @@ type = "text"
 
 # Assessment
 
-- T category (ST-1): ___ (t_category)
+- T category: ___ (t_category)
 - Largest involved node, greatest dimension: ___ (node_size)
 - Number of involved nodes: ___ (node_number)
 - Nodal laterality: ___ (node_laterality)
