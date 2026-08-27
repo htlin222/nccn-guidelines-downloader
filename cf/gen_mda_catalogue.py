@@ -19,6 +19,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.request
 
 INDEX_URL = (
@@ -34,6 +35,12 @@ INDEX_URL = (
 # Scoping to *this page's links* is what keeps the sibling …/cancer-treatment/
 # family out; links into that set stay external (see the design doc).
 ALGO_ROOT = "/content/dam/mdanderson/documents/for-physicians/algorithms/"
+# 跟 refresh_mda.sh 同一個 UA。裸的 "Mozilla/5.0" 在 NCCN 那邊被 Cloudflare
+# 直接擋掉過（commit a1dd4f4），沒有理由在這裡再賭一次。
+UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -64,10 +71,26 @@ LINK_RE = re.compile(
 TAG_RE = re.compile(r"<[^>]+>")
 
 
-def fetch(url):
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return r.read().decode("utf-8", "replace")
+# 索引頁是動態產生的，而且慢得不像話：實測從家用網路要 53 秒才回第一個 byte，
+# 從 GitHub runner 更久。原本 timeout=60 就是踩在這條線上，於是 2026-08-10、
+# 08-17、08-24 連續三輪每月排程全部 TimeoutError 掛在第一步——一份 PDF 都沒抓到。
+# （PDF 本身走 CDN，實測 2 秒，不受影響，所以只有這裡需要放寬。）
+#
+# 放寬 timeout 還不夠：慢到這個程度的來源偶爾就是會斷。所以退避重試，而且刻意
+# 不吞掉最後一次的例外——抓不到索引頁時整支必須紅，不能安靜地拿舊目錄當新的。
+def fetch(url, timeout=180, tries=3):
+    last = None
+    for n in range(tries):
+        if n:
+            time.sleep(5 * n)  # 5s, 10s
+        req = urllib.request.Request(url, headers={"User-Agent": UA})
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.read().decode("utf-8", "replace")
+        except Exception as e:  # noqa: BLE001 — 逾時、連線重置、5xx 都重試
+            last = e
+            print("fetch failed (%d/%d): %s" % (n + 1, tries, e), file=sys.stderr)
+    raise last
 
 
 def untag(s):
