@@ -77,6 +77,11 @@ document.documentElement.dataset.inv=(d&&localStorage.getItem('nccninv')!=='0')?
     background:hsl(var(--background)/.8);border-bottom:1px solid hsl(var(--border));}
   .wrap{max-width:1180px;margin:0 auto;padding:0 20px;}
   .htop{display:flex;align-items:center;gap:14px;padding:14px 0 12px;}
+  .navlink{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 13px;border-radius:10px;
+    text-decoration:none;font-size:.84rem;font-weight:600;white-space:nowrap;
+    background:transparent;border:1px solid hsl(var(--border));color:hsl(var(--foreground));}
+  .navlink:hover{background:hsl(var(--accent));}
+  @media(max-width:560px){.navlink span{display:none;}}
   .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.12rem;letter-spacing:-.01em;}
   .brand .logo{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;
     background:hsl(var(--primary));color:hsl(var(--primary-foreground));font-size:16px;}
@@ -225,6 +230,7 @@ ${TOAST_CSS}
     <div class="htop">
       <div class="brand"><span class="logo" id="logo"></span><span><span id="brandName">NCCN Guidelines</span><small id="sub">${GUIDELINES.length} 份 · R2 · PWA</small></span></div>
       <div class="spacer"></div>
+      <a class="navlink" href="/notes" title="門診核對清單">📋<span>臨床筆記</span></a>
       <button class="iconbtn" id="bell" title="通知"></button>
       <button class="iconbtn" id="settings" title="設定"></button>
       <button class="iconbtn" id="theme" title="切換主題"></button>

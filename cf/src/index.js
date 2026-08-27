@@ -52,6 +52,8 @@ import { API_PREFIX, handleApi } from "./lib/api.js";
 import { listKeys, mintKey, revokeKey } from "./lib/apikey.js";
 import { SKILL_FILENAME, buildSkillZip } from "./lib/skillpack.js";
 import { renderPage } from "./views/home.js";
+import { renderNotes } from "./views/notes.js";
+import { buildSearch, parseQuery, rankRows } from "./lib/notes.js";
 import { renderViewer } from "./views/viewer.js";
 import { faviconResponse, manifestResponse, SW_JS } from "./views/static.js";
 
@@ -75,6 +77,52 @@ export default {
 
 		if (pathname === "/" || pathname === "/index.html")
 			return html(renderPage(request));
+
+		// 臨床筆記：門診核對清單的瀏覽與檢索（issue #4）。跟 /api/v1 不同，這條
+		// 路徑留在 Cloudflare Access 後面——它是給人用的頁面，不是給 token 用的。
+		if (pathname === "/notes") return html(renderNotes(request));
+
+		if (pathname === "/api/notes") {
+			const q = url.searchParams.get("q") || "";
+			try {
+				// 別名表每次從 D1 讀。它是手寫檔，改完 load_snippets.sh 一跑就該生效，
+				// 不值得為了省一次查詢而讓「改了字典卻沒反應」變成一種可能。
+				const al = await env.DB.prepare(
+					"SELECT axis, alias, value FROM facet_alias",
+				).all();
+				const alias = {};
+				for (const r of al.results || []) {
+					(alias[r.axis] = alias[r.axis] || {})[r.alias] = r.value;
+				}
+				const parsed = parseQuery(q, alias);
+				const { sql, binds } = buildSearch(parsed, 80);
+				const res = await env.DB.prepare(sql)
+					.bind(...binds)
+					.all();
+				return json({
+					rows: rankRows(res.results || []),
+					facets: parsed.facets,
+					text: parsed.text,
+				});
+			} catch (e) {
+				return json({ rows: [], error: String(e && e.message) }, 500);
+			}
+		}
+
+		if (pathname.startsWith("/api/notes/")) {
+			const [, , , gid, ref] = pathname.split("/");
+			if (!gid || !ref) return json({ error: "bad path" }, 400);
+			try {
+				const row = await env.DB.prepare(
+					"SELECT gid, ref, title, body, page, version, review FROM snippets WHERE gid=? AND ref=?",
+				)
+					.bind(decodeURIComponent(gid), decodeURIComponent(ref))
+					.first();
+				return row ? json(row) : json({ error: "not found" }, 404);
+			} catch (e) {
+				return json({ error: String(e && e.message) }, 500);
+			}
+		}
 		if (pathname === "/manifest.webmanifest") return manifestResponse();
 		if (pathname === "/favicon.svg" || pathname === "/favicon.ico")
 			return faviconResponse();
