@@ -1,10 +1,12 @@
 #!/bin/bash
 # Generate first-page thumbnails for every cached PDF and upload to R2 as
-# thumb/<id>.webp. Pulls PDFs from R2 (already seeded) — does NOT hit NCCN.
+# thumb/<id>.webp. PDF 走 lib.sh 的 fetch_clean（同一輪 gen_clean.sh 留下的本機
+# 檔優先，否則讀 R2）— does NOT hit NCCN.
 # Covers both catalogues: pdftoppm does not care where the PDF came from.
 set -u
 cd "$(dirname "$0")"
 [ -f ../.env ] && set -a && . ../.env && set +a  # load token if present
+. ./lib.sh
 BUCKET="nccn-pdfs"
 IDS=$(python3 -c "import json;print('\n'.join(g['id'] for f in ('guidelines.json','algorithms.json') for g in json.load(open(f))))")
 WORK=$(mktemp -d)
@@ -13,7 +15,7 @@ ok=0; fail=0; i=0; total=$(echo "$IDS" | wc -l | tr -d ' ')
 for id in $IDS; do
   i=$((i+1))
   pdf="$WORK/$id.pdf"; png="$WORK/$id"; webp="$WORK/$id.webp"
-  if ! wrangler r2 object get "$BUCKET/$id.pdf" --file="$pdf" --remote >/dev/null 2>&1; then
+  if ! fetch_clean "$id" "$pdf"; then
     fail=$((fail+1)); echo "[$i/$total] GET-FAIL $id" | tee -a "$LOG"; continue
   fi
   # first page -> png (width 480), then webp q80

@@ -3,7 +3,7 @@
 # and publish it to R2 as meta/toc/<id>.json. The Discussion pages are labelled
 # "MS-N" in the footer (bottom-right); we map MS-N -> physical PDF page by the
 # per-page footer label, then parse the Discussion TOC (2-column, -layout) into
-# {title, ms, page, level}. Pulls PDFs from R2 — does NOT hit NCCN.
+# {title, ms, page, level}. PDF 走 lib.sh 的 fetch_clean — does NOT hit NCCN.
 # Set ONLY=<id> to process a single guideline (debug).
 #
 # NCCN only — deliberately reads guidelines.json and not algorithms.json. A
@@ -13,6 +13,7 @@ set -u
 cd "$(dirname "$0")"
 [ -f ../.env ] && set -a && . ../.env && set +a
 del(){ command rip "$@" 2>/dev/null || find "$@" -delete 2>/dev/null; }
+. ./lib.sh
 BUCKET="nccn-pdfs"
 ONLY="${ONLY:-}"
 WORK=$(mktemp -d)
@@ -24,7 +25,7 @@ ok=0; none=0; i=0; total=$(echo "$IDS" | wc -w | tr -d ' ')
 for id in $IDS; do
   i=$((i+1))
   pdf="$WORK/x.pdf"; [ -f "$pdf" ] && del "$pdf" 2>/dev/null
-  wrangler r2 object get "$BUCKET/$id.pdf" --file="$pdf" --remote >/dev/null 2>&1
+  fetch_clean "$id" "$pdf"
   [ -f "$pdf" ] || { echo "[$i] GET-FAIL $id" | tee -a "$LOG"; continue; }
   pdftotext -layout "$pdf" "$WORK/t.txt" 2>/dev/null
   n=$(python3 build_toc.py "$WORK/t.txt" "$WORK/out.json" "$id")

@@ -20,8 +20,11 @@ LOG="build_index.log"; : > "$LOG"
 del(){ command rip "$@" 2>/dev/null || find "$@" -delete 2>/dev/null; }
 
 python3 - "$WORK" "$LIMIT" <<'PY'
-import sys, os, json, subprocess, re
+import sys, os, json, shutil, subprocess, re
 work, limit = sys.argv[1], int(sys.argv[2])
+# gen_clean.sh 這一輪剝好的 PDF 就在這裡，優先用它——理由見 lib.sh 的 fetch_clean。
+# mda- 的 id 永遠不會出現在裡面（gen_clean.sh 只跑 guidelines.json），自動走 R2。
+clean_dir = os.environ.get('CLEAN_DIR', '')
 guides = json.load(open('guidelines.json')) + json.load(open('algorithms.json'))
 if limit > 0: guides = guides[:limit]
 chunk, cn, size = [], 0, 0
@@ -67,7 +70,11 @@ for gi, g in enumerate(guides, 1):
     gid, name, cat = g['id'], g['name'], g['cat']
     pdf = os.path.join(work, 'x.pdf')
     if os.path.exists(pdf): os.remove(pdf)
-    subprocess.run(['wrangler','r2','object','get',f'nccn-pdfs/{gid}.pdf','--file='+pdf,'--remote'], capture_output=True)
+    local_pdf = os.path.join(clean_dir, gid + '.pdf') if clean_dir else ''
+    if local_pdf and os.path.exists(local_pdf) and os.path.getsize(local_pdf) > 0:
+        shutil.copyfile(local_pdf, pdf)
+    else:
+        subprocess.run(['wrangler','r2','object','get',f'nccn-pdfs/{gid}.pdf','--file='+pdf,'--remote'], capture_output=True)
     if not os.path.exists(pdf):
         print(f'[{gi}] GET-FAIL {gid}'); continue
     txt = subprocess.run(['pdftotext','-enc','UTF-8',pdf,'-'], capture_output=True).stdout.decode('utf-8','ignore')

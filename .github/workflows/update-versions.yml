@@ -51,11 +51,44 @@ jobs:
             || { echo "::error::token cannot read D1 (needs D1: Edit)"; exit 1; }
           echo "token reaches both R2 and D1"
 
+      # Banner-free copies for slide-making. Deterministic: strips only the two
+      # content streams NCCN stamps on each page, keeps the source /ID, and skips
+      # ids whose source PDF hasn't changed (sha256 tracked in meta/clean.json).
+      #
+      # 這一步必須排在所有「衍生資料」之前。它把 raw/<id>.pdf 剝掉橫幅後覆寫根物件
+      # <id>.pdf，而下面每一步都是從根物件推導出來的。它以前排在最後，結果是徽章、
+      # 縮圖、搜尋索引、TOC、updates 全部比實際發出去的 PDF 慢整整一輪——實測：
+      # breast 在 2026-08-03 那輪就已經換成 v6.2026 的 PDF，versions.json 卻要到
+      # 8/6 手動補跑才記錄 v5→v6。
+      #
+      # 剝好的 PDF 同時留一份在 CLEAN_DIR，下游直接讀本機檔。不能讓它們回頭去 R2
+      # 重抓：讀取要穿過約 4 小時的快取，剛覆寫完馬上重讀很可能拿回舊 bytes
+      # （CLAUDE.md §6），那等於換個方式重現同一個 bug。順帶省掉四輪全目錄下載。
+      #
+      # continue-on-error 不是放水，紅還是會紅——只是延到最後的 Verify 才算帳。
+      # gen_clean.sh 的守門是 `fail -eq 0`：**任何一個** id 失敗就整支非零。它以前
+      # 排在最後，紅了無所謂；排到最前面就不一樣了——NCCN cookie 過期時 raw/ 會被
+      # 寫進登入頁的 HTML，gen_clean 認出 NOT-PDF 而失敗，若就地中止，整週的徽章、
+      # 縮圖、索引、TOC、updates 全部一起停擺。失敗的 id 不會進 CLEAN_DIR，下游對
+      # 它們自動退回讀 R2，也就是它們原本的行為，資料仍跟線上服務的那份一致。
+      - name: Build banner-free PDFs → R2
+        id: clean
+        continue-on-error: true
+        working-directory: cf
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+          CLEAN_DIR: ${{ runner.temp }}/clean
+        run: |
+          python3 -m pip install --quiet --upgrade pymupdf
+          bash gen_clean.sh
+
       - name: Extract versions → R2
         working-directory: cf
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+          CLEAN_DIR: ${{ runner.temp }}/clean
         run: bash gen_versions.sh
 
       - name: Regenerate first-page thumbnails → R2
@@ -63,6 +96,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+          CLEAN_DIR: ${{ runner.temp }}/clean
         run: sudo apt-get install -y webp && bash gen_thumbs.sh
 
       - name: Build full-text search index → D1
@@ -70,6 +104,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+          CLEAN_DIR: ${{ runner.temp }}/clean
         run: bash build_index.sh
 
       - name: Extract Discussion TOC → R2
@@ -77,6 +112,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+          CLEAN_DIR: ${{ runner.temp }}/clean
         run: bash build_toc.sh
 
       # 每一版改了什麼，逐條拆好存成 meta/updates/<id>.json。/api/v1/updates 直接
@@ -86,19 +122,8 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+          CLEAN_DIR: ${{ runner.temp }}/clean
         run: bash build_updates.sh
-
-      # Banner-free copies for slide-making. Deterministic: strips only the two
-      # content streams NCCN stamps on each page, keeps the source /ID, and skips
-      # ids whose source PDF hasn't changed (sha256 tracked in meta/clean.json).
-      - name: Build banner-free PDFs → R2
-        working-directory: cf
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
-        run: |
-          python3 -m pip install --quiet --upgrade pymupdf
-          bash gen_clean.sh
 
       # Every step above can pass on its own terms and still leave the site
       # wrong, so check the things a reader actually sees: a populated index, a
@@ -110,6 +135,9 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
         run: |
           set -e
+          # gen_clean 的失敗延到這裡才算帳（見那一步的註解）。
+          [ "${{ steps.clean.outcome }}" = "success" ] \
+            || { echo "::error::gen_clean.sh 有失敗的 id — 見上面的 log；那些 id 這一輪仍是舊的乾淨檔"; exit 1; }
           # 兩個分母，因為兩個產物涵蓋的範圍本來就不同：
           #   versions.json 兩邊都有（索引、縮圖、版本都跨來源）
           #   clean.json    只有 NCCN——MDA 的 PDF 沒有 banner 要剝，gen_clean.sh

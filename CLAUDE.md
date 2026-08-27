@@ -143,7 +143,7 @@ everything else still demands a login. Two things to keep straight:
 
 ```bash
 cd cf && pnpm install
-pnpm test            # 265 tests — pure helpers, plus an end-to-end pass over /api/v1
+pnpm test            # 284 tests — pure helpers, plus an end-to-end pass over /api/v1
 pnpm run deploy      # = bash deploy.sh
 ```
 
@@ -212,12 +212,12 @@ Order matters; each step is a script in `cf/`:
 
 1. **Check the token** — proves it can reach both R2 and D1, and fails the run on
    step 1 rather than doing five useless passes.
-2. `gen_versions.sh` → `meta/versions.json` (the version badges)
-3. `gen_thumbs.sh` → `thumb/<id>.webp`
-4. `build_index.sh` → the D1 FTS5 index
-5. `build_toc.sh` → `meta/toc/<id>.json`
-6. `build_updates.sh` → `meta/updates/<id>.json` (what changed in this version)
-7. `gen_clean.sh` → banner-free `<id>.pdf` at the bucket root + `meta/clean.json`
+2. `gen_clean.sh` → banner-free `<id>.pdf` at the bucket root + `meta/clean.json`
+3. `gen_versions.sh` → `meta/versions.json` (the version badges)
+4. `gen_thumbs.sh` → `thumb/<id>.webp`
+5. `build_index.sh` → the D1 FTS5 index
+6. `build_toc.sh` → `meta/toc/<id>.json`
+7. `build_updates.sh` → `meta/updates/<id>.json` (what changed in this version)
 8. **Verify the result** — index row count, `page_text` row count matching it, and
    that both manifests cover the catalogue. A step can pass on its own terms and
    still leave the site wrong.
@@ -233,9 +233,35 @@ visible on the home page.
 Run it by hand: `gh workflow run update-versions.yml`, then
 `gh run watch $(gh run list --workflow=update-versions.yml --limit 1 --json databaseId -q '.[0].databaseId')`.
 
-Steps 2–4 (`gen_versions.sh`, `gen_thumbs.sh`, `build_index.sh`) cover **both**
-catalogues. Steps 5–7 (`build_toc.sh`, `build_updates.sh`, `gen_clean.sh`) are
-NCCN-only by design — see §5.7.
+Steps 3–5 (`gen_versions.sh`, `gen_thumbs.sh`, `build_index.sh`) cover **both**
+catalogues. Steps 2, 6 and 7 (`gen_clean.sh`, `build_toc.sh`, `build_updates.sh`)
+are NCCN-only by design — see §5.7.
+
+**`gen_clean.sh` runs first, and that ordering is load-bearing.** It is the step
+that writes the root object `<id>.pdf`; every step after it derives from that
+object. It used to run *last*, which meant each week's badges, thumbnails, search
+index, TOC and updates all described the **previous** week's PDF — measured:
+breast shipped v6.2026 in the 2026-08-03 run and `versions.json` still said
+v5.2026 until a manual dispatch on 08-06 happened to catch up.
+
+Reordering alone is not enough. R2 reads sit behind a ~4 hour cache (§6), so a
+downstream step that re-reads the object `gen_clean.sh` just overwrote can get
+the pre-write bytes back — the same bug wearing a different hat. So `gen_clean.sh`
+also leaves each stripped PDF in `CLEAN_DIR`, and every downstream step prefers
+that local file (`fetch_clean` in `cf/lib.sh`; the same rule is reimplemented in
+`build_index.sh`'s Python half). It saves four full-catalogue downloads as well.
+
+Ids that `gen_clean.sh` **skipped** (source sha unchanged) or **failed** to upload
+deliberately do not land in `CLEAN_DIR`, so those fall back to R2. That is
+correct, not a gap: what is live for those ids *is* the older object, and derived
+data must describe what readers actually get.
+
+That is also why this step alone carries `continue-on-error: true`. Its guard is
+`fail -eq 0` — **any** single bad id makes the whole script non-zero. That was
+harmless when it ran last; running first, an expired NCCN cookie (which writes a
+login page into `raw/`, and `gen_clean` correctly rejects as `NOT-PDF`) would
+otherwise halt the entire week's rebuild. The run still goes red: `Verify` checks
+`steps.clean.outcome` before anything else.
 
 ### Monthly — `.github/workflows/update-mda.yml` (1st of the month, 05:23 UTC)
 

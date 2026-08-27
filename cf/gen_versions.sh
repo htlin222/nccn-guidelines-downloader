@@ -1,7 +1,7 @@
 #!/bin/bash
 # Extract each cached PDF's version stamp and publish a versions map to R2 as
-# meta/versions.json (served by the Worker, shown on the cards). Pulls PDFs from
-# R2 — does NOT hit NCCN.
+# meta/versions.json (served by the Worker, shown on the cards). PDF 走 lib.sh 的
+# fetch_clean — does NOT hit NCCN.
 #
 # Two upstreams, two stamps, one map:
 #   NCCN  first page, "Version 3.2026 — May 1, 2026"
@@ -15,6 +15,7 @@ set -u
 cd "$(dirname "$0")"
 [ -f ../.env ] && set -a && . ../.env && set +a  # load token if present
 del(){ command rip "$@" 2>/dev/null || find "$@" -delete 2>/dev/null; }
+. ./lib.sh
 BUCKET="nccn-pdfs"
 IDS=$(python3 -c "import json;print('\n'.join(g['id'] for f in ('guidelines.json','algorithms.json') for g in json.load(open(f))))")
 WORK=$(mktemp -d)
@@ -31,7 +32,7 @@ ok=0; miss=0; i=0; total=$(echo "$IDS" | wc -l | tr -d ' ')
 for id in $IDS; do
   i=$((i+1))
   pdf="$WORK/x.pdf"
-  if ! wrangler r2 object get "$BUCKET/$id.pdf" --file="$pdf" --remote >/dev/null 2>&1; then
+  if ! fetch_clean "$id" "$pdf"; then
     miss=$((miss+1)); echo "[$i/$total] GET-FAIL $id" | tee -a "$LOG"; continue
   fi
   case "$id" in
