@@ -143,7 +143,7 @@ everything else still demands a login. Two things to keep straight:
 
 ```bash
 cd cf && pnpm install
-pnpm test            # 284 tests — pure helpers, plus an end-to-end pass over /api/v1
+pnpm test            # 289 tests — pure helpers, plus an end-to-end pass over /api/v1
 pnpm run deploy      # = bash deploy.sh
 ```
 
@@ -568,7 +568,18 @@ curl -sI -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
 - Pure helpers go in `cf/src/lib/*` with unit tests in `cf/test/*`. Functions the
   browser also needs are injected verbatim via `.toString()` — those **must** stay
   self-contained (params + JS builtins only, no closures, no module-scope refs).
-  See `lib/cite.js`, `lib/toc.js`, `lib/marks.js`, `lib/view.js`.
+  See `lib/cite.js`, `lib/toc.js`, `lib/marks.js`, `lib/view.js`, `lib/sw.js`.
+- **Cache Storage ignores `Cache-Control` entirely.** The service worker's own
+  strategy is the only thing that decides when a cached asset is re-fetched — a
+  `max-age` from the Worker is decoration at that layer. `/thumb/` was
+  cache-first, so a browser that had loaded a cover once never asked for it
+  again: R2 could be perfectly correct and the reader would still see last
+  season's thumbnail, forever. It is stale-while-revalidate now
+  (`lib/sw.js` `assetResponse`), the `<img>` url carries `?v=<version>` so a
+  new version is a url the browser has never seen, and bumping the cache name
+  (`nccn-assets-v1` → `v2`) is what clears the entries already stuck under the
+  old strategy. Changing the strategy without renaming the cache fixes nobody
+  who already has the bad entries.
 - `lib/view.js` holds the viewer's render scheduling: which page you are on
   (`pageAtOffset`), what to rasterise next (`prefetchPlan`), whether you are
   scrolling too fast to bother (`scrollIntent`), and what to drop when canvases

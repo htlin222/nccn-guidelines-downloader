@@ -1,3 +1,5 @@
+import { assetResponse } from "../lib/sw.js";
+
 export function faviconResponse() {
 	// lucide "cross" glyph on a rounded shadcn-dark tile.
 	const svg =
@@ -53,8 +55,12 @@ export function manifestResponse() {
 }
 
 export const SW_JS = `
+${assetResponse.toString()}
 const SHELL = 'nccn-shell-v2';
-const ASSETS = 'nccn-assets-v1';
+// v1 -> v2 是一次性的清場。舊的策略是純 cache-first，命中就永不回源，所以既有
+// 使用者手上那份縮圖是「永久」過期的——換個 cache 名字，activate 的清理就會把整
+// 包 v1 刪掉，那些瀏覽器下一次進站直接拿到新封面，不必等 revalidate 一輪。
+const ASSETS = 'nccn-assets-v2';
 const SHELL_URLS = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(SHELL).then((c) => c.addAll(SHELL_URLS)).then(() => self.skipWaiting()));
@@ -68,13 +74,9 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/thumb/') || url.pathname.startsWith('/icons/')) {
-    e.respondWith(caches.open(ASSETS).then(async (c) => {
-      const hit = await c.match(e.request);
-      if (hit) return hit;
-      const res = await fetch(e.request);
-      if (res.ok) c.put(e.request, res.clone());
-      return res;
-    }));
+    e.respondWith(caches.open(ASSETS).then((c) =>
+      assetResponse(c, e.request, (r) => fetch(r), (p) => e.waitUntil(p))
+    ));
     return;
   }
   if (url.pathname === '/') {
