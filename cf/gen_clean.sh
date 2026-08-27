@@ -102,9 +102,14 @@ done
 # one that died partway) only has rows for the ids it touched, and rewriting
 # from those alone would drop the other 80-odd entries and force a full re-strip
 # next time.
-python3 - "$WORK/prev.json" "$WORK/rows.tsv" "$WORK/clean.json" <<'PY'
+# 舊 manifest 當底，是為了保留這一輪抓不到的 id（GET-FAIL / NOT-PDF / STRIP-FAIL）
+# 的舊值——那些 id 線上服務的仍是舊物件，manifest 要跟著它，而不是憑空消失。
+# 但只 upsert 不修剪的話，從目錄退役的 id 會永遠留在裡面：實測 2026-08-27 那輪
+# 是 93 entries / 91 個 id，多出來的正是 NCCN 拆掉的 hepatobiliary 與 immunotherapy。
+# 所以最後按目錄過濾一次。
+python3 - "$WORK/prev.json" "$WORK/rows.tsv" "$WORK/clean.json" guidelines.json <<'PY'
 import sys, json, datetime
-prev, rows, out = sys.argv[1], sys.argv[2], sys.argv[3]
+prev, rows, out, cat = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 now = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
 try:
     m = json.load(open(prev, encoding="utf-8"))
@@ -120,8 +125,14 @@ for line in open(rows, encoding="utf-8"):
     gid, src_sha, pages = parts
     m[gid] = {"src_sha": src_sha, "pages": int(pages or 0), "updated": now}
     fresh += 1
+live = {g["id"] for g in json.load(open(cat, encoding="utf-8"))}
+dropped = sorted(set(m) - live)
+for gid in dropped:
+    del m[gid]
 json.dump(m, open(out, "w"), ensure_ascii=False, separators=(",", ":"), sort_keys=True)
 print(f"manifest entries {len(m)} (this run touched {fresh})")
+if dropped:
+    print("dropped from manifest, no longer in the catalogue: " + ", ".join(dropped))
 PY
 
 if wrangler r2 object put "$BUCKET/meta/clean.json" --file="$WORK/clean.json" \

@@ -167,6 +167,11 @@ jobs:
             n=$(python3 -c "import json,sys;print(len(json.load(open(sys.argv[1]))))" "/tmp/$(basename "$f")")
             echo "$f: $n entries (of $denom)"
             [ "$n" -ge $((denom / 2)) ] || { echo "::error::$f only covers $n/$denom guidelines"; exit 1; }
+            # 上界也要看。manifest 比目錄還長，意思是裡面有目錄裡沒有的 id——
+            # 2026-08-27 那輪 clean.json 是 93/91，多的正是 NCCN 已經拆掉的兩份，
+            # 因為 gen_clean 的 manifest 當時只 upsert 不修剪。下界檢查看不到這種事。
+            [ "$n" -le "$denom" ] \
+              || { echo "::error::$f has $n entries but the catalogue only has $denom — it is carrying ids that no longer exist"; exit 1; }
           }
           check_manifest meta/versions.json "$total"
           check_manifest meta/clean.json "$nccn"
