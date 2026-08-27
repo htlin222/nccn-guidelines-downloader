@@ -14,20 +14,37 @@
 cd cf && bash snippets_status.sh
 ```
 
-優先順序（使用者定的，照這個順序做）：
+**先看懂這個數字。** `snippets_status.sh` 的分母是「已 dump 的素材」，不是全庫——
+它只回答「已備素材的做完了沒」。2026-08-27 我因此誤判了三次，宣告過「355/355 全庫
+完成」，而那只是當時 dump 過的 33 份指引。
+
+真實規模看這個：
+
+```bash
+python3 - <<'EOF'
+import json, os, glob
+cat = [g["id"] for g in json.load(open("guidelines.json"))]
+dumped = [g for g in cat if os.path.isdir("snippets/_src/" + g)]
+print("catalogue      %d 份指引" % len(cat))
+print("已 dump        %d 份，%d 個節點" % (len(dumped),
+      sum(len(glob.glob("snippets/_src/%s/*.txt" % g)) for g in dumped)))
+print("已完成         %d" % sum(len(glob.glob("snippets/%s/*.md" % g)) for g in dumped))
+print("尚未 dump      %d 份" % (len(cat) - len(dumped)))
+EOF
+```
+
+catalogue 是 **91 份 NCCN 指引**（另有 91 份 MD Anderson，還沒開始）。
+全庫決策節點估計 950–1,000 個。
+
+優先順序（使用者定的）：
 
 1. **乳癌、大腸癌、肺癌** — 主要照顧的癌別。**已完成 53 份。**
 2. **消化道其餘** — rectal、gastric、pancreatic、esophageal、btc、hcc、
    appendiceal、small_bowel、ampullary、gist、anal。**已完成 116 份。**
-3. **血液科** — 18 份指引，素材全部已 dump。已完成 98 份，剩下是零散的小指引：
-   castleman 6、histiocytic_neoplasms 22、cutaneous_lymphomas 22、mlne 9、
-   mastocytosis 5、amyloidosis 4、hairy_cell 2。
-   （`waldenstroms` dump 出 0 個節點——TOC 裡沒有 algorithm 條目，還沒查是
-   那份指引真的沒有，還是 build_toc 漏了它。）
-
-`prostate` 的素材已備好（18 份）但不在優先序上，先不做。
-
-2026-08-27 收工時：**267/355（75%）**。
+3. **血液科** — 18 份指引全部完成，**194 份**。
+4. 其餘實體瘤 — prostate 已完成 18；bladder、kidney、ovarian、uterine、cervical、
+   cns、head-and-neck、cutaneous_melanoma、nmsc、squamous、mcc、bone、sarcoma、
+   thyroid、meso_pleural 素材已備好；還有 43 份指引連素材都還沒 dump。
 
 ---
 
