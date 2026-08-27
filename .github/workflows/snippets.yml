@@ -14,6 +14,11 @@ on:
       - "cf/snippets/**"
       - "cf/verify_snippets.py"
       - "cf/load_snippets.sh"
+      # dump 與進度腳本都是這支 workflow 的實際步驟，漏掉它們的後果很難察覺：
+      # 改了 dump 腳本、push、CI 不跑，於是修正從未被驗證過，而下一輪失敗看起來
+      # 像是修正無效。2026-08-28 真的這樣繞了一圈。
+      - "cf/dump_snippet_src.sh"
+      - "cf/snippets_status.sh"
       - "cf/sql/snippets.sql"
       - ".github/workflows/snippets.yml"
   workflow_dispatch: {}
