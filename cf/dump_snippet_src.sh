@@ -80,12 +80,33 @@ PY
 # build_toc.sh 對某些 PDF 認不出任何演算法頁——`waldenstroms` 的 TOC 有 20 個條目
 # 但全部是 discussion，而它的 PDF 裡確實有 LPL-1/LPL-2/AL-1/BNS-1 等九頁。
 # 這種時候退回用頁尾 ref 表：那張表是掃 page_text 建的，不依賴 TOC。
-if [ ! -s "$WORK/refs.tsv" ] && [ "$KIND" != "principles" ]; then
-  echo "TOC 沒有演算法條目，改用頁尾 ref 表（$(wc -l < "$WORK/refpage.tsv" | tr -d ' ') 個頁尾 ref）" >&2
-  awk -F'\t' '$1 !~ /^MS-/ && $1 !~ /^ABBR/ {
-    kind = ($1 ~ /-[0-9]+[A-Z]?$/) ? "decision" : "principles"
-    print $1 "\t" $2 "\t" kind "\t"
-  }' "$WORK/refpage.tsv" | sort -t$'\t' -k2 -n > "$WORK/refs.tsv"
+# TOC 與頁尾 ref 表是互補的，不是二選一：TOC 給得出標題，頁尾表給得出完整性。
+#
+# build_toc.sh 對某些 PDF 只認出一部分演算法頁——`thyroid` 的 TOC 只列 THYR-C/D/E，
+# 而那份 PDF 實際有 PAP-5 到 PAP-9、ONC-2A、CAT-1。先前的寫法是「TOC 完全沒有
+# algorithm 才改用頁尾表」，於是 KIND=decision 時 refs.tsv 為空、fallback 生效、
+# 抓到 8 個；KIND=all 時 refs.tsv 有那 3 個 principles、fallback 不生效、只抓 3 個。
+# 同一份指引在兩種模式下抓到不同的東西，而 CI 用的正是抓得比較少的那種。
+#
+# 所以改成合併：TOC 有的照用（保留標題），頁尾表有而 TOC 沒有的補進來。
+if [ -s "$WORK/refpage.tsv" ] && [ "$KIND" != "principles" ]; then
+  before=$(wc -l < "$WORK/refs.tsv" | tr -d ' ')
+  # 用 getline 讀既有的 ref，不用 NR==FNR：TOC 一個 algorithm 都沒有時 refs.tsv
+  # 是空的，而 NR==FNR 在第一個檔案為空時會把第二個檔案的第一行誤判成第一個檔案的
+  # ——那正是 thyroid 在 KIND=decision 下的情況。
+  cut -f1 "$WORK/refs.tsv" > "$WORK/have.txt" 2>/dev/null || : > "$WORK/have.txt"
+  awk -F'\t' -v kind="$KIND" -v have="$WORK/have.txt" '
+    BEGIN { while ((getline l < have) > 0) seen[l] = 1 }
+    $1 ~ /^MS-/ || $1 ~ /^ABBR/ { next }
+    !($1 in seen) {
+      k = ($1 ~ /-[0-9]+[A-Z]?$/) ? "decision" : "principles"
+      if (kind == "all" || k == kind) print $1 "\t" $2 "\t" k "\t"
+    }
+  ' "$WORK/refpage.tsv" >> "$WORK/refs.tsv"
+  after=$(wc -l < "$WORK/refs.tsv" | tr -d ' ')
+  [ "$after" -gt "$before" ] \
+    && echo "  TOC 有 $before 個，頁尾 ref 表補了 $((after - before)) 個" >&2
+  sort -t$'\t' -k2 -n -o "$WORK/refs.tsv" "$WORK/refs.tsv"
 fi
 
 n=0; miss=0
