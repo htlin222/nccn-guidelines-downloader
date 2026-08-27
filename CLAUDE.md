@@ -480,6 +480,7 @@ LIMIT=3 SLEEP=0 bash refresh_mda.sh    # 抓三份（需要 R2 token）
 | The MD Anderson tab is empty after a deploy | `src/data/algorithms.js` was not regenerated/committed | `bash gen_mda_catalogue.sh && pnpm run deploy` |
 | `gen_mda_catalogue.sh` exits non-zero with "refusing to overwrite" | The index page returned something that parses to <50 entries (redesign, or an error page) | Look at it by hand before touching the guard — the guard is what stops a truncated catalogue retiring 40 PDFs |
 | Cards show no version badge | `gen_versions.sh` has not run since these landed | wait for Monday, or run it |
+| `versions.json` covers 90/91, never 91 | `mda-adult-blood` is a one-page placeholder upstream ("currently undergoing updates"), with no `Department of Clinical Effectiveness V<N>` footer to read | expected — leave it; it comes back on its own when MD Anderson republishes the algorithm |
 
 ---
 
