@@ -50,13 +50,13 @@ type = "text"
 
 # Assessment
 
-- PO anticancer agent: \_\_\_ (po_agent)
-- Dose: \_\_\_ (daily_dose)
-- Concurrent RT: \_\_\_ (concurrent_rt)
-- Weight \_\_\_ (weight) kg
-- BSA \_\_\_ (bsa) m2
-- Other agents in the anticancer regimen, PO or IV: \_\_\_ (other_agents)
-- Patient-specific emetic risk factors: \_\_\_ (risk_factors)
+- PO anticancer agent: ___ (po_agent)
+- Dose: ___ (daily_dose)
+- Concurrent RT: ___ (concurrent_rt)
+- Weight ___ (weight) kg
+- BSA ___ (bsa) m2
+- Other agents in the anticancer regimen, PO or IV: ___ (other_agents)
+- Patient-specific emetic risk factors: ___ (risk_factors)
 
 # Moderate to high emetic risk level
 

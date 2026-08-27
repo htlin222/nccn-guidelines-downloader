@@ -119,6 +119,13 @@ def check(path):
             fail(errs, name, "第 %d 行有斜體 *" % i)
         if "___" in line and not VARSLOT.search(line):
             fail(errs, name, "第 %d 行的 ___ 不是 `___ (name)` 格式" % i)
+        # 底線被跳脫或被 markdown 吃掉，是實際發生過的一種壞法：模型寫 \_\_\_ 以免
+        # 三個底線被解析成強調，結果 verify 一個合法變數槽都找不到，錯誤訊息卻只說
+        # 「宣告了 X 但 body 沒用到」，離真正的原因隔了一層。
+        if "\\_" in line:
+            fail(errs, name, "第 %d 行的底線被反斜線跳脫了，變數槽要寫成字面的 `___ (name)`" % i)
+        if "**_" in line or "_**" in line:
+            fail(errs, name, "第 %d 行的 ___ 被 markdown 吃成強調符號，要寫成字面的三個底線" % i)
 
     declared = {v.get("name") for v in meta.get("variables", []) or []}
     used = set(VARSLOT.findall(body))

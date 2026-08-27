@@ -51,12 +51,12 @@ options = ["A", "B", "C"]
 
 # Assessment
 
-- **_ (age) yo, receiving _** (anticancer_regimen)
+- ___ (age) yo, receiving ___ (anticancer_regimen)
 - Emetogenic potential confirmed as high emetic risk (AE-3)
-- Patient-specific risk factors: \_\_\_ (risk_factors) (AE-1)
-- Emesis during a previous cycle with a 3-drug regimen: \_\_\_ (prior_emesis)
-- Cellular therapy or ICI therapy: \_\_\_ (cellular_or_ici)
-- Day 1 treatment option selected: \_\_\_ (treatment_option)
+- Patient-specific risk factors: ___ (risk_factors) (AE-1)
+- Emesis during a previous cycle with a 3-drug regimen: ___ (prior_emesis)
+- Cellular therapy or ICI therapy: ___ (cellular_or_ici)
+- Day 1 treatment option selected: ___ (treatment_option)
 
 # Day 1 - treatment option A
 

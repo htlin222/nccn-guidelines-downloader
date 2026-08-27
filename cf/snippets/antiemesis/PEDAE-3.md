@@ -56,14 +56,14 @@ options = ["A", "B", "C", "D"]
 
 # Assessment
 
-- Age \_\_\_ (age)
-- Weight \_\_\_ (weight) kg
-- Anticancer regimen: \_\_\_ (anticancer_regimen)
-- Drug with the highest emetic risk in the regimen: \_\_\_ (highest_risk_agent)
-- Patient-specific risk factors: \_\_\_ (risk_factors)
-- Able to receive an NK1 RA and dexamethasone: \_\_\_ (able_nk1_and_dexamethasone)
-- Cellular therapy or ICI therapy in this regimen: \_\_\_ (cellular_or_ici_therapy)
-- Treatment option selected: \_\_\_ (treatment_option)
+- Age ___ (age)
+- Weight ___ (weight) kg
+- Anticancer regimen: ___ (anticancer_regimen)
+- Drug with the highest emetic risk in the regimen: ___ (highest_risk_agent)
+- Patient-specific risk factors: ___ (risk_factors)
+- Able to receive an NK1 RA and dexamethasone: ___ (able_nk1_and_dexamethasone)
+- Cellular therapy or ICI therapy in this regimen: ___ (cellular_or_ici_therapy)
+- Treatment option selected: ___ (treatment_option)
 - Antiemetics ordered to start before anticancer therapy
 
 # Treatment option A, step 1, 5-HT3 RA, choose one
