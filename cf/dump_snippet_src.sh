@@ -61,6 +61,17 @@ for x in json.load(open(toc, encoding="utf-8")):
     print("%s\t%s\t%s\t%s" % (ref, x.get("p"), k, (x.get("t") or "").replace("\t", " ")))
 PY
 
+# build_toc.sh 對某些 PDF 認不出任何演算法頁——`waldenstroms` 的 TOC 有 20 個條目
+# 但全部是 discussion，而它的 PDF 裡確實有 LPL-1/LPL-2/AL-1/BNS-1 等九頁。
+# 這種時候退回用頁尾 ref 表：那張表是掃 page_text 建的，不依賴 TOC。
+if [ ! -s "$WORK/refs.tsv" ] && [ "$KIND" != "principles" ]; then
+  echo "TOC 沒有演算法條目，改用頁尾 ref 表" >&2
+  awk -F'\t' '$1 !~ /^MS-/ && $1 !~ /^ABBR/ {
+    kind = ($1 ~ /-[0-9]+[A-Z]?$/) ? "decision" : "principles"
+    print $1 "\t" $2 "\t" kind "\t"
+  }' "$WORK/refpage.tsv" | sort -t$'\t' -k2 -n > "$WORK/refs.tsv"
+fi
+
 n=0
 while IFS=$'\t' read -r ref page kind title; do
   [ -n "$ref" ] || continue
