@@ -80,7 +80,7 @@ type = "text"
     - Evaluation of thrombotic/hemorrhagic events
     - Evaluation of cardiovascular risk factors
 - Documentation of transfusion/medication history
-- Assessment of symptom burden using MPN Symptom Assessment Form Total Symptom Score (MPN-SAF TSS; MPN-E)
+- Assessment of symptom burden using MPN Symptom Assessment Form Total Symptom Score (MPN-SAF TSS; MPN-E 1 of 2)
 
 # Blood tests
 

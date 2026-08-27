@@ -15,24 +15,4 @@
 # 跑也可以，但重跑一遍比較省事，而且生成本來就會受惠於當時已經修好的工具。
 #
 # 2026-08-27：這 21 份是撞到 session limit 時，生成已完成但 audit 全數失敗的。
-hodgkins/HODG-6
-hodgkins/HODG-7
-mds/MDS-3
-mds/MDS-4
-mds/MDS-7
-mds/MDS-8
-mpn/MPN-1
-mpn/MPN-2
-mpn/MF-1
-mpn/MF-2
-mpn/MF-3
-mpn/PV-1
-mpn/PV-2
-mpn/ET-1
-mpn/ET-2
-t-cell/PTCL-1
-t-cell/TPLL-1
-t-cell/ATLL-1
-t-cell/ENKL-1
-t-cell/INTCL-1
-t-cell/ST-1
+# 2026-08-27 稍後：那 21 份已補跑審查並通過，清單清空。

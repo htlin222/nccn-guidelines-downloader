@@ -90,6 +90,7 @@ options = ["yes", "no"]
 - Azacitidine with or without Venetoclax
     - The addition of venetoclax is based on patient status and tolerance
     - When used as cytoreduction for MDS in combination with an HMA, venetoclax has been effectively given for 14 days in monthly courses
+    - Some emerging data have shown efficacy of novel agents, including venetoclax in combination with an HMA with or without IDH1 inhibition, ie, ivosidenib or olutasidenib, to target mIDH1 in patients with myeloid malignancies including higher-risk MDS
 - Decitabine with or without Venetoclax
 - Decitabine and Cedazuridine, with or without Venetoclax
     - Oral decitabine and cedazuridine (DEC-C) could be a substitution for intravenous decitabine in patients with IPSS Intermediate-1 and above
@@ -105,6 +106,7 @@ options = ["yes", "no"]
 - If no response and if mIDH1
     - Consider single-agent Ivosidenib
     - Or single-agent Olutasidenib (category 2B)
+        - Emerging data have also shown utility of olutasidenib for treating patients with IDH1 mutations
     - Or Azacitidine/Olutasidenib (category 2B)
     - Followed by allo-HCT
 - If no response and if mIDH2

@@ -7,24 +7,24 @@ title        = "Treatment for high-risk essential thrombocythemia"
 nccn_version = "2.2026"
 nccn_date    = "06/16/26"
 generated    = "2026-08-27"
-see_also     = ["MPN-2", "ET-1", "ET-3", "MPN-H", "MPN-E", "MPN-F", "MPN-C", "ET-A"]
+see_also     = ["ET-1", "ET-3", "MPN-2", "MPN-H", "MPN-E", "MPN-F", "MPN-C", "ET-A"]
 
 [facets]
 disease   = "mpn"
 histology = "myeloproliferative"
 biomarker = ["jak2", "any"]
-timepoint = "primary-treatment"
+timepoint = ["primary-treatment", "surveillance"]
 
 [[variables]]
 name = "age"
 type = "number"
 [[variables]]
 name = "jak2"
-type = "text"
+type = "enum"
+options = ["mutated", "not detected"]
 [[variables]]
 name = "thrombosis_history"
-type = "enum"
-options = ["none", "prior thrombosis"]
+type = "text"
 [[variables]]
 name = "cv_risk_factors"
 type = "text"
@@ -68,7 +68,7 @@ options = ["adequate response", "inadequate response", "loss of response", "dise
 # Treatment for all high-risk ET
 
 - Manage cardiovascular risk factors (MPN-H)
-- Aspirin (81-100 mg/day)
+- Aspirin 81-100 mg/day
     - Use with caution in patients with acquired VWS
     - Higher-dose aspirin may be appropriate in selected patients as clinically indicated
     - Weigh the risks and benefits of higher-dose aspirin (>100 mg) based on the presence of vasomotor symptoms versus the risk of bleeding
@@ -81,17 +81,20 @@ options = ["adequate response", "inadequate response", "loss of response", "dise
     - Hydroxyurea
 - Other recommended, based on other patient-specific variables
     - Peginterferon alfa-2a
-        - Can be considered for patients in need of cytoreductive therapy who are younger or pregnant or who defer hydroxyurea
-        - If peginterferon alfa-2a is unavailable, the use of other available pegylated interferons (eg, ropeginterferon alfa-2b-njft) is appropriate
+        - Can be considered for patients in need of cytoreductive therapy who are younger or pregnant, or who defer hydroxyurea
+        - If peginterferon alfa-2a is unavailable, use of other available pegylated interferons (eg, ropeginterferon alfa-2b-njft) is appropriate
     - Anagrelide
 
 # Monitoring
 
-- Monitor for new thrombosis, acquired VWS, and/or disease-related major bleeding
+- Monitor for new thrombosis
+- Monitor for acquired VWS
+- Monitor for disease-related major bleeding
 - Monitor response and signs/symptoms of disease progression (MPN-E 1 of 2) as clinically indicated
     - Supportive Care for Patients with MPN (MPN-F)
-    - Bone marrow aspirate and biopsy should be performed to rule out disease progression to MF if clinical or laboratory suspicion of MF
-    - Normalization of blood counts after initiation of treatment is usually a goal in clinical practice, but is not associated with long-term clinical benefit, and there are no evidence-based data to recommend a target WBC or platelet count for patients receiving cytoreductive therapy
+    - Perform bone marrow aspirate and biopsy to rule out disease progression to MF, if there is clinical or laboratory suspicion of MF
+    - Normalization of blood counts after initiation of treatment is usually a goal in clinical practice, but it is not associated with long-term clinical benefit
+        - There are no evidence-based data to recommend a target WBC or platelet count for patients receiving cytoreductive therapy
         - In selected patients with a severe thrombotic event or other disease-related symptoms, normalization of blood counts might be a goal of treatment
     - Response criteria were developed mainly for use in clinical trials
         - Clinical benefit may not reach the threshold of the 2013 IWG-MRT and ELN Response Criteria for ET (ET-A)

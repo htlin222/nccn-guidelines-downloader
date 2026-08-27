@@ -36,9 +36,6 @@ type = "text"
 name = "ldh"
 type = "number"
 [[variables]]
-name = "sites"
-type = "text"
-[[variables]]
 name = "subtype"
 type = "enum"
 options = ["smoldering", "chronic", "acute", "lymphoma"]
@@ -61,7 +58,6 @@ options = ["smoldering", "chronic", "acute", "lymphoma"]
 - HTLV-1/2 serology ___ (htlv_serology)
 - Biopsy site, if performed ___ (biopsy_site)
 - LDH ___ (ldh)
-- Sites of disease ___ (sites)
 - Subtype ___ (subtype)
 
 # Diagnosis, essential

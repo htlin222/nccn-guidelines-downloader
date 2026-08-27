@@ -44,15 +44,18 @@ type = "text"
 [[variables]]
 name = "symptoms"
 type = "text"
+[[variables]]
+name = "acquired_vws"
+type = "enum"
+options = ["absent", "present", "not assessed"]
 +++
 
 # Source
 
 - NCCN Myeloproliferative Neoplasms v2.2026, ET-1, p24
 - Applies to essential thrombocythemia (ET) that is very-low-risk, low-risk, or intermediate-risk
-- Special Considerations in the Treatment of MPN: MPN-H
-- Supportive Care for Patients with MPN: MPN-F
-- All recommendations category 2A unless stated otherwise
+- Special Considerations in the Treatment of MPN (MPN-H)
+- All recommendations are category 2A unless otherwise indicated
 
 # Assessment
 
@@ -63,6 +66,7 @@ type = "text"
 - Platelet count ___ (plt) / WBC ___ (wbc)
 - Spleen ___ (spleen)
 - Vasomotor/microvascular disturbances ___ (vasomotor)
+- Acquired VWS ___ (acquired_vws)
 - Disease-related symptoms ___ (symptoms)
 
 # Risk category
@@ -79,12 +83,12 @@ type = "text"
     - Age older than 60 years
     - No JAK2 mutation
     - No prior history of thrombosis
-- High-risk ET, see ET-2
+- High-risk ET is treated on ET-2
 
 # Treatment of very-low-risk ET
 
 - Manage cardiovascular risk factors (MPN-H)
-- Aspirin 81-100 mg/day, for patients with vasomotor/microvascular disturbances
+- Aspirin (81-100 mg/day), only for patients with vasomotor/microvascular disturbances
     - Use with caution in patients with acquired VWS
     - Higher-dose aspirin may be appropriate in selected patients as clinically indicated
     - Weigh the risks and benefits of higher-dose aspirin (more than 100 mg) based on the presence of vasomotor symptoms versus the risk of bleeding
@@ -93,7 +97,7 @@ type = "text"
 # Treatment of low-risk or intermediate-risk ET
 
 - Manage cardiovascular risk factors (MPN-H)
-- Aspirin 81-100 mg/day
+- Aspirin (81-100 mg/day)
     - Use with caution in patients with acquired VWS
     - Higher-dose aspirin may be appropriate in selected patients as clinically indicated
     - Weigh the risks and benefits of higher-dose aspirin (more than 100 mg) based on the presence of vasomotor symptoms versus the risk of bleeding
@@ -106,7 +110,7 @@ type = "text"
 - Monitor for disease-related major bleeding
 - Evaluate for indications for cytoreductive therapy, as clinically indicated
 - Monitor signs/symptoms of disease progression (MPN-E 1 of 2), as clinically indicated
-- Supportive care for patients with MPN (MPN-F)
+    - Supportive Care for Patients with MPN (MPN-F)
 
 # Symptomatic with potential indications for cytoreductive therapy
 
@@ -124,7 +128,7 @@ type = "text"
 
 # Next
 
-- After initiating cytoreductive therapy, see High-risk ET (ET-2)
+- Initiate cytoreductive therapy, see High-risk ET (ET-2)
 - Post-ET MF, see MPN-2
     - WHO and ICC Diagnostic Criteria for Post-ET MF (MPN-C)
 - Accelerated/blast phase MPN, see MPN-AP/BP-1

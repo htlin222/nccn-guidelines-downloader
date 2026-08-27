@@ -101,7 +101,6 @@ options = ["adequate", "inadequate", "loss of response", "disease progression"]
     - In selected patients with a severe thrombotic event or other disease-related symptoms, normalization of blood counts might be a goal of treatment
     - Response criteria were developed mainly for use in clinical trials; clinical benefit may not reach the threshold of the 2013 IWG-MRT and ELN Response Criteria for PV (PV-A)
     - Response assessment should be done based on the improvement of disease-related symptoms at the discretion of the clinician
-- Adequate response, continue current management
 
 # Potential indications for change of cytoreductive therapy
 
@@ -127,8 +126,8 @@ options = ["adequate", "inadequate", "loss of response", "disease progression"]
 
 # Next
 
-- Adequate response, continue current management and monitoring
-- Inadequate response or loss of response, change cytoreductive therapy per the options above
+- Adequate response
+- Inadequate response or loss of response, review the potential indications for change of cytoreductive therapy above
 - Disease progression to post-PV MF, go to MPN-2
     - WHO and ICC diagnostic criteria for post-PV MF, see MPN-B
 - Accelerated/blast phase MPN, go to MPN-AP/BP-1

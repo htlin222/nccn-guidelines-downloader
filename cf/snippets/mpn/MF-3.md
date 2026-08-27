@@ -16,15 +16,9 @@ biomarker = ["any", "del5q"]
 timepoint = ["primary-treatment", "supportive"]
 
 [[variables]]
-name = "age"
-type = "number"
-[[variables]]
-name = "hgb"
-type = "text"
-[[variables]]
 name = "splenomegaly"
 type = "enum"
-options = ["none", "asymptomatic", "symptomatic"]
+options = ["none", "ongoing symptomatic", "well controlled on JAK inhibitor"]
 [[variables]]
 name = "constitutional_symptoms"
 type = "text"
@@ -38,24 +32,27 @@ type = "text"
 name = "del5q"
 type = "enum"
 options = ["present", "absent", "unknown"]
+[[variables]]
+name = "alt_causes"
+type = "text"
 +++
 
 # Source
 
 - NCCN Myeloproliferative Neoplasms v2.2026, MF-3, p12
 - Applies to management of MF-associated anemia
-- Supportive care for patients with MPN, see MPN-F
+- Supportive care for patients with MPN (MPN-F)
 - All recommendations category 2A unless stated otherwise
 
 # Assessment
 
-- ___ (age) yo, MF-associated anemia
-- Hgb ___ (hgb)
+- MF-associated anemia
 - Splenomegaly ___ (splenomegaly)
 - Constitutional symptoms ___ (constitutional_symptoms)
 - Current JAK inhibitor ___ (current_jak_inhibitor)
 - Serum EPO ___ (epo) mU/mL
 - del(5q) ___ (del5q)
+- Alternative causes of anemia found ___ (alt_causes)
 
 # Before selecting therapy
 
@@ -73,12 +70,12 @@ options = ["present", "absent", "unknown"]
     - Pacritinib
     - Ruxolitinib combination
         - Luspatercept-aamt
-    - Danazol (category 2B)
-        - Prostate cancer screening and monitoring of LFTs is recommended
-        - Caution is advised with concomitant use of statins, over concerns for increased risk of rhabdomyolysis
-    - Erythropoiesis-stimulating agents (ESAs), if serum EPO <500 mU/mL (category 2B)
-        - ESAs include epoetin alfa and darbepoetin alfa
-        - An FDA-approved biosimilar is an appropriate substitute for any recommended systemic biologic therapy in the NCCN Guidelines
+        - Danazol (category 2B)
+            - Prostate cancer screening and monitoring of LFTs is recommended
+            - Caution is advised with concomitant use of statins, over concerns for increased risk of rhabdomyolysis
+        - Erythropoiesis-stimulating agents (ESAs), if serum EPO <500 mU/mL (category 2B)
+            - ESAs include epoetin alfa and darbepoetin alfa
+            - An FDA-approved biosimilar is an appropriate substitute for any recommended systemic biologic therapy in the NCCN Guidelines
 
 # No splenomegaly or constitutional symptoms
 
@@ -90,6 +87,7 @@ options = ["present", "absent", "unknown"]
         - Caution is advised with concomitant use of statins, over concerns for increased risk of rhabdomyolysis
     - ESAs, if serum EPO <500 mU/mL
         - ESAs include epoetin alfa and darbepoetin alfa
+        - An FDA-approved biosimilar is an appropriate substitute for any recommended systemic biologic therapy in the NCCN Guidelines
     - Luspatercept-aamt
     - Momelotinib (category 2B)
     - Pacritinib (category 2B)
@@ -106,6 +104,7 @@ options = ["present", "absent", "unknown"]
         - JAK inhibitors may be continued for the improvement of splenomegaly and other disease-related symptoms
         - Add ESAs, if serum EPO <500 mU/mL
             - ESAs include epoetin alfa and darbepoetin alfa
+            - An FDA-approved biosimilar is an appropriate substitute for any recommended systemic biologic therapy in the NCCN Guidelines
         - Add luspatercept-aamt
         - Add danazol (category 2B)
             - Prostate cancer screening and monitoring of LFTs is recommended

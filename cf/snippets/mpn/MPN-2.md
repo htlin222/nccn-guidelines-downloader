@@ -12,7 +12,7 @@ see_also     = ["MPN-1", "MF-1", "MF-2", "PV-1", "PV-2", "ET-1", "ET-2"]
 [facets]
 disease   = "mpn"
 histology = "myeloproliferative"
-biomarker = ["jak2", "any"]
+biomarker = "jak2"
 timepoint = ["diagnosis", "staging"]
 
 [[variables]]
@@ -30,7 +30,7 @@ name = "thrombosis_history"
 type = "enum"
 options = ["none", "prior thrombosis"]
 [[variables]]
-name = "karyotyping"
+name = "karyotype"
 type = "text"
 [[variables]]
 name = "molecular_testing"
@@ -46,9 +46,8 @@ type = "text"
 # Source
 
 - NCCN Myeloproliferative Neoplasms v2.2026, MPN-2, p7
+- Applies once workup is complete and an MPN diagnosis is being assigned (MPN-1)
 - Diagnosis of MPN is based on the 2022 WHO criteria and ICC criteria
-- Referral to specialized centers with expertise in the management of MPN is strongly recommended for all patients diagnosed with MF, PV, or ET
-- Footnotes on MPN-2A
 - All recommendations are category 2A unless otherwise indicated
 
 # Assessment
@@ -57,25 +56,26 @@ type = "text"
 - Diagnosis ___ (mpn_diagnosis)
 - JAK2 mutation ___ (jak2)
 - Prior history of thrombosis ___ (thrombosis_history)
-- Recent karyotyping available ___ (karyotyping)
+- Recent karyotyping available ___ (karyotype)
 - Molecular testing available ___ (molecular_testing)
 - Risk model applied ___ (risk_model)
-- Risk model score ___ (risk_score)
+- Risk score ___ (risk_score)
 
 # Diagnosis
 
 - Myelofibrosis (MF)
     - Primary myelofibrosis (PMF)
-        - See WHO and ICC Diagnostic Criteria for PMF (MPN-A)
+        - Confirm against the WHO and ICC Diagnostic Criteria for PMF (MPN-A)
     - Post-PV MF
-        - See WHO and ICC Diagnostic Criteria for PV and Post-PV MF (MPN-B)
+        - Confirm against the WHO and ICC Diagnostic Criteria for PV and Post-PV MF (MPN-B)
     - Post-ET MF
-        - See WHO and ICC Diagnostic Criteria for ET and Post-ET MF (MPN-C)
+        - Confirm against the WHO and ICC Diagnostic Criteria for ET and Post-ET MF (MPN-C)
 - Polycythemia vera (PV)
-    - See WHO and ICC Diagnostic Criteria for PV and Post-PV MF (MPN-B)
+    - Confirm against the WHO and ICC Diagnostic Criteria for PV and Post-PV MF (MPN-B)
 - Essential thrombocythemia (ET)
-    - See WHO and ICC Diagnostic Criteria for ET and Post-ET MF (MPN-C)
+    - Confirm against the WHO and ICC Diagnostic Criteria for ET and Post-ET MF (MPN-C)
 - Accelerated/blast phase MPN
+- Referral to specialized centers with expertise in the management of MPN is strongly recommended for all patients diagnosed with MF, PV, or ET
 
 # Prognostic risk model
 
@@ -88,10 +88,12 @@ type = "text"
     - DIPSS-Plus
     - MYSEC-PM
 - Polycythemia vera (PV)
-    - Conventional risk model (Marchioli R, et al. J Clin Oncol 2005;23:2224-2232)
+    - Conventional risk model
+        - Marchioli R, et al. J Clin Oncol 2005;23:2224-2232
 - Essential thrombocythemia (ET)
     - IPSET-thrombosis (revised)
-        - The revised IPSET-thrombosis is preferred for the risk stratification of ET (Haider M, et al. Am J Hematol 2016;91:390-394; Barbui T, et al. Blood Cancer J 2015;5:e369)
+        - The revised International Prognostic Score of Thrombosis for Essential Thrombocythemia is preferred for the risk stratification of ET
+        - Haider M, et al. Am J Hematol 2016;91:390-394; Barbui T, et al. Blood Cancer J 2015;5:e369
 
 # Risk stratification, myelofibrosis
 
@@ -111,20 +113,28 @@ type = "text"
 # Risk stratification, polycythemia vera
 
 - Low-risk (PV-1)
-    - Age <60 years and no prior history of thrombosis
+    - Age <60 years
+    - No prior history of thrombosis
 - High-risk (PV-2)
     - Age ≥60 years and/or prior history of thrombosis
 
 # Risk stratification, essential thrombocythemia
 
 - Very-low-risk (ET-1)
-    - Age ≤60 years, no JAK2 mutation, no prior history of thrombosis
+    - Age ≤60 years
+    - No JAK2 mutation
+    - No prior history of thrombosis
 - Low-risk (ET-1)
-    - Age ≤60 years, with JAK2 mutation, no prior history of thrombosis
+    - Age ≤60 years
+    - With JAK2 mutation
+    - No prior history of thrombosis
 - Intermediate-risk (ET-1)
-    - Age >60 years, no JAK2 mutation, no prior history of thrombosis
+    - Age >60 years
+    - No JAK2 mutation
+    - No prior history of thrombosis
 - High-risk (ET-2)
-    - History of thrombosis at any age, or age >60 years with JAK2 mutation
+    - History of thrombosis at any age
+    - Or age >60 years with JAK2 mutation
 
 # Next
 

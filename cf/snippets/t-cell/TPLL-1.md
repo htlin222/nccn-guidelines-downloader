@@ -48,8 +48,8 @@ options = ["asymptomatic", "symptomatic"]
 # Source
 
 - NCCN T-Cell Prolymphocytic Leukemia v2.2026, TPLL-1, p33
-- Diagnostic Criteria for TPLL (TPLL-A)
-- Principles of Biomarker Testing in T-Cell Lymphomas (TCLYM-A)
+- Diagnostic criteria for TPLL: TPLL-A
+- Principles of Biomarker Testing in T-Cell Lymphomas: TCLYM-A
 - All recommendations are category 2A unless otherwise indicated
 
 # Assessment
@@ -72,7 +72,7 @@ options = ["asymptomatic", "symptomatic"]
     - Flow cytometry panel may include TdT, CD1a, CD2, CD3, CD4, CD5, CD7, CD8, CD52, TCR+ alpha/beta, TCL1, TRBC1
     - Typical immunophenotype: CD1a-, TdT-, CD2+, sCD3+/-, cCD3+/-, CD5+, CD7++, CD52++, TCR alpha/beta+
     - CD4+/CD8- (65%), CD4+/CD8+ (21%), CD4-/CD8+ (13%)
-- Cytogenetics, FISH or conventional chromosome analysis
+- Cytogenetics, by FISH or conventional chromosome analysis
     - inv(14)(q11;q32)
     - t(14;14)(q11;q32)
     - t(X;14)(q28;q11)
@@ -91,12 +91,14 @@ options = ["asymptomatic", "symptomatic"]
 
 - H&P examination
     - Complete skin examination
-    - Evaluation of lymph nodes, spleen, and liver
+    - Evaluation of lymph nodes
+    - Evaluation of spleen
+    - Evaluation of liver
 - Performance status
 - LDH
 - CBC with differential
 - Comprehensive metabolic panel
-- Assessment of HTLV-1/2 by serology or other methods
+- Assessment of HTLV-1/2, by serology or other methods
     - See map for prevalence of HTLV-1/2 by geographic region
     - HTLV-1/2 has been described in patients in non-endemic areas
 - FDG-PET/CT scan and/or C/A/P CT with contrast

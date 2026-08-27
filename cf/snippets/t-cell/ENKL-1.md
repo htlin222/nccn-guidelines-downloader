@@ -59,13 +59,14 @@ options = ["ENKL nasal type", "extranasal ENKL", "ANKL"]
 
 - Excisional or incisional biopsy is preferred over core needle biopsy
 - FNA biopsy alone is insufficient for the initial diagnosis of lymphoma
-    - Necrosis is very common in diagnostic biopsies and may delay diagnosis significantly
-    - Biopsy should include the edges of lesions to increase the odds of having viable tissue
-    - It is useful to perform multiple nasopharyngeal biopsies, even in areas not clearly involved
 - Core needle biopsy is an appropriate alternative to excisional or incisional biopsy under certain circumstances
 - Combination of core needle biopsy and FNA biopsy may be sufficient for diagnosis
     - Only when a lymph node is not easily accessible for excisional or incisional biopsy
     - Only in conjunction with appropriate ancillary techniques
+- Technique, whichever biopsy is chosen
+    - Necrosis is very common in diagnostic biopsies and may delay diagnosis significantly
+    - Biopsy should include the edges of lesions to increase the odds of having viable tissue
+    - It is useful to perform multiple nasopharyngeal biopsies, even in areas not clearly involved
 
 # Essential: immunophenotyping
 
