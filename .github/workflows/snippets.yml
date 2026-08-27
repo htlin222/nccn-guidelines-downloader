@@ -54,7 +54,11 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
         run: |
           set -e
-          for gid in $(ls snippets | grep -v '^_'); do
+          # 只取目錄，而且跳過 _ 開頭的。snippets/ 底下還有 SPEC.md 與 _vocab.json，
+          # 拿它們當 gid 會在第一輪就死在「no TOC for SPEC.md」。
+          for d in snippets/*/; do
+            gid=$(basename "$d")
+            case "$gid" in _*) continue ;; esac
             echo "--- $gid"
             KIND=all bash dump_snippet_src.sh "$gid"
           done
