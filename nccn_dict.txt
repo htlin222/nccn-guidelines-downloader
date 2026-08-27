@@ -4,12 +4,14 @@
  anal                  # Anal Carcinoma
  nmsc                  # Basal Cell Skin Cancer
  b-cell                # B-Cell Lymphomas
+ appendiceal           # Appendiceal Neoplasms and Cancers
  btc                   # Biliary Tract Cancers
  bladder               # Bladder Cancer
  bone                  # Bone Cancer
  breast                # Breast Cancer
  cns                   # Central Nervous System Cancers
  cervical              # Cervical Cancer
+ castleman             # Castleman Disease
  cll                   # Chronic Lymphocytic Leukemia/Small Lymphocytic Lymphoma
  cml                   # Chronic Myeloid Leukemia
  colon                 # Colon Cancer
@@ -20,7 +22,6 @@
  gtn                   # Gestational Trophoblastic Neoplasia
  hairy_cell            # Hairy Cell Leukemia
  head-and-neck         # Head and Neck Cancers
- hepatobiliary         # Hepatobiliary Cancers
  hcc                   # Hepatocellular Carcinoma
  histiocytic_neoplasms # Histiocytic Neoplasms
  hodgkins              # Hodgkin Lymphoma
@@ -40,12 +41,13 @@
  occult                # Occult Primary
  ovarian               # Ovarian Cancer/Fallopian Tube Cancer/Primary Peritoneal Cancer
  pancreatic            # Pancreatic Adenocarcinoma
+ neuroblastoma         # Neuroblastoma
  ped_all               # Pediatric Acute Lymphoblastic Leukemia
  ped_b-cell            # Pediatric Aggressive Mature B-Cell Lymphomas
  ped_cns               # Pediatric Central Nervous System Cancers
  ped_hodgkin           # Pediatric Hodgkin Lymphoma
  penile                # Penile Cancer
- primary_cutaneous     # Primary Cutaneous Lymphomas
+ cutaneous_lymphomas   # Cutaneous Lymphomas
  prostate              # Prostate Cancer
  rectal                # Rectal Cancer
  small_bowel           # Small Bowel Adenocarcinoma
@@ -59,8 +61,10 @@
  thymic                # Thymomas and Thymic Carcinomas
  thyroid               # Thyroid Carcinoma
  uterine               # Uterine Neoplasms
+ vaginal               # Vaginal Cancer
  vulvar                # Vulvar Cancer
  waldenstroms          # Waldenström Macroglobulinemia / Lymphoplasmacytic Lymphoma
+ ped_sts               # Pediatric Soft Tissue Sarcoma
  wilms_tumor           # Wilms Tumor (Nephroblastoma)
  antiemesis            # Antiemesis
  pain                  # Adult Cancer Pain
@@ -69,18 +73,19 @@
  distress              # Distress Management
  hct                   # Hematopoietic Cell Transplantation
  growthfactors         # Hematopoietic Growth Factors
- immunotherapy         # Management of Immunotherapy-Related Toxicities
+ cellular_tox          # Management of CAR T-Cell and Lymphocyte Engager-Related Toxicities
+ ici_tox               # Management of Immune Checkpoint Inhibitor-Related Toxicities
  palliative            # Palliative Care
  infections            # Prevention and Treatment of Cancer-Related Infections
  smoking               # Smoking Cessation
  survivorship          # Survivorship
  aya                   # Adolescent and Young Adult (AYA) Oncology
- older_adult           # Cancer in People with HIV
- hiv                   # Older Adult Oncology
+ older_adult           # Older Adult Oncology
+ hiv                   # Cancer in People with HIV
  breast_risk           # Breast Cancer Risk Reduction
  breast-screening      # Breast Cancer Screening and Diagnosis
  colorectal_screening  # Colorectal Cancer Screening
- genetics_bop          # Genetic/Familial High-Risk Assessment: Breast, Ovarian, and Pancreatic
- genetics_colon        # Genetic/Familial High-Risk Assessment: Colorectal
+ genetics_bopp         # Genetic/Familial High-Risk Assessment: Breast, Ovarian, Pancreatic, and Prostate
+ genetics_ceg          # Genetic/Familial High-Risk Assessment: Colorectal, Endometrial, Esophageal, and Gastric
  lung_screening        # Lung Cancer Screening
  prostate_detection    # Prostate Cancer Early Detection

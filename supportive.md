@@ -5,7 +5,8 @@ fatigue
 distress
 hct
 growthfactors
-immunotherapy
+ici_tox
+cellular_tox
 palliative
 infections
 smoking
@@ -18,7 +19,8 @@ Cancer-Related Fatigue
 Distress Management
 Hematopoietic Cell Transplantation
 Hematopoietic Growth Factors
-Management of Immunotherapy-Related Toxicities
+Management of Immune Checkpoint Inhibitor-Related Toxicities
+Management of CAR T-Cell and Lymphocyte Engager-Related Toxicities
 Palliative Care
 Prevention and Treatment of Cancer-Related Infections
 Smoking Cessation
@@ -34,7 +36,7 @@ Older Adult Oncology
 Breast Cancer Risk Reduction
 Breast Cancer Screening and Diagnosis
 Colorectal Cancer Screening
-Genetic/Familial High-Risk Assessment: Breast, Ovarian, and Pancreatic
-Genetic/Familial High-Risk Assessment: Colorectal
+Genetic/Familial High-Risk Assessment: Breast, Ovarian, Pancreatic, and Prostate
+Genetic/Familial High-Risk Assessment: Colorectal, Endometrial, Esophageal, and Gastric
 Lung Cancer Screening
 Prostate Cancer Early Detection

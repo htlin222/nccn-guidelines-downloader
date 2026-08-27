@@ -133,6 +133,7 @@ The `id` is the NCCN PDF slug (`https://www.nccn.org/professionals/physician_gls
 | Acute Myeloid Leukemia | `aml` |
 | Ampullary Adenocarcinoma | `ampullary` |
 | Anal Carcinoma | `anal` |
+| Appendiceal Neoplasms and Cancers | `appendiceal` |
 | Basal Cell Skin Cancer | `nmsc` |
 | B-Cell Lymphomas | `b-cell` |
 | Biliary Tract Cancers | `btc` |
@@ -141,9 +142,11 @@ The `id` is the NCCN PDF slug (`https://www.nccn.org/professionals/physician_gls
 | Breast Cancer | `breast` |
 | Central Nervous System Cancers | `cns` |
 | Cervical Cancer | `cervical` |
+| Castleman Disease | `castleman` |
 | Chronic Lymphocytic Leukemia/SLL | `cll` |
 | Chronic Myeloid Leukemia | `cml` |
 | Colon Cancer | `colon` |
+| Cutaneous Lymphomas | `cutaneous_lymphomas` |
 | Dermatofibrosarcoma Protuberans | `dfsp` |
 | Esophageal and EGJ Cancers | `esophageal` |
 | Gastric Cancer | `gastric` |
@@ -151,7 +154,6 @@ The `id` is the NCCN PDF slug (`https://www.nccn.org/professionals/physician_gls
 | Gestational Trophoblastic Neoplasia | `gtn` |
 | Hairy Cell Leukemia | `hairy_cell` |
 | Head and Neck Cancers | `head-and-neck` |
-| Hepatobiliary Cancers | `hepatobiliary` |
 | Hepatocellular Carcinoma | `hcc` |
 | Histiocytic Neoplasms | `histiocytic_neoplasms` |
 | Hodgkin Lymphoma | `hodgkins` |
@@ -166,6 +168,7 @@ The `id` is the NCCN PDF slug (`https://www.nccn.org/professionals/physician_gls
 | Myelodysplastic Syndromes | `mds` |
 | Myeloid/Lymphoid Neoplasms w/ Eosinophilia | `mlne` |
 | Myeloproliferative Neoplasms | `mpn` |
+| Neuroblastoma | `neuroblastoma` |
 | Neuroendocrine and Adrenal Tumors | `neuroendocrine` |
 | Non-Small Cell Lung Cancer | `nscl` |
 | Occult Primary | `occult` |
@@ -175,8 +178,8 @@ The `id` is the NCCN PDF slug (`https://www.nccn.org/professionals/physician_gls
 | Pediatric Aggressive Mature B-Cell Lymphomas | `ped_b-cell` |
 | Pediatric CNS Cancers | `ped_cns` |
 | Pediatric Hodgkin Lymphoma | `ped_hodgkin` |
+| Pediatric Soft Tissue Sarcoma | `ped_sts` |
 | Penile Cancer | `penile` |
-| Primary Cutaneous Lymphomas | `cutaneous_lymphomas` |
 | Prostate Cancer | `prostate` |
 | Rectal Cancer | `rectal` |
 | Small Bowel Adenocarcinoma | `small_bowel` |
@@ -190,6 +193,7 @@ The `id` is the NCCN PDF slug (`https://www.nccn.org/professionals/physician_gls
 | Thymomas and Thymic Carcinomas | `thymic` |
 | Thyroid Carcinoma | `thyroid` |
 | Uterine Neoplasms | `uterine` |
+| Vaginal Cancer | `vaginal` |
 | Vulvar Cancer | `vulvar` |
 | Waldenström Macroglobulinemia / LPL | `waldenstroms` |
 | Wilms Tumor (Nephroblastoma) | `wilms_tumor` |
@@ -206,7 +210,8 @@ The `id` is the NCCN PDF slug (`https://www.nccn.org/professionals/physician_gls
 | Distress Management | `distress` |
 | Hematopoietic Cell Transplantation | `hct` |
 | Hematopoietic Growth Factors | `growthfactors` |
-| Immunotherapy-Related Toxicities | `immunotherapy` |
+| CAR T-Cell/Engager-Related Toxicities | `cellular_tox` |
+| Immune Checkpoint Inhibitor-Related Toxicities | `ici_tox` |
 | Palliative Care | `palliative` |
 | Cancer-Related Infections | `infections` |
 | Smoking Cessation | `smoking` |
@@ -217,8 +222,8 @@ The `id` is the NCCN PDF slug (`https://www.nccn.org/professionals/physician_gls
 | Breast Cancer Risk Reduction | `breast_risk` |
 | Breast Cancer Screening and Diagnosis | `breast-screening` |
 | Colorectal Cancer Screening | `colorectal_screening` |
-| Genetics — Breast, Ovarian, Pancreatic | `genetics_bopp` |
-| Genetics — Colorectal | `genetics_ceg` |
+| Genetics — Breast, Ovarian, Pancreatic, Prostate | `genetics_bopp` |
+| Genetics — Colorectal, Endometrial, Esophageal, Gastric | `genetics_ceg` |
 | Lung Cancer Screening | `lung_screening` |
 | Prostate Cancer Early Detection | `prostate_detection` |
 
@@ -228,6 +233,10 @@ The `id` is the NCCN PDF slug (`https://www.nccn.org/professionals/physician_gls
 > (`primary_cutaneous → cutaneous_lymphomas`, `genetics_bop → genetics_bopp`,
 > `genetics_colon → genetics_ceg`). The Worker follows NCCN redirects on live fetches,
 > so live downloads survive future renames even before the built-in list is updated.
+
+> NCCN also splits and retires guidelines. `hepatobiliary` became `hcc` + `btc`,
+> and `immunotherapy` became `ici_tox` + `cellular_tox`; both old ids now serve a
+> one-page notice PDF with no version stamp, so they are no longer listed.
 
 ---
 

@@ -9,12 +9,18 @@ export const GUIDELINES = [
 	{ id: "anal", name: "Anal Carcinoma", cat: "Gastrointestinal" },
 	{ id: "nmsc", name: "Basal Cell Skin Cancer", cat: "Skin & Melanoma" },
 	{ id: "b-cell", name: "B-Cell Lymphomas", cat: "Hematology" },
+	{
+		id: "appendiceal",
+		name: "Appendiceal Neoplasms and Cancers",
+		cat: "Gastrointestinal",
+	},
 	{ id: "btc", name: "Biliary Tract Cancers", cat: "Gastrointestinal" },
 	{ id: "bladder", name: "Bladder Cancer", cat: "Genitourinary" },
 	{ id: "bone", name: "Bone Cancer", cat: "Bone & Sarcoma" },
 	{ id: "breast", name: "Breast Cancer", cat: "Breast" },
 	{ id: "cns", name: "Central Nervous System Cancers", cat: "CNS" },
 	{ id: "cervical", name: "Cervical Cancer", cat: "Gynecologic" },
+	{ id: "castleman", name: "Castleman Disease", cat: "Hematology" },
 	{
 		id: "cll",
 		name: "Chronic Lymphocytic Leukemia/Small Lymphocytic Lymphoma",
@@ -45,11 +51,6 @@ export const GUIDELINES = [
 	},
 	{ id: "hairy_cell", name: "Hairy Cell Leukemia", cat: "Hematology" },
 	{ id: "head-and-neck", name: "Head and Neck Cancers", cat: "Head & Neck" },
-	{
-		id: "hepatobiliary",
-		name: "Hepatobiliary Cancers",
-		cat: "Gastrointestinal",
-	},
 	{ id: "hcc", name: "Hepatocellular Carcinoma", cat: "Gastrointestinal" },
 	{
 		id: "histiocytic_neoplasms",
@@ -93,6 +94,7 @@ export const GUIDELINES = [
 		name: "Pancreatic Adenocarcinoma",
 		cat: "Gastrointestinal",
 	},
+	{ id: "neuroblastoma", name: "Neuroblastoma", cat: "Pediatric" },
 	{
 		id: "ped_all",
 		name: "Pediatric Acute Lymphoblastic Leukemia",
@@ -110,11 +112,7 @@ export const GUIDELINES = [
 	},
 	{ id: "ped_hodgkin", name: "Pediatric Hodgkin Lymphoma", cat: "Pediatric" },
 	{ id: "penile", name: "Penile Cancer", cat: "Genitourinary" },
-	{
-		id: "cutaneous_lymphomas",
-		name: "Primary Cutaneous Lymphomas",
-		cat: "Hematology",
-	},
+	{ id: "cutaneous_lymphomas", name: "Cutaneous Lymphomas", cat: "Hematology" },
 	{ id: "prostate", name: "Prostate Cancer", cat: "Genitourinary" },
 	{ id: "rectal", name: "Rectal Cancer", cat: "Gastrointestinal" },
 	{
@@ -136,12 +134,14 @@ export const GUIDELINES = [
 	{ id: "thymic", name: "Thymomas and Thymic Carcinomas", cat: "Thoracic" },
 	{ id: "thyroid", name: "Thyroid Carcinoma", cat: "Head & Neck" },
 	{ id: "uterine", name: "Uterine Neoplasms", cat: "Gynecologic" },
+	{ id: "vaginal", name: "Vaginal Cancer", cat: "Gynecologic" },
 	{ id: "vulvar", name: "Vulvar Cancer", cat: "Gynecologic" },
 	{
 		id: "waldenstroms",
 		name: "Waldenström Macroglobulinemia / Lymphoplasmacytic Lymphoma",
 		cat: "Hematology",
 	},
+	{ id: "ped_sts", name: "Pediatric Soft Tissue Sarcoma", cat: "Pediatric" },
 	{ id: "wilms_tumor", name: "Wilms Tumor (Nephroblastoma)", cat: "Pediatric" },
 	{ id: "antiemesis", name: "Antiemesis", cat: "Supportive Care" },
 	{ id: "pain", name: "Adult Cancer Pain", cat: "Supportive Care" },
@@ -163,8 +163,13 @@ export const GUIDELINES = [
 		cat: "Supportive Care",
 	},
 	{
-		id: "immunotherapy",
-		name: "Management of Immunotherapy-Related Toxicities",
+		id: "cellular_tox",
+		name: "Management of CAR T-Cell and Lymphocyte Engager-Related Toxicities",
+		cat: "Supportive Care",
+	},
+	{
+		id: "ici_tox",
+		name: "Management of Immune Checkpoint Inhibitor-Related Toxicities",
 		cat: "Supportive Care",
 	},
 	{ id: "palliative", name: "Palliative Care", cat: "Supportive Care" },
@@ -203,12 +208,12 @@ export const GUIDELINES = [
 	},
 	{
 		id: "genetics_bopp",
-		name: "Genetic/Familial High-Risk Assessment: Breast, Ovarian, and Pancreatic",
+		name: "Genetic/Familial High-Risk Assessment: Breast, Ovarian, Pancreatic, and Prostate",
 		cat: "Genetics & Risk",
 	},
 	{
 		id: "genetics_ceg",
-		name: "Genetic/Familial High-Risk Assessment: Colorectal",
+		name: "Genetic/Familial High-Risk Assessment: Colorectal, Endometrial, Esophageal, and Gastric",
 		cat: "Genetics & Risk",
 	},
 	{
