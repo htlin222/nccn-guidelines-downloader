@@ -42,9 +42,9 @@ options = ["high", "moderate"]
 
 - Parenteral anticancer agent(s) planned: ___ (anticancer_agents)
 - Dose of each agent: ___ (dose_per_administration)
-    - Read the thresholds below as dose per administration, not as a daily or cycle total, except where otherwise noted
+    - Every mg/m2 or g/m2 threshold below is per dose, except where otherwise noted (eg, Cytarabine ≥3000 mg/m2/day)
 - Agents given together in the same regimen: ___ (same_day_combination)
-    - Several combinations carry a risk level of their own, higher than either single agent
+    - Combinations are listed as their own entries; check the combination rows, not only the single agents
 - Emetic risk level assigned: ___ (emetic_risk)
 
 # High emetic risk, more than 90% frequency of emesis

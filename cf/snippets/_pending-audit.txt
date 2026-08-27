@@ -22,13 +22,4 @@
 #   AE-6 PEDAE-1 PEDAE-3 PEDAE-9      — 生成 agent 自己也失敗了，但檔案已寫出。
 #     它們通過四關，所以格式完整；但生成 agent 沒跑完自己的驗證循環就中斷，
 #     所以連「生成階段的自我修正」都不確定跑過。這一類要重生成，不只是補審。
-antiemesis/AE-1
-antiemesis/AE-6
-antiemesis/AE-9
-antiemesis/AE-13
-antiemesis/AE-14
-antiemesis/AE-15
-antiemesis/AE-16
-antiemesis/PEDAE-1
-antiemesis/PEDAE-3
-antiemesis/PEDAE-9
+# 2026-08-27 更晚：那 10 份 antiemesis 已重生成並通過審查，清單清空。
