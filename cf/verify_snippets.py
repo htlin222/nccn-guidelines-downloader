@@ -41,12 +41,21 @@ DRUG_SUFFIX = re.compile(
 )
 
 # 帶單位的數字，以及 NCCN 的 category 標註。兩者都是「寫錯就危險」的東西。
-QUANTITY = re.compile(
-    r"\b\d+(?:\.\d+)?\s*(?:mg|mcg|g|cm|mm|%|Gy|weeks?|months?|years?|cycles?|doses?)\b",
-    re.I,
-)
+UNITS = r"mg|mcg|g|cm|mm|%|Gy|weeks?|months?|years?|cycles?|doses?"
+QUANTITY = re.compile(r"\b(\d+(?:[.\u2013-]\d+)?)\s*(?:%s)\b" % UNITS, re.I)
+
+# 拼成英文的數字也要驗，否則「寫成 three 就不會被檢查」會變成繞過這一關的方法——
+# 而那正是第一批 20 個裡真的發生過的事。
+WORDNUM = {
+    "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6",
+    "seven": "7", "eight": "8", "nine": "9", "ten": "10", "eleven": "11", "twelve": "12",
+}
+WORDQTY = re.compile(r"\b(%s)(?:\s+to\s+(%s))?\s+(?:%s)\b"
+                     % ("|".join(WORDNUM), "|".join(WORDNUM), UNITS), re.I)
 CATEGORY = re.compile(r"\bcategory\s+[123][AB]?\b", re.I)
-XREF = re.compile(r"\b([A-Z]{2,}[A-Z0-9]*-[0-9A-Z]+)\b")
+# ref 的尾碼只有兩種形狀：數字（BINV-12、COL-2A）或一到兩個字母（BINV-A、ST-1）。
+# 不限制的話 HER2-NEGATIVE、ER-POSITIVE 這種全大寫詞會被當成頁碼引用。
+XREF = re.compile(r"\b([A-Z]{2,}[A-Z0-9]*-(?:\d+[A-Z]?|[A-Z]{1,2}))\b")
 VARSLOT = re.compile(r"___ \(([a-z0-9_]+)\)")
 
 
@@ -138,10 +147,23 @@ def check(path):
         return errs
     src = norm(open(src_path, encoding="utf-8").read())
 
-    for pat, label in ((DRUG_SUFFIX, "藥名"), (QUANTITY, "數量"), (CATEGORY, "category 標註")):
+    for pat, label in ((DRUG_SUFFIX, "藥名"), (CATEGORY, "category 標註")):
         for hit in {h.group(0) for h in pat.finditer(body)}:
             if norm(hit) not in src:
                 fail(errs, name, "%s『%s』在素材裡找不到" % (label, hit.strip()))
+
+    # 數量只驗數字，不要求單位緊貼著它。素材是 pdftotext 的產物，雙欄排版會把
+    # 「3–5 years」切成「3–5」和跑到另一欄的「years」——連在一起驗的話，一句完全
+    # 正確的話會過不了關，而模型面對過不了的關卡會選擇刪掉它。第一批 20 個裡
+    # BINV-6 的 bisphosphonate 療程就是這樣先被刪掉、再被改寫成英文拼字繞過去的。
+    nums = {h.group(1) for h in QUANTITY.finditer(body)}
+    for h in WORDQTY.finditer(body):
+        nums.add(WORDNUM[h.group(1).lower()]
+                 + ("-" + WORDNUM[h.group(2).lower()] if h.group(2) else ""))
+    for n in nums:
+        parts = [p for p in re.split(r"[.\u2013-]", n) if p]
+        if not all(norm(p) in src for p in parts):
+            fail(errs, name, "數量『%s』的數字在素材裡找不到" % n)
 
     # 交叉引用要嘛出現在素材裡，要嘛是同一份指引裡真實存在的另一個 ref
     known = {os.path.basename(p)[:-4] for p in glob.glob(os.path.join(SNIP, "_src", gid, "*.txt"))}

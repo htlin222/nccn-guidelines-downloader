@@ -6,75 +6,207 @@
       "values": []
     },
     "histology": {
-      "values": ["dcis", "invasive-ductal", "invasive-lobular", "inflammatory", "paget", "phyllodes", "any"]
+      "values": [
+        "dcis",
+        "invasive-ductal",
+        "invasive-lobular",
+        "inflammatory",
+        "paget",
+        "phyllodes",
+        "tubular",
+        "mucinous",
+        "cribriform",
+        "metaplastic",
+        "micropapillary",
+        "any"
+      ]
     },
     "stage": {
-      "values": ["0", "I", "II", "III", "IV", "recurrent", "any"]
+      "values": [
+        "0",
+        "I",
+        "II",
+        "III",
+        "IV",
+        "recurrent",
+        "any"
+      ]
     },
     "biomarker": {
       "note": "各癌別自己的清單，共用的放前面。",
-      "values": ["hr-positive", "hr-negative", "her2-positive", "her2-negative", "tnbc", "brca", "pik3ca", "esr1", "any"]
+      "values": [
+        "hr-positive",
+        "hr-negative",
+        "her2-positive",
+        "her2-negative",
+        "tnbc",
+        "brca",
+        "pik3ca",
+        "esr1",
+        "any"
+      ]
     },
     "timepoint": {
       "note": "這個病人現在走到哪一步。門診檢索最常用的軸。",
-      "values": ["workup", "staging", "primary-treatment", "neoadjuvant", "adjuvant", "surveillance", "recurrence", "metastatic", "supportive"]
+      "values": [
+        "workup",
+        "staging",
+        "primary-treatment",
+        "neoadjuvant",
+        "adjuvant",
+        "surveillance",
+        "recurrence",
+        "metastatic",
+        "supportive"
+      ]
     },
     "intent": {
-      "values": ["curative", "palliative"]
+      "values": [
+        "curative",
+        "palliative"
+      ]
     },
     "population": {
       "note": "只在該頁明確針對這族群時才填，不要因為「也適用」就填。",
-      "values": ["pregnancy", "male", "older-adult", "fertility"]
+      "values": [
+        "pregnancy",
+        "male",
+        "older-adult",
+        "fertility"
+      ]
     }
   },
   "alias": {
     "disease": {
-      "乳癌": "breast", "乳腺癌": "breast", "breast": "breast", "breast cancer": "breast"
+      "乳癌": "breast",
+      "乳腺癌": "breast",
+      "breast": "breast",
+      "breast cancer": "breast"
     },
     "histology": {
-      "原位癌": "dcis", "dcis": "dcis",
-      "浸潤性乳管癌": "invasive-ductal", "idc": "invasive-ductal", "ductal": "invasive-ductal",
-      "浸潤性小葉癌": "invasive-lobular", "ilc": "invasive-lobular", "lobular": "invasive-lobular",
-      "發炎性乳癌": "inflammatory", "ibc": "inflammatory", "inflammatory": "inflammatory",
-      "柏哲德氏病": "paget", "paget": "paget",
-      "葉狀腫瘤": "phyllodes", "phyllodes": "phyllodes"
+      "原位癌": "dcis",
+      "dcis": "dcis",
+      "浸潤性乳管癌": "invasive-ductal",
+      "idc": "invasive-ductal",
+      "ductal": "invasive-ductal",
+      "浸潤性小葉癌": "invasive-lobular",
+      "ilc": "invasive-lobular",
+      "lobular": "invasive-lobular",
+      "發炎性乳癌": "inflammatory",
+      "ibc": "inflammatory",
+      "inflammatory": "inflammatory",
+      "柏哲德氏病": "paget",
+      "paget": "paget",
+      "葉狀腫瘤": "phyllodes",
+      "phyllodes": "phyllodes",
+      "管狀癌": "tubular",
+      "tubular": "tubular",
+      "黏液癌": "mucinous",
+      "mucinous": "mucinous",
+      "篩狀癌": "cribriform",
+      "cribriform": "cribriform",
+      "化生性癌": "metaplastic",
+      "metaplastic": "metaplastic",
+      "微乳頭": "micropapillary",
+      "micropapillary": "micropapillary"
     },
     "stage": {
-      "零期": "0", "stage 0": "0",
-      "一期": "I", "第一期": "I", "stage 1": "I", "stage i": "I",
-      "二期": "II", "第二期": "II", "stage 2": "II", "stage ii": "II",
-      "三期": "III", "第三期": "III", "stage 3": "III", "stage iii": "III", "局部晚期": "III",
-      "四期": "IV", "第四期": "IV", "stage 4": "IV", "stage iv": "IV", "轉移": "IV", "轉移性": "IV", "metastatic": "IV",
-      "復發": "recurrent", "recurrent": "recurrent", "recurrence": "recurrent"
+      "零期": "0",
+      "stage 0": "0",
+      "一期": "I",
+      "第一期": "I",
+      "stage 1": "I",
+      "stage i": "I",
+      "二期": "II",
+      "第二期": "II",
+      "stage 2": "II",
+      "stage ii": "II",
+      "三期": "III",
+      "第三期": "III",
+      "stage 3": "III",
+      "stage iii": "III",
+      "局部晚期": "III",
+      "四期": "IV",
+      "第四期": "IV",
+      "stage 4": "IV",
+      "stage iv": "IV",
+      "轉移": "IV",
+      "轉移性": "IV",
+      "metastatic": "IV",
+      "復發": "recurrent",
+      "recurrent": "recurrent",
+      "recurrence": "recurrent"
     },
     "biomarker": {
-      "荷爾蒙受體陽性": "hr-positive", "hr+": "hr-positive", "er+": "hr-positive", "hr positive": "hr-positive",
-      "荷爾蒙受體陰性": "hr-negative", "hr-": "hr-negative", "er-": "hr-negative",
-      "her2陽性": "her2-positive", "her2+": "her2-positive", "her2 positive": "her2-positive",
-      "her2陰性": "her2-negative", "her2-": "her2-negative", "her2 negative": "her2-negative",
-      "三陰性": "tnbc", "三陰": "tnbc", "tnbc": "tnbc", "triple negative": "tnbc",
-      "brca": "brca", "遺傳": "brca"
+      "荷爾蒙受體陽性": "hr-positive",
+      "hr+": "hr-positive",
+      "er+": "hr-positive",
+      "hr positive": "hr-positive",
+      "荷爾蒙受體陰性": "hr-negative",
+      "hr-": "hr-negative",
+      "er-": "hr-negative",
+      "her2陽性": "her2-positive",
+      "her2+": "her2-positive",
+      "her2 positive": "her2-positive",
+      "her2陰性": "her2-negative",
+      "her2-": "her2-negative",
+      "her2 negative": "her2-negative",
+      "三陰性": "tnbc",
+      "三陰": "tnbc",
+      "tnbc": "tnbc",
+      "triple negative": "tnbc",
+      "brca": "brca",
+      "遺傳": "brca"
     },
     "timepoint": {
-      "檢查": "workup", "檢驗": "workup", "初診": "workup", "workup": "workup", "work-up": "workup",
-      "分期": "staging", "staging": "staging",
-      "手術": "primary-treatment", "局部治療": "primary-treatment", "primary treatment": "primary-treatment", "surgery": "primary-treatment",
-      "術前": "neoadjuvant", "前導": "neoadjuvant", "neoadjuvant": "neoadjuvant", "preoperative": "neoadjuvant",
-      "術後": "adjuvant", "輔助": "adjuvant", "adjuvant": "adjuvant",
-      "追蹤": "surveillance", "監測": "surveillance", "surveillance": "surveillance", "follow-up": "surveillance",
-      "復發處理": "recurrence", "recurrence": "recurrence",
-      "轉移治療": "metastatic", "metastatic": "metastatic",
-      "支持": "supportive", "supportive": "supportive"
+      "檢查": "workup",
+      "檢驗": "workup",
+      "初診": "workup",
+      "workup": "workup",
+      "work-up": "workup",
+      "分期": "staging",
+      "staging": "staging",
+      "手術": "primary-treatment",
+      "局部治療": "primary-treatment",
+      "primary treatment": "primary-treatment",
+      "surgery": "primary-treatment",
+      "術前": "neoadjuvant",
+      "前導": "neoadjuvant",
+      "neoadjuvant": "neoadjuvant",
+      "preoperative": "neoadjuvant",
+      "術後": "adjuvant",
+      "輔助": "adjuvant",
+      "adjuvant": "adjuvant",
+      "追蹤": "surveillance",
+      "監測": "surveillance",
+      "surveillance": "surveillance",
+      "follow-up": "surveillance",
+      "復發處理": "recurrence",
+      "recurrence": "recurrence",
+      "轉移治療": "metastatic",
+      "metastatic": "metastatic",
+      "支持": "supportive",
+      "supportive": "supportive"
     },
     "intent": {
-      "根治": "curative", "curative": "curative",
-      "緩和": "palliative", "安寧": "palliative", "palliative": "palliative"
+      "根治": "curative",
+      "curative": "curative",
+      "緩和": "palliative",
+      "安寧": "palliative",
+      "palliative": "palliative"
     },
     "population": {
-      "懷孕": "pregnancy", "孕婦": "pregnancy", "pregnancy": "pregnancy", "pregnant": "pregnancy",
-      "男性": "male", "male": "male",
-      "老年": "older-adult", "高齡": "older-adult", "older adult": "older-adult",
-      "生育": "fertility", "fertility": "fertility"
+      "懷孕": "pregnancy",
+      "孕婦": "pregnancy",
+      "pregnancy": "pregnancy",
+      "pregnant": "pregnancy",
+      "男性": "male",
+      "male": "male",
+      "老年": "older-adult",
+      "高齡": "older-adult",
+      "older adult": "older-adult",
+      "生育": "fertility",
+      "fertility": "fertility"
     }
   }
 }

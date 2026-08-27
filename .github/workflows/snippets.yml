@@ -1,0 +1,105 @@
+name: Verify and load clinic checklists
+
+# 核對清單的單一真相是 git 裡的 cf/snippets/<gid>/<ref>.md，D1 只是可查詢副本。
+# 這支負責讓兩邊不會漂開：清單一進 main，就重驗一次並重新載入 D1。
+#
+# 生成不在這裡。生成需要模型逐頁讀 NCCN 的內容，那是批次作業，靠
+# `bash cf/snippets_status.sh <gid> --todo` 取下一批來做；這支只做機械驗證與同步，
+# 所以它永遠跑得完，也永遠可以重跑。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "cf/snippets/**"
+      - "cf/verify_snippets.py"
+      - "cf/load_snippets.sh"
+      - "cf/sql/snippets.sql"
+      - ".github/workflows/snippets.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  snippets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      # verify 的來源關要比對素材，而素材是 page_text 的衍生檔、不進版控，
+      # 所以每次都要重新 dump。這也順便證明了「清單引用的那一頁還在索引裡」。
+      - name: Install wrangler
+        run: npm install -g wrangler
+
+      - name: Check the token is set and actually works
+        working-directory: cf
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+        run: |
+          [ -n "$CLOUDFLARE_API_TOKEN" ] \
+            || { echo "::error::repo secret CLOUDFLARE_API_TOKEN is empty"; exit 1; }
+          wrangler d1 execute nccn-search --remote --command "SELECT 1" >/dev/null \
+            || { echo "::error::token cannot read D1 (needs D1: Edit)"; exit 1; }
+
+      - name: Rebuild the source material every checklist is checked against
+        working-directory: cf
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+        run: |
+          set -e
+          for gid in $(ls snippets | grep -v '^_'); do
+            echo "--- $gid"
+            KIND=all bash dump_snippet_src.sh "$gid"
+          done
+
+      # 四關。來源關是唯一擋得住幻覺的一關，所以它必須在 CI 裡跑，而不是只在
+      # 寫的當下跑過一次——素材會隨著 NCCN 改版而變，昨天有依據的句子今天可能沒有。
+      - name: Verify every checklist against its source
+        working-directory: cf
+        run: python3 verify_snippets.py
+
+      - name: Load into D1
+        working-directory: cf
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+        run: bash load_snippets.sh
+
+      # 進度是這個計劃的主要訊號：還剩幾個沒做。印在 summary 裡，不必翻 log。
+      - name: Progress
+        working-directory: cf
+        run: |
+          bash snippets_status.sh | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # 版本過期：清單記錄了產生當下的 NCCN 版本，指引改版之後那一份就不再可信。
+      # 這裡只報告，不自動重生——重生要重新過人工審閱，那是人的決定。
+      - name: Flag checklists whose guideline has moved on
+        working-directory: cf
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+        run: |
+          wrangler r2 object get nccn-pdfs/meta/versions.json --file=/tmp/versions.json --remote
+          wrangler d1 execute nccn-search --remote --json \
+            --command "SELECT gid, ref, version FROM snippets" > /tmp/snips.json
+          python3 - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
+          import json
+          live = json.load(open("/tmp/versions.json"))
+          rows = json.load(open("/tmp/snips.json"))[0]["results"]
+          stale = [r for r in rows
+                   if live.get(r["gid"], {}).get("v") not in (None, r["version"])]
+          if stale:
+              print("\n### 這些清單的指引已經改版\n")
+              for r in stale:
+                  print("- `%s/%s` — 清單是 v%s，線上是 v%s"
+                        % (r["gid"], r["ref"], r["version"], live[r["gid"]]["v"]))
+          else:
+              print("\n所有清單都對應目前的指引版本。")
+          PY
