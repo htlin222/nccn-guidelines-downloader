@@ -483,6 +483,55 @@ LIMIT=3 SLEEP=0 bash refresh_mda.sh    # 抓三份（需要 R2 token）
 
 ---
 
+## 5.8 Reconciling the NCCN catalogue with upstream
+
+MD Anderson's catalogue regenerates itself every month (§5.7). **The NCCN one does
+not** — `cf/guidelines.json` and its three copies are hand-written, so NCCN adding,
+splitting or renaming a guideline is silent until somebody looks. In August 2026
+that drift had reached seven missing guidelines, two that upstream had retired, and
+three stale names. Nothing was red; `gen_versions.sh` just logged `NO-VERSION` twice
+a week for a year.
+
+There is no API. The listing lives in five category pages, and the PDF slug only
+appears on each guideline's own detail page:
+
+```bash
+cd cf && set -a && . ../.env && set +a
+CK=$(wrangler kv key get cookie --binding NCCN_KV --remote | tail -1)
+UA='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
+
+# 1. every guideline NCCN currently ships (category_1..5 → 91 entries)
+for c in 1 2 3 4 5; do curl -s -H "cookie: $CK" -A "$UA" "https://www.nccn.org/guidelines/category_$c"; done \
+  | grep -oE 'guidelines-detail\?category=[0-9]+&(amp;)?id=[0-9]+"[^>]*>[^<]+'
+
+# 2. the PDF slug for one of them — this is the only place it is written down
+curl -s -H "cookie: $CK" -A "$UA" "https://www.nccn.org/guidelines/guidelines-detail?category=3&id=1548" \
+  | grep -oE 'physician_gls/pdf/[a-z0-9_.-]+\.pdf' | sort -u
+```
+
+Four things worth knowing before doing this again:
+
+- **Do not guess slugs.** Unauthenticated, NCCN answers **200 with a login page**
+  for every path under `physician_gls/pdf/`, so a wrong guess is indistinguishable
+  from a right one — eleven plausible names for `ici_tox` all came back 200. With
+  the cookie, `content-type` separates them: `application/pdf` vs `text/html`.
+- **Every guideline also exists as `<id>_blocks.pdf`** (`aml_blocks.pdf` too). The
+  detail page points at the un-suffixed one, which is what the catalogue uses.
+- **A retired guideline is not a 404.** It becomes a one-page notice PDF ("has been
+  separated into…", 45–80 KB) with no `Version X.YYYY` stamp — which is exactly what
+  `NO-VERSION` in `gen_versions.log` means. Two of those sat in the catalogue for
+  months. `test/catalog.test.js` now fails if either id comes back.
+- **An id can outlive its name.** `genetics_bopp` and `genetics_ceg` are acronyms of
+  guideline scopes that NCCN widened; the ids were updated at the time, the display
+  names were not, and nothing notices because a wrong name breaks nothing.
+
+Once `guidelines.json` changes, all four copies must move together —
+`src/data/guidelines.js`, `embed.json`, `nccn_dict.txt` — and `test/catalog.test.js`
+is what enforces that. Then pull the new PDFs into **`raw/`** (never the root; §6)
+and run `gen_clean.sh` so readers get them before the next Monday.
+
+---
+
 ## 6. R2 layout
 
 ```
