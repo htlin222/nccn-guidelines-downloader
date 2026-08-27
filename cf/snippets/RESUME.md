@@ -120,27 +120,35 @@ Workflow({ scriptPath: "<repo>/cf/snippets/_workflow-backfill-facets.js",
 
 ---
 
-## 先做這件事：補跑 21 份的對抗性審查
+## 先做這件事：處理 10 份未審的 antiemesis
 
-`snippets/_pending-audit.txt` 列著 21 份「生成完成、但審查沒跑成」的清單
-（2026-08-27 撞到 session limit）。它們四關全過，在 D1 裡 `review='unaudited'`。
+`snippets/_pending-audit.txt` 列著它們，D1 裡是 `review='unaudited'`。分兩種：
 
-**未審與已審不是同一個東西，即使它們長得一模一樣。** 四關擋得住編出來的藥名與
-數字，擋不住這三類——全部實際發生過，而且全部四關通過：
+- **AE-1 AE-9 AE-13 AE-14 AE-15 AE-16** — 生成完成，只有 audit 失敗。補審即可。
+- **AE-6 PEDAE-1 PEDAE-3 PEDAE-9** — 生成 agent 自己也中斷了，但檔案已經寫出。
+  它們通過四關所以格式完整，但生成 agent 沒跑完自己的驗證循環，所以連生成階段的
+  自我修正都不確定跑過。**這四份要重生成，不是補審。**
 
-- 把 `positive margins` 寫成 `margins`（任何 margin 結果都變成高風險）
-- 把 `± pertuzumab` 寫成 `Add pertuzumab`（可選變必須）
-- 憑空生成一句總結規則（讀起來像好文件，把人從核對推向推論）
-
-補法就是把那 21 個 ref 丟回生成 workflow 跑一遍（會重新生成再審查一次）：
+兩種都是把 ref 丟回生成 workflow 跑一遍（它會重新生成再審查）：
 
 ```
 Workflow({ scriptPath: "<repo>/cf/snippets/_workflow-generate.js",
-           args: ["hodgkins/HODG-6", "mds/MDS-3", ...] })
+           args: ["antiemesis/AE-1", "antiemesis/AE-6", ...] })
 ```
 
 跑完把 `_pending-audit.txt` 裡對應的行刪掉，重新 `bash load_snippets.sh`——
 它會把 `unaudited` 清掉。
+
+**為什麼未審不能當已審**：四關擋得住編出來的藥名與數字，擋不住下面這些——全部
+實際發生過，而且全部四關通過：
+
+- `REC-4` 把 `positive margins` 寫成 `margins`（任何 margin 結果都變高風險）
+- `hcc/ST-1` 的 T1 漏掉「≤2 cm 或 >2 cm 且無血管侵犯」（把 T2 拉進 T1）
+- `BINV-5` 把 `± pertuzumab` 寫成 `Add pertuzumab`（可選變必須）
+- `bone/CHON-2` 加了一個 systemic therapy 選項，而同頁的註腳明說沒有標準化療
+- `CERV-2` 把註腳掛到沒有那個標記的四行上（**漏條件讀者會發現清單比較短；
+  條件掛錯地方讀者不會發現任何異常**）
+- `SELLAR-1` 把「無法手術處理的殘留腫瘤，考慮放療或觀察」寫成「轉介放療」
 
 ## 還沒做的事
 

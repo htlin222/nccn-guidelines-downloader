@@ -16,3 +16,19 @@
 #
 # 2026-08-27：這 21 份是撞到 session limit 時，生成已完成但 audit 全數失敗的。
 # 2026-08-27 稍後：那 21 份已補跑審查並通過，清單清空。
+#
+# 2026-08-27 第二次撞額度（11:10pm 重置）。這 10 份分兩種情況，都算未審：
+#   AE-1 AE-9 AE-13 AE-14 AE-15 AE-16 — 生成完成，audit 失敗
+#   AE-6 PEDAE-1 PEDAE-3 PEDAE-9      — 生成 agent 自己也失敗了，但檔案已寫出。
+#     它們通過四關，所以格式完整；但生成 agent 沒跑完自己的驗證循環就中斷，
+#     所以連「生成階段的自我修正」都不確定跑過。這一類要重生成，不只是補審。
+antiemesis/AE-1
+antiemesis/AE-6
+antiemesis/AE-9
+antiemesis/AE-13
+antiemesis/AE-14
+antiemesis/AE-15
+antiemesis/AE-16
+antiemesis/PEDAE-1
+antiemesis/PEDAE-3
+antiemesis/PEDAE-9
