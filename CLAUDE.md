@@ -533,6 +533,36 @@ and run `gen_clean.sh` so readers get them before the next Monday.
 
 ---
 
+## 5.9 Clinic checklists (issue #4)
+
+逐頁把 NCCN 的決策節點寫成門診核對清單：一個 ref 一個檔，`cf/snippets/<gid>/<ref>.md`。
+單一真相在 git，D1（`snippets` / `snippet_facets` / `facet_alias`）是可查詢副本，
+方向永遠是檔案 → D1。
+
+**跨 session 的長工，接手看 [`cf/snippets/RESUME.md`](cf/snippets/RESUME.md)** ——
+讀完那一頁就能接著做，不需要對話紀錄。狀態不落地：`snippets/<gid>/<ref>.md` 存在
+就是做完，所以中斷不留待收拾的東西。
+
+```bash
+cd cf && bash snippets_status.sh          # 進度與待辦
+python3 verify_snippets.py                # 四關
+bash load_snippets.sh                     # 檔案 → D1（冪等，不覆寫 review）
+```
+
+三個決定值得知道：
+
+- **facet 是受控詞彙，不是自由填的。** 放任的話同一個概念會生出 `stage III` /
+  `III` / `cT3` 幾種寫法，檢索開始漏而且**靜默**——使用者只覺得「有時候找不到」。
+  代價已經付過一次：頭兩批做完才發現 `_vocab.json` 只有乳癌的值，大腸癌與肺癌的
+  biomarker 軸幾乎全空。開新癌別前先看字典夠不夠。
+- **生成之後一定要跑對抗性審查。** 機械四關擋得住編出來的藥名與數字，擋不住
+  「把 positive margins 寫成 margins」「把 ± pertuzumab 寫成 Add pertuzumab」
+  「憑空生成一句總結規則」。這三類都實際發生過，全部四關通過。
+- **`review` 欄位是人審的結論，重載不覆寫它。** 目前全是 NULL——機械關與對抗性
+  審查都是模型，臨床把關還沒發生。
+
+---
+
 ## 6. R2 layout
 
 ```
