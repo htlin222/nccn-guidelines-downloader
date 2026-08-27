@@ -74,7 +74,10 @@ def fail(errs, ref, msg):
 
 def check(path):
     errs = []
-    name = os.path.basename(path)
+    # 用 <gid>/<ref> 當標籤，不是檔名：ST-1.md 在三十幾份指引裡都存在，只印檔名
+    # 的話「32 failed」看得到，卻無從知道是哪三十二個。
+    parts = os.path.normpath(path).split(os.sep)
+    name = "/".join(parts[-2:]) if len(parts) >= 2 else os.path.basename(path)
     raw = open(path, encoding="utf-8").read()
 
     # --- 結構關：frontmatter 切得出來嗎 ---
@@ -96,12 +99,13 @@ def check(path):
     for k in REQUIRED_META:
         if not meta.get(k):
             fail(errs, name, "frontmatter 缺 %s" % k)
-    ref = meta.get("ref") or name[:-3]
+    base = os.path.basename(path)[:-3]
+    ref = meta.get("ref") or base
     gid = meta.get("gid") or ""
 
     if meta.get("id") and meta["id"] != "%s/%s" % (gid, ref):
         fail(errs, name, "id 應為 %s/%s，實為 %s" % (gid, ref, meta["id"]))
-    if name[:-3] != ref:
+    if base != ref:
         fail(errs, name, "檔名與 ref 不一致（ref=%s）" % ref)
 
     if "# Source" not in body:
@@ -172,12 +176,19 @@ def check(path):
         if not all(norm(p) in src for p in parts):
             fail(errs, name, "數量『%s』的數字在素材裡找不到" % n)
 
-    # 交叉引用要嘛出現在素材裡，要嘛是同一份指引裡真實存在的另一個 ref
-    known = {os.path.basename(p)[:-4] for p in glob.glob(os.path.join(SNIP, "_src", gid, "*.txt"))}
+    # 交叉引用必須出現在**這一頁的素材裡**。
+    #
+    # 原本還放行「同一份指引裡存在這個 ref」，那是個洞：ST-16 寫了「本表的 cN 定義
+    # 在 ST-15」，外部為真、ST-15 也確實存在，於是通過——但那一頁只有一行
+    # 「Table 7 — Continued」，從未指向 ST-15。這一類最難抓，正因為它是真的；
+    # 而 snippet 的價值在於「它就是那一頁」，一句那一頁沒說的導引不屬於它。
+    #
+    # 誤殺的情況是素材抽取壞了（pdftotext 把 ref 切碎，像 mastocytosis 的 SM-G），
+    # 那時候該修的是素材或那一行，不是放寬這道檢查。
     for x in {h.group(1) for h in XREF.finditer(body)}:
-        if x == ref or x in known or norm(x) in src:
+        if x == ref or norm(x) in src:
             continue
-        fail(errs, name, "交叉引用 %s 既不在素材裡，也不是這份指引的 ref" % x)
+        fail(errs, name, "交叉引用 %s 沒有出現在這一頁的素材裡（外部為真也不算）" % x)
 
     return errs
 
@@ -197,7 +208,7 @@ def main():
             for e in errs:
                 print("FAIL %s" % e)
         else:
-            print("OK   %s" % os.path.basename(p))
+            print("OK   %s" % "/".join(os.path.normpath(p).split(os.sep)[-2:]))
     print("\n%d passed, %d failed / %d" % (len(paths) - bad, bad, len(paths)))
     return 1 if bad else 0
 
