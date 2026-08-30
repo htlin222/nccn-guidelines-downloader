@@ -54,7 +54,15 @@ import { SKILL_FILENAME, buildSkillZip } from "./lib/skillpack.js";
 import { renderPage } from "./views/home.js";
 import { renderNotes } from "./views/notes.js";
 import { buildSearch, parseQuery, rankRows } from "./lib/notes.js";
-import { remember } from "./lib/cache.js";
+import {
+	NOTES_GEN_KEY,
+	cacheKey,
+	generation,
+	remember,
+} from "./lib/cache.js";
+// hashKey 就是 sha256 十六進位，名字是金鑰用途留下的。這裡借它算生成內容的
+// 指紋，不值得為了名字再抄一份同樣的 crypto.subtle.digest。
+import { hashKey as sha256 } from "./lib/apikey.js";
 import { renderViewer } from "./views/viewer.js";
 import { faviconResponse, manifestResponse, SW_JS } from "./views/static.js";
 
@@ -128,12 +136,79 @@ export default {
 			}
 		}
 
+		// 單一份清單的讀與寫。
+		//
+		// 這條路徑刻意留在 Cloudflare Access 後面（不是 /api/v1 那個 Bypass 前綴），
+		// 所以 PUT 的授權就是 Access 本身——能登入的人才寫得了，而 Access 同時告訴
+		// 我們是誰寫的。任何時候把它搬進 /api/v1，等於把寫入能力送給整個網際網路。
 		if (pathname.startsWith("/api/notes/")) {
 			const [, , , gid, ref] = pathname.split("/");
 			if (!gid || !ref) return json({ error: "bad path" }, 400);
+			const g = decodeURIComponent(gid);
+			const r = decodeURIComponent(ref);
+
+			if (request.method === "PUT" || request.method === "DELETE") {
+				const who =
+					request.headers.get("cf-access-authenticated-user-email") || "";
+				try {
+					const row = await env.DB.prepare(
+						"SELECT body FROM snippets WHERE gid=? AND ref=?",
+					)
+						.bind(g, r)
+						.first();
+					if (!row) return json({ error: "not found" }, 404);
+
+					if (request.method === "DELETE") {
+						await env.DB.prepare(
+							"DELETE FROM snippet_edits WHERE gid=? AND ref=?",
+						)
+							.bind(g, r)
+							.run();
+					} else {
+						const in_ = await request.json().catch(() => null);
+						const text = in_ && typeof in_.body === "string" ? in_.body : null;
+						if (text == null) return json({ error: "body required" }, 400);
+						// 改回跟生成內容一模一樣，就當成撤銷。留著一筆內容相同的
+						// 「已編輯」只會讓那個徽章失去意義。
+						if (text === row.body) {
+							await env.DB.prepare(
+								"DELETE FROM snippet_edits WHERE gid=? AND ref=?",
+							)
+								.bind(g, r)
+								.run();
+						} else {
+							await env.DB.prepare(
+								"INSERT OR REPLACE INTO snippet_edits" +
+									" (gid,ref,body,base_hash,editor,updated) VALUES (?,?,?,?,?,?)",
+							)
+								.bind(
+									g,
+									r,
+									text,
+									await sha256(row.body),
+									who,
+									new Date().toISOString(),
+								)
+								.run();
+						}
+					}
+					// 這一份的快取要立刻失效。世代號是整批失效用的，為了一次編輯把
+					// 全站快取丟掉太貴，所以只刪這一個 key。
+					ctx?.waitUntil(
+						(async () => {
+							const gen = await generation(env, NOTES_GEN_KEY);
+							await env.NCCN_KV.delete(
+								cacheKey(gen, "s", g + "/" + r, "notes"),
+							).catch(() => {});
+						})(),
+					);
+					return json({ ok: true });
+				} catch (e) {
+					return json({ error: String(e && e.message) }, 500);
+				}
+			}
+
 			try {
-				const g = decodeURIComponent(gid);
-				const r = decodeURIComponent(ref);
 				// loader 回 null 代表這份不存在，remember 就不會把 404 釘住 30 天。
 				const body = await remember(env, ctx, "s", g + "/" + r, async () => {
 					const row = await env.DB.prepare(
@@ -141,7 +216,22 @@ export default {
 					)
 						.bind(g, r)
 						.first();
-					return row || null;
+					if (!row) return null;
+					const ed = await env.DB.prepare(
+						"SELECT body, base_hash, editor, updated FROM snippet_edits WHERE gid=? AND ref=?",
+					)
+						.bind(g, r)
+						.first();
+					if (!ed) return row;
+					return {
+						...row,
+						body: ed.body,
+						generated: row.body,
+						edited: { editor: ed.editor, updated: ed.updated },
+						// base 對不上代表這份修改是針對舊版寫的——之後重新生成過了。
+						// 讀的人該知道，不然一份舊修改會安靜地擋住新版內容。
+						stale: ed.base_hash ? ed.base_hash !== (await sha256(row.body)) : false,
+					};
 				}, "notes");
 				return body
 					? new Response(body, {

@@ -81,7 +81,11 @@ document.documentElement.dataset.inv=(d&&localStorage.getItem('nccninv')!=='0')?
     text-decoration:none;font-size:.84rem;font-weight:600;white-space:nowrap;
     background:transparent;border:1px solid hsl(var(--border));color:hsl(var(--foreground));}
   .navlink:hover{background:hsl(var(--accent));}
-  @media(max-width:560px){.navlink span{display:none;}}
+  .navlink .ni{display:grid;place-items:center;}
+  .navlink .ni svg{width:16px;height:16px;}
+  /* 窄螢幕只留圖示。選擇器要指定文字那一個 span，寫成 .navlink span 會把
+     圖示的 .ni 也一起藏掉，整顆按鈕變空白。 */
+  @media(max-width:560px){.navlink span:not(.ni){display:none;}.navlink{padding:0 10px;}}
   .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.12rem;letter-spacing:-.01em;}
   .brand .logo{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;
     background:hsl(var(--primary));color:hsl(var(--primary-foreground));font-size:16px;}
@@ -230,7 +234,7 @@ ${TOAST_CSS}
     <div class="htop">
       <div class="brand"><span class="logo" id="logo"></span><span><span id="brandName">NCCN Guidelines</span><small id="sub">${GUIDELINES.length} 份 · R2 · PWA</small></span></div>
       <div class="spacer"></div>
-      <a class="navlink" href="/notes" title="門診核對清單">📋<span>臨床筆記</span></a>
+      <a class="navlink" href="/notes" title="門診核對清單"><span class="ni" id="notesicon"></span><span>臨床筆記</span></a>
       <button class="iconbtn" id="bell" title="通知"></button>
       <button class="iconbtn" id="settings" title="設定"></button>
       <button class="iconbtn" id="theme" title="切換主題"></button>
@@ -287,6 +291,7 @@ const ICONS = {
   star:'<path d="m12 2.5 2.95 5.98 6.6.96-4.77 4.65 1.12 6.57L12 17.56l-5.9 3.1 1.12-6.57L2.45 9.44l6.6-.96z"/>',
   bell:'<path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="M21 18H3a2 2 0 0 0 2-2v-5a7 7 0 0 1 14 0v5a2 2 0 0 0 2 2z"/>',
   circlex:'<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>',
+  notebookpen:'<path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/>',
 };
 function svg(name){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[name]||'')+'</svg>';}
 // 顏色／圖示查表涵蓋兩個來源的分類，不是只有目前這一邊：搜尋下拉與收藏區都可能
@@ -312,6 +317,7 @@ function starIds(){return Object.keys(STARS).sort();}
 function saveStars(){try{localStorage.setItem('nccnstars',JSON.stringify(starIds()));}catch(e){}}
 document.getElementById('logo').innerHTML=svg('cross');
 document.getElementById('searchicon').innerHTML=svg('search');document.getElementById('settings').innerHTML=svg('settings');
+document.getElementById('notesicon').innerHTML=svg('notebookpen');
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 function card(g){
   const c=R2[g.id];

@@ -38,12 +38,17 @@ export function renderNotes(request) {
     --accent:240 3.7% 15.9%;
   }}
   *{box-sizing:border-box;}
+  /* 整頁不捲，捲軸落在左右兩欄各自身上。門診要的是「清單一直在那裡、右邊換內容」，
+     整頁捲的話捲到下面就看不到搜尋框，而搜尋框是這一頁唯一的入口。
+     這也讓 header 不必再是 sticky——它就是 flex 的第一個項目。 */
+  html,body{height:100%;}
   body{margin:0;background:hsl(var(--background));color:hsl(var(--foreground));
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;
-    -webkit-font-smoothing:antialiased;}
+    -webkit-font-smoothing:antialiased;
+    display:flex;flex-direction:column;overflow:hidden;}
   svg{width:1em;height:1em;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;}
-  header{position:sticky;top:0;z-index:20;backdrop-filter:saturate(180%) blur(12px);
-    background:hsl(var(--background)/.85);border-bottom:1px solid hsl(var(--border));}
+  header{flex:none;z-index:20;background:hsl(var(--background));
+    border-bottom:1px solid hsl(var(--border));}
   .wrap{max-width:1180px;margin:0 auto;padding:0 20px;}
   .htop{display:flex;align-items:center;gap:14px;padding:14px 0 12px;}
   .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.12rem;}
@@ -80,14 +85,16 @@ export function renderNotes(request) {
     background:hsl(var(--muted));border:1px solid transparent;color:hsl(var(--foreground));}
   .chip.on{background:hsl(var(--primary));color:hsl(var(--primary-foreground));}
   .chip small{opacity:.6;margin-left:5px;}
-  main{max-width:1180px;margin:0 auto;padding:20px;}
+  main{flex:1;min-height:0;width:100%;max-width:1180px;margin:0 auto;padding:16px 20px;display:flex;}
   /* 左右兩欄：左邊是搜尋結果，右邊是選中那份的全文。--htop 由 JS 量 header 實高
      寫上去——header 是 sticky 的，而它的高度會隨 chips 換行變動，寫死會讓右欄
      在某些寬度下卡進 header 底下。 */
-  .panes{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px;align-items:start;}
-  .lpane{min-width:0;}
-  .rpane{position:sticky;top:calc(var(--htop,180px) + 12px);min-width:0;
-    height:calc(100vh - var(--htop,180px) - 44px);display:flex;flex-direction:column;
+  .panes{flex:1;min-height:0;display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px;}
+  /* min-height:0 是這裡的關鍵：grid/flex 項目的預設 min-height 是 auto，
+     內容多高它就多高，overflow:auto 永遠不會觸發，捲軸會跑回整個視窗上。 */
+  .lpane{min-width:0;min-height:0;overflow:auto;padding-right:4px;}
+  .rpane{min-width:0;min-height:0;display:flex;flex-direction:column;
     background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:var(--radius);}
   .phead{display:flex;align-items:flex-start;gap:10px;padding:13px 15px;
     border-bottom:1px solid hsl(var(--border));}
@@ -102,6 +109,16 @@ export function renderNotes(request) {
   .pact button{padding:6px 12px;border-radius:8px;font-size:.8rem;cursor:pointer;
     background:hsl(var(--muted));border:1px solid hsl(var(--border));color:hsl(var(--foreground));}
   .pact button:hover{background:hsl(var(--accent));}
+  .pact .sp{flex:1;}
+  .pact button.pri{background:hsl(var(--primary));color:hsl(var(--primary-foreground));
+    border-color:hsl(var(--primary));}
+  .pbody textarea{width:100%;height:100%;min-height:280px;resize:none;padding:0;
+    background:transparent;border:0;outline:none;color:hsl(var(--foreground));
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem;line-height:1.75;}
+  .pnote{font-size:.72rem;line-height:1.7;padding:8px 15px;
+    border-bottom:1px solid hsl(var(--border));background:hsl(var(--muted));
+    color:hsl(var(--muted-foreground));}
+  .pnote b{color:hsl(var(--foreground));}
   .pempty{flex:1;display:grid;place-items:center;text-align:center;padding:24px;
     font-size:.84rem;line-height:1.9;color:hsl(var(--muted-foreground));}
   .pclose{display:none;width:32px;height:32px;border-radius:8px;cursor:pointer;flex:none;
@@ -111,6 +128,7 @@ export function renderNotes(request) {
   @media (max-width:900px){
     .panes{grid-template-columns:minmax(0,1fr);}
     .rpane{position:fixed;inset:0 0 0 auto;width:min(94vw,560px);height:100dvh;z-index:40;
+      /* 蓋在上面而不是擠壓清單，所以不受 .panes 的 grid 約束 */
       border-radius:0;border-width:0 0 0 1px;transform:translateX(101%);
       transition:transform .18s ease;box-shadow:-12px 0 32px hsl(0 0% 0%/.22);}
     .rpane.show{transform:none;}
@@ -137,8 +155,11 @@ export function renderNotes(request) {
     background:hsl(var(--muted));border:1px solid hsl(var(--border));color:hsl(var(--foreground));}
   .cact button:hover{background:hsl(var(--accent));}
   .empty{text-align:center;padding:60px 20px;color:hsl(var(--muted-foreground));font-size:.9rem;line-height:1.9;}
-  footer{max-width:1180px;margin:0 auto;padding:24px 20px 40px;font-size:.75rem;
-    color:hsl(var(--muted-foreground));border-top:1px solid hsl(var(--border));}
+  /* 整頁不捲之後，footer 若還在流程末端就會被推出畫面。免責聲明不能因為版面
+     改了就消失，所以它是 flex 的最後一個項目，永遠看得到。 */
+  footer{flex:none;width:100%;max-width:1180px;margin:0 auto;padding:9px 20px;
+    font-size:.7rem;line-height:1.6;color:hsl(var(--muted-foreground));
+    border-top:1px solid hsl(var(--border));}
 </style>
 </head><body>
 <header>
@@ -241,7 +262,7 @@ function paneEmpty(msg){
 
 function closePane(){
   paneEl.classList.remove('show');
-  SEL=-1;
+  EDITING=false; CUR=null; SEL=-1;
   var on=listEl.querySelector('.card.sel'); if(on) on.classList.remove('sel');
   paneEmpty('點左邊任何一份清單<br>全文會出現在這裡');
 }
@@ -249,36 +270,95 @@ function closePane(){
 var CLOSE_SVG='<svg viewBox="0 0 24 24" aria-hidden="true">'
   +'<path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
 
-function paintPane(r,text){
+// 目前這一份的完整資料（含 edited / generated / stale），select() 拿到後存起來，
+// 因為編輯要用到「生成版本」才能提供還原。
+var CUR=null, EDITING=false;
+
+function paintPane(r,text,d){
+  d=d||{};
+  var notes='';
+  if(d.stale)
+    notes+='<div class="pnote"><b>這份修改是針對舊版寫的。</b>'
+      +'此後這一頁重新生成過，你看到的是修改後的內容，不是最新的生成結果。'
+      +'按「還原成生成版本」可以看最新版。</div>';
+  else if(d.edited)
+    notes+='<div class="pnote">已由 <b>'+esc(d.edited.editor||'—')+'</b> 修改於 '
+      +esc((d.edited.updated||'').slice(0,16).replace('T',' '))+'</div>';
+
+  var acts;
+  if(EDITING){
+    acts='<button data-a="save" class="pri">儲存</button>'
+      +'<button data-a="cancel">取消</button><span class="sp"></span>'
+      +(d.edited?'<button data-a="revert">還原成生成版本</button>':'');
+  }else{
+    acts='<button data-a="edit">編輯</button>'
+      +'<button data-a="copy">複製</button>'
+      +'<button data-a="pdf">開啟 PDF 第 '+esc(r.page)+' 頁</button>';
+  }
+
   paneEl.innerHTML='<div class="phead"><div class="pt">'
-    +'<div class="pref">'+esc(r.ref)+' '+badges(r)+'</div>'
+    +'<div class="pref">'+esc(r.ref)+' '+badges(r)
+    +(d.edited?'<span class="cbadge" title="這一份被修改過，內容與 git 裡的生成版本不同">已編輯</span>':'')
+    +'</div>'
     +'<div class="ptitle">'+esc(r.title)+'</div>'
     +'<div class="pmeta">'+esc(r.gid)+'　·　p'+esc(r.page)+'　·　v'+esc(r.version)+'</div>'
     +'</div><button class="pclose" id="pclose" title="關閉">'+CLOSE_SVG+'</button></div>'
-    +'<div class="pbody"><pre id="pbody"></pre></div>'
-    +'<div class="pact"><button data-a="copy">複製</button>'
-    +'<button data-a="pdf">開啟 PDF 第 '+esc(r.page)+' 頁</button></div>';
-  document.getElementById('pbody').textContent=text;
+    +notes
+    +'<div class="pbody">'
+    +(EDITING?'<textarea id="pedit" spellcheck="false"></textarea>':'<pre id="pbody"></pre>')
+    +'</div><div class="pact">'+acts+'</div>';
+
+  var el=document.getElementById(EDITING?'pedit':'pbody');
+  if(EDITING){el.value=text; el.focus();} else {el.textContent=text;}
   paneEl.classList.add('show');
+}
+
+function load(r,i,force){
+  var key=r.gid+'/'+r.ref;
+  if(!force && BODY[key]){CUR=BODY[key]; paintPane(r,CUR.body,CUR); return;}
+  paintPane(r,'載入中…',{});
+  fetch('/api/notes/'+encodeURIComponent(r.gid)+'/'+encodeURIComponent(r.ref),
+        force?{cache:'no-store'}:undefined)
+    .then(function(res){return res.json();})
+    .then(function(d){
+      d.body=d.body||'(讀不到內容)';
+      BODY[key]=d;
+      // 期間可能已經點了別份，晚到的回應不該蓋掉現在這份
+      if(SEL===i){CUR=d; paintPane(r,d.body,d);}
+    })
+    .catch(function(){ if(SEL===i) paintPane(r,'(讀取失敗)',{}); });
 }
 
 function select(i){
   if(i<0||i>=ROWS.length) return;
+  if(EDITING && !confirm('這份還在編輯，切換會丟掉未儲存的修改。要繼續嗎？')) return;
+  EDITING=false;
   var r=ROWS[i]; SEL=i;
   var was=listEl.querySelector('.card.sel'); if(was) was.classList.remove('sel');
   var el=listEl.querySelector('.card[data-i="'+i+'"]');
   if(el){el.classList.add('sel');el.scrollIntoView({block:'nearest'});}
-  var key=r.gid+'/'+r.ref;
-  if(BODY[key]!=null){paintPane(r,BODY[key]);return;}
-  paintPane(r,'載入中…');
-  fetch('/api/notes/'+encodeURIComponent(r.gid)+'/'+encodeURIComponent(r.ref))
-    .then(function(res){return res.json();})
-    .then(function(d){
-      BODY[key]=d.body||'(讀不到內容)';
-      // 期間可能已經點了別份，晚到的回應不該蓋掉現在這份
-      if(SEL===i) paintPane(r,BODY[key]);
-    })
-    .catch(function(){ if(SEL===i) paintPane(r,'(讀取失敗)'); });
+  load(r,i,false);
+}
+
+function saveEdit(){
+  var r=ROWS[SEL]; if(!r) return;
+  var text=document.getElementById('pedit').value;
+  var btn=paneEl.querySelector('button[data-a="save"]');
+  btn.disabled=true; btn.textContent='儲存中…';
+  fetch('/api/notes/'+encodeURIComponent(r.gid)+'/'+encodeURIComponent(r.ref),
+        {method:'PUT',headers:{'content-type':'application/json'},
+         body:JSON.stringify({body:text})})
+    .then(function(res){ if(!res.ok) throw 0; })
+    .then(function(){ EDITING=false; load(r,SEL,true); })
+    .catch(function(){ btn.disabled=false; btn.textContent='儲存失敗，再試一次'; });
+}
+
+function revertEdit(){
+  var r=ROWS[SEL]; if(!r) return;
+  if(!confirm('把這一份還原成 git 裡的生成版本？你的修改會被刪掉。')) return;
+  fetch('/api/notes/'+encodeURIComponent(r.gid)+'/'+encodeURIComponent(r.ref),
+        {method:'DELETE'})
+    .then(function(){ EDITING=false; load(r,SEL,true); });
 }
 
 listEl.addEventListener('click',function(e){
@@ -289,11 +369,15 @@ listEl.addEventListener('click',function(e){
 paneEl.addEventListener('click',function(e){
   if(e.target.closest('#pclose')){closePane();return;}
   var btn=e.target.closest('button[data-a]'); if(!btn) return;
-  var r=ROWS[SEL]; if(!r) return;
-  if(btn.dataset.a==='pdf'){
+  var a=btn.dataset.a, r=ROWS[SEL]; if(!r) return;
+  if(a==='pdf'){
     window.open('/preview/'+encodeURIComponent(r.gid)+'?page='+encodeURIComponent(r.page),'_blank');
     return;
   }
+  if(a==='edit'){ EDITING=true; paintPane(r,CUR?CUR.body:'',CUR||{}); return; }
+  if(a==='cancel'){ EDITING=false; paintPane(r,CUR?CUR.body:'',CUR||{}); return; }
+  if(a==='save'){ saveEdit(); return; }
+  if(a==='revert'){ revertEdit(); return; }
   navigator.clipboard.writeText(document.getElementById('pbody').textContent).then(function(){
     btn.textContent='已複製'; setTimeout(function(){btn.textContent='複製';},1200);
   });
@@ -302,6 +386,11 @@ paneEl.addEventListener('click',function(e){
 // 上下鍵在清單間移動。輸入框是單行的，方向鍵在裡面沒有別的意思，所以不必
 // 先把焦點移出搜尋框——門診打完字直接按方向鍵就能翻。
 document.addEventListener('keydown',function(e){
+  // 編輯中方向鍵要留給游標，Esc 也不該把還沒存的東西關掉。
+  if(EDITING){
+    if((e.key==='s'||e.key==='S')&&(e.metaKey||e.ctrlKey)){e.preventDefault();saveEdit();}
+    return;
+  }
   if(e.key==='Escape'){closePane();return;}
   if(e.key!=='ArrowDown'&&e.key!=='ArrowUp') return;
   if(!ROWS.length) return;
@@ -333,8 +422,8 @@ function run(){
       metaEl.textContent=rows.length+' 份'+(bits.length?'　·　'+bits.join('　·　'):'');
       listEl.innerHTML=rows.map(card).join('');
       // 換一批結果就把右欄清掉——原本選的那份多半不在新結果裡，留著會讓右邊
-      // 的內容和左邊的清單對不起來。
-      closePane();
+      // 的內容和左邊的清單對不起來。編輯中則留著，不然打到一半換個關鍵字就沒了。
+      if(!EDITING) closePane();
     })
     .catch(function(){metaEl.textContent='搜尋失敗';});
 }
@@ -347,17 +436,6 @@ document.getElementById('theme').addEventListener('click',function(){
   document.documentElement.dataset.theme=next;
   try{localStorage.setItem('theme',next);}catch(e){}
 });
-// header 是 sticky 的，右欄要貼在它底下。高度會隨 chips 換行與視窗寬度變，
-// 所以量出來寫進 --htop，不寫死。
-var headerEl=document.querySelector('header');
-function syncHeader(){
-  document.documentElement.style.setProperty('--htop',
-    Math.round(headerEl.getBoundingClientRect().height)+'px');
-}
-syncHeader();
-addEventListener('resize',syncHeader);
-if(window.ResizeObserver) new ResizeObserver(syncHeader).observe(headerEl);
-
 paintChips(); run();
 </script>
 </body></html>`;
