@@ -130,10 +130,15 @@ const items = (args || []).map((s) => {
 })
 log(`${items.length} refs across ${new Set(items.map((x) => x.gid)).size} guidelines`)
 
+// 兩階段都跑 Sonnet（2026-08-30，使用者要求降成本）。一批 40 個 ref 的兩階段
+// 合計約 540 萬 subagent tokens，這裡是整條流程唯一花錢的地方。
+// 想換回來就把 MODEL 改成 'opus' 或整個拿掉（拿掉 = 繼承 session 模型）。
+const MODEL = 'sonnet'
+
 const out = await pipeline(
   items,
-  (it) => agent(gen(it.gid, it.ref), { label: `gen:${it.gid}/${it.ref}`, phase: 'Generate', schema: RESULT }),
-  (res, it) => agent(audit(it.gid, it.ref), { label: `audit:${it.gid}/${it.ref}`, phase: 'Audit', schema: AUDIT })
+  (it) => agent(gen(it.gid, it.ref), { label: `gen:${it.gid}/${it.ref}`, phase: 'Generate', schema: RESULT, model: MODEL }),
+  (res, it) => agent(audit(it.gid, it.ref), { label: `audit:${it.gid}/${it.ref}`, phase: 'Audit', schema: AUDIT, model: MODEL })
       .then((a) => ({ gid: it.gid, ref: it.ref, gen: res, audit: a })),
 )
 
