@@ -125,4 +125,17 @@ done < "$WORK/files.txt"
 
 echo "DONE batches ok=$ok fail=$fail"
 del "$WORK"
+
+# 改寫世代號，讓 /api/notes 的 KV 快取整批失效。刻意放在批次全部成功之後——
+# 先丟快取再發現載入是壞的，等於拿一份好快取換一份壞資料。
+# 只是加速層，寫不進去不該讓整個載入變成失敗，所以這裡不進 $fail。
+if [ "$fail" -eq 0 ]; then
+  if wrangler kv key put notes:gen "$(date +%s)" --binding NCCN_KV --remote >/dev/null 2>&1; then
+    echo "OK notes:gen 已改寫，筆記搜尋快取失效"
+  else
+    echo "WARN notes:gen 改寫失敗——搜尋可能回舊結果，最久 30 天。手動補：" >&2
+    echo "     wrangler kv key put notes:gen \"\$(date +%s)\" --binding NCCN_KV --remote" >&2
+  fi
+fi
+
 [ "$fail" -eq 0 ]

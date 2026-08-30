@@ -12,13 +12,19 @@
 //    30 天後自動消失，而單一項目最多每 9 天寫一次。
 
 export const GEN_KEY = "api:gen";
+// 臨床筆記自己的世代號。跟 api:gen 分開是因為改寫它們的是兩個不同的事件：
+// api:gen 由每週 CI 在重建索引後改寫，notes:gen 由 load_snippets.sh 在把
+// snippets/ 推進 D1 之後改寫。共用一個的話，跑完 load_snippets.sh 的筆記
+// 搜尋會繼續回舊結果直到下個星期一——而 index.js 原本每次現讀別名表，正是
+// 為了不讓「改了字典卻沒反應」變成一種可能。
+export const NOTES_GEN_KEY = "notes:gen";
 export const TTL = 2_592_000; // 30 天
 const GEN_MEM_MS = 60_000;
 
-let genMem = { at: 0, v: "0" };
+const genMem = { [GEN_KEY]: { at: 0, v: "0" }, [NOTES_GEN_KEY]: { at: 0, v: "0" } };
 
-export function cacheKey(gen, kind, id) {
-	return "api:" + gen + ":" + kind + (id ? ":" + id : "");
+export function cacheKey(gen, kind, id, ns) {
+	return (ns || "api") + ":" + gen + ":" + kind + (id ? ":" + id : "");
 }
 
 // 續期門檻：剩餘壽命低於七成就續。exp / now 都是 epoch 秒。
@@ -27,21 +33,24 @@ export function shouldRenew(exp, nowSec, ttl) {
 	return exp - nowSec < ttl * 0.7;
 }
 
-export async function generation(env) {
+export async function generation(env, key) {
+	const k = key || GEN_KEY;
 	const now = Date.now();
-	if (now - genMem.at < GEN_MEM_MS) return genMem.v;
-	const v = await env.NCCN_KV.get(GEN_KEY, { cacheTtl: 3600 }).catch(() => null);
-	genMem = { at: now, v: v || "0" };
-	return genMem.v;
+	const mem = genMem[k] || (genMem[k] = { at: 0, v: "0" });
+	if (now - mem.at < GEN_MEM_MS) return mem.v;
+	const v = await env.NCCN_KV.get(k, { cacheTtl: 3600 }).catch(() => null);
+	mem.at = now;
+	mem.v = v || "0";
+	return mem.v;
 }
 
 // 取一份 JSON 字串：先 KV，miss 就跑 loader 並寫回。
 // loader 回 null 代表「這東西不存在」——不快取，免得一次 R2 抖動就把 404 釘住
 // 30 天。回傳字串而不是物件，是為了讓端點能把它原樣塞進 Response，不必解析再
 // 序列化一次。
-export async function remember(env, ctx, kind, id, loader) {
-	const gen = await generation(env);
-	const key = cacheKey(gen, kind, id);
+export async function remember(env, ctx, kind, id, loader, ns) {
+	const gen = await generation(env, ns === "notes" ? NOTES_GEN_KEY : GEN_KEY);
+	const key = cacheKey(gen, kind, id, ns);
 	const nowSec = Math.floor(Date.now() / 1000);
 
 	const got = await env.NCCN_KV.getWithMetadata(key, { cacheTtl: 3600 }).catch(

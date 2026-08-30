@@ -56,11 +56,23 @@ export function renderNotes(request) {
   .tabs a:not(.act):hover{border-color:hsl(var(--border));color:hsl(var(--foreground));}
   .iconbtn{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;cursor:pointer;
     background:transparent;border:1px solid hsl(var(--border));color:hsl(var(--foreground));font-size:16px;}
+  .back{display:inline-flex;align-items:center;gap:6px;padding:7px 12px 7px 10px;border-radius:10px;
+    text-decoration:none;font-size:.82rem;font-weight:600;white-space:nowrap;
+    color:hsl(var(--muted-foreground));border:1px solid hsl(var(--border));background:transparent;}
+  .back:hover{color:hsl(var(--foreground));background:hsl(var(--muted));}
+  .back svg{width:15px;height:15px;}
+  /* 窄螢幕只留箭頭：標籤列已經有「指引」可以回去，這裡不值得為它擠掉標題 */
+  @media (max-width:560px){.back span{display:none;}.back{padding:7px 9px;}}
   .searchrow{position:relative;padding-bottom:12px;}
   .searchrow input{width:100%;padding:11px 14px 11px 40px;border-radius:10px;font-size:.95rem;
     background:hsl(var(--card));border:1px solid hsl(var(--border));color:hsl(var(--foreground));}
   .searchrow input:focus{outline:2px solid hsl(var(--primary)/.35);outline-offset:1px;}
-  .si{position:absolute;left:13px;top:11px;color:hsl(var(--muted-foreground));font-size:15px;}
+  .si{position:absolute;left:13px;top:11px;color:hsl(var(--muted-foreground));
+    display:grid;place-items:center;width:16px;height:16px;}
+  .si svg{width:16px;height:16px;}
+  .bicon{display:grid;place-items:center;color:hsl(var(--primary));}
+  .bicon svg{width:20px;height:20px;}
+  .iconbtn svg{width:17px;height:17px;}
   .hint{font-size:.76rem;color:hsl(var(--muted-foreground));padding-bottom:10px;line-height:1.7;}
   .hint b{color:hsl(var(--foreground));font-weight:600;}
   .chips{display:flex;flex-wrap:wrap;gap:6px;padding-bottom:12px;}
@@ -69,7 +81,43 @@ export function renderNotes(request) {
   .chip.on{background:hsl(var(--primary));color:hsl(var(--primary-foreground));}
   .chip small{opacity:.6;margin-left:5px;}
   main{max-width:1180px;margin:0 auto;padding:20px;}
+  /* 左右兩欄：左邊是搜尋結果，右邊是選中那份的全文。--htop 由 JS 量 header 實高
+     寫上去——header 是 sticky 的，而它的高度會隨 chips 換行變動，寫死會讓右欄
+     在某些寬度下卡進 header 底下。 */
+  .panes{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px;align-items:start;}
+  .lpane{min-width:0;}
+  .rpane{position:sticky;top:calc(var(--htop,180px) + 12px);min-width:0;
+    height:calc(100vh - var(--htop,180px) - 44px);display:flex;flex-direction:column;
+    background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:var(--radius);}
+  .phead{display:flex;align-items:flex-start;gap:10px;padding:13px 15px;
+    border-bottom:1px solid hsl(var(--border));}
+  .phead .pt{min-width:0;flex:1;}
+  .pref{font-weight:700;font-size:.9rem;}
+  .ptitle{font-size:.82rem;color:hsl(var(--muted-foreground));line-height:1.6;margin-top:3px;}
+  .pmeta{font-size:.72rem;color:hsl(var(--muted-foreground));margin-top:5px;}
+  .pbody{flex:1;overflow:auto;padding:14px 15px;}
+  .pbody pre{white-space:pre-wrap;word-break:break-word;margin:0;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem;line-height:1.75;}
+  .pact{display:flex;gap:8px;padding:11px 15px;border-top:1px solid hsl(var(--border));}
+  .pact button{padding:6px 12px;border-radius:8px;font-size:.8rem;cursor:pointer;
+    background:hsl(var(--muted));border:1px solid hsl(var(--border));color:hsl(var(--foreground));}
+  .pact button:hover{background:hsl(var(--accent));}
+  .pempty{flex:1;display:grid;place-items:center;text-align:center;padding:24px;
+    font-size:.84rem;line-height:1.9;color:hsl(var(--muted-foreground));}
+  .pclose{display:none;width:32px;height:32px;border-radius:8px;cursor:pointer;flex:none;
+    background:transparent;border:1px solid hsl(var(--border));color:hsl(var(--foreground));}
+  .pclose svg{width:15px;height:15px;}
+  /* 窄螢幕：右欄改成從右邊滑出的面板，不擠壓清單 */
+  @media (max-width:900px){
+    .panes{grid-template-columns:minmax(0,1fr);}
+    .rpane{position:fixed;inset:0 0 0 auto;width:min(94vw,560px);height:100dvh;z-index:40;
+      border-radius:0;border-width:0 0 0 1px;transform:translateX(101%);
+      transition:transform .18s ease;box-shadow:-12px 0 32px hsl(0 0% 0%/.22);}
+    .rpane.show{transform:none;}
+    .pclose{display:grid;place-items:center;}
+  }
   .meta{font-size:.8rem;color:hsl(var(--muted-foreground));padding-bottom:12px;}
+  .card.sel{border-color:hsl(var(--primary));box-shadow:0 0 0 1px hsl(var(--primary)/.35);}
   .card{background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:var(--radius);
     margin-bottom:10px;overflow:hidden;}
   .chead{display:flex;align-items:center;gap:10px;padding:13px 15px;cursor:pointer;}
@@ -96,16 +144,19 @@ export function renderNotes(request) {
 <header>
   <div class="wrap">
     <div class="htop">
-      <div class="brand"><span>📋</span><span>臨床筆記<small id="sub">NCCN 決策節點核對清單</small></span></div>
+      <a class="back" href="/" title="回首頁">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg><span>回首頁</span>
+      </a>
+      <div class="brand"><span class="bicon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/></svg></span><span>臨床筆記<small id="sub">NCCN 決策節點核對清單</small></span></div>
       <div class="spacer"></div>
-      <button class="iconbtn" id="theme" title="切換主題">◐</button>
+      <button class="iconbtn" id="theme" title="切換主題"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path fill="currentColor" stroke="none" d="M12 18a6 6 0 0 1 0-12z"/></svg></button>
     </div>
     <div class="tabs">
       <a href="/">指引</a>
       <a href="/notes" class="act">臨床筆記</a>
     </div>
     <div class="searchrow">
-      <span class="si">⌕</span>
+      <span class="si"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
       <input id="q" type="search" placeholder="乳癌 三期 檢查　·　大腸癌 MSI-H　·　olaparib" autocomplete="off" autofocus>
     </div>
     <div class="hint">
@@ -116,8 +167,15 @@ export function renderNotes(request) {
   </div>
 </header>
 <main>
-  <div class="meta" id="meta"></div>
-  <div id="list"></div>
+  <div class="panes">
+    <div class="lpane">
+      <div class="meta" id="meta"></div>
+      <div id="list"></div>
+    </div>
+    <aside class="rpane" id="pane" aria-live="polite">
+      <div class="pempty" id="pempty">點左邊任何一份清單<br>全文會出現在這裡</div>
+    </aside>
+  </div>
 </main>
 <footer>
   單一真相在 git 的 <code>cf/snippets/</code>，這裡是它的可查詢副本。
@@ -149,7 +207,18 @@ chipsEl.addEventListener('click',function(e){
   var el=e.target.closest('.chip'); if(!el) return;
   var i=+el.dataset.i, at=STATE.chips.indexOf(i);
   if(at>=0) STATE.chips.splice(at,1); else STATE.chips.push(i);
-  paintChips(); run();
+  // header 是 sticky 的，右欄要貼在它底下。高度會隨 chips 換行與視窗寬度變，
+// 所以量出來寫進 --htop，不寫死。
+var headerEl=document.querySelector('header');
+function syncHeader(){
+  document.documentElement.style.setProperty('--htop',
+    Math.round(headerEl.getBoundingClientRect().height)+'px');
+}
+syncHeader();
+addEventListener('resize',syncHeader);
+if(window.ResizeObserver) new ResizeObserver(syncHeader).observe(headerEl);
+
+paintChips(); run();
 });
 
 function effectiveQuery(){
@@ -157,43 +226,95 @@ function effectiveQuery(){
   return (q.value.trim()+' '+parts.join(' ')).trim();
 }
 
-function card(r){
-  var badge = r.kind==='decision' ? '' : '<span class="cbadge">參考</span>';
-  var unaud = r.review==='unaudited' ? '<span class="cbadge" title="尚未經過對照來源的審查">未審</span>' : '';
-  return '<div class="card" data-gid="'+esc(r.gid)+'" data-ref="'+esc(r.ref)+'">'
+function badges(r){
+  return (r.kind==='decision' ? '' : '<span class="cbadge">參考</span>')
+    +(r.review==='unaudited'
+      ? '<span class="cbadge" title="尚未經過對照來源的審查">未審</span>' : '');
+}
+
+function card(r,i){
+  return '<div class="card" data-i="'+i+'" data-gid="'+esc(r.gid)+'" data-ref="'+esc(r.ref)+'">'
     +'<div class="chead"><span class="cref">'+esc(r.ref)+'</span>'
-    +'<span class="ctitle">'+esc(r.title)+'</span>'+badge+unaud
-    +'<span class="cgid">'+esc(r.gid)+' p'+esc(r.page)+' · v'+esc(r.version)+'</span></div>'
-    +'<div class="cbody"><pre></pre>'
-    +'<div class="cact"><button data-a="copy">複製</button>'
-    +'<button data-a="pdf">開啟 PDF 第 '+esc(r.page)+' 頁</button></div></div></div>';
+    +'<span class="ctitle">'+esc(r.title)+'</span>'+badges(r)
+    +'<span class="cgid">'+esc(r.gid)+' p'+esc(r.page)+' · v'+esc(r.version)+'</span></div></div>';
+}
+
+// ---- 右欄 ----
+var paneEl=document.getElementById('pane');
+var ROWS=[], SEL=-1, BODY={};
+
+function paneEmpty(msg){
+  paneEl.innerHTML='<div class="pempty">'+msg+'</div>';
+}
+
+function closePane(){
+  paneEl.classList.remove('show');
+  SEL=-1;
+  var on=listEl.querySelector('.card.sel'); if(on) on.classList.remove('sel');
+  paneEmpty('點左邊任何一份清單<br>全文會出現在這裡');
+}
+
+var CLOSE_SVG='<svg viewBox="0 0 24 24" aria-hidden="true">'
+  +'<path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+
+function paintPane(r,text){
+  paneEl.innerHTML='<div class="phead"><div class="pt">'
+    +'<div class="pref">'+esc(r.ref)+' '+badges(r)+'</div>'
+    +'<div class="ptitle">'+esc(r.title)+'</div>'
+    +'<div class="pmeta">'+esc(r.gid)+'　·　p'+esc(r.page)+'　·　v'+esc(r.version)+'</div>'
+    +'</div><button class="pclose" id="pclose" title="關閉">'+CLOSE_SVG+'</button></div>'
+    +'<div class="pbody"><pre id="pbody"></pre></div>'
+    +'<div class="pact"><button data-a="copy">複製</button>'
+    +'<button data-a="pdf">開啟 PDF 第 '+esc(r.page)+' 頁</button></div>';
+  document.getElementById('pbody').textContent=text;
+  paneEl.classList.add('show');
+}
+
+function select(i){
+  if(i<0||i>=ROWS.length) return;
+  var r=ROWS[i]; SEL=i;
+  var was=listEl.querySelector('.card.sel'); if(was) was.classList.remove('sel');
+  var el=listEl.querySelector('.card[data-i="'+i+'"]');
+  if(el){el.classList.add('sel');el.scrollIntoView({block:'nearest'});}
+  var key=r.gid+'/'+r.ref;
+  if(BODY[key]!=null){paintPane(r,BODY[key]);return;}
+  paintPane(r,'載入中…');
+  fetch('/api/notes/'+encodeURIComponent(r.gid)+'/'+encodeURIComponent(r.ref))
+    .then(function(res){return res.json();})
+    .then(function(d){
+      BODY[key]=d.body||'(讀不到內容)';
+      // 期間可能已經點了別份，晚到的回應不該蓋掉現在這份
+      if(SEL===i) paintPane(r,BODY[key]);
+    })
+    .catch(function(){ if(SEL===i) paintPane(r,'(讀取失敗)'); });
 }
 
 listEl.addEventListener('click',function(e){
-  var btn=e.target.closest('button[data-a]');
-  var card=e.target.closest('.card'); if(!card) return;
-  if(btn){
-    e.stopPropagation();
-    if(btn.dataset.a==='pdf'){
-      window.open('/preview/'+encodeURIComponent(card.dataset.gid)+'?page='+card.querySelector('.cgid').textContent.match(/p(\\d+)/)[1],'_blank');
-      return;
-    }
-    var txt=card.querySelector('pre').textContent;
-    navigator.clipboard.writeText(txt).then(function(){
-      btn.textContent='已複製'; setTimeout(function(){btn.textContent='複製';},1200);
-    });
+  var el=e.target.closest('.card'); if(!el) return;
+  select(+el.dataset.i);
+});
+
+paneEl.addEventListener('click',function(e){
+  if(e.target.closest('#pclose')){closePane();return;}
+  var btn=e.target.closest('button[data-a]'); if(!btn) return;
+  var r=ROWS[SEL]; if(!r) return;
+  if(btn.dataset.a==='pdf'){
+    window.open('/preview/'+encodeURIComponent(r.gid)+'?page='+encodeURIComponent(r.page),'_blank');
     return;
   }
-  if(!e.target.closest('.chead')) return;
-  var open=card.classList.toggle('open');
-  var pre=card.querySelector('pre');
-  if(open && !pre.textContent){
-    pre.textContent='載入中…';
-    fetch('/api/notes/'+encodeURIComponent(card.dataset.gid)+'/'+encodeURIComponent(card.dataset.ref))
-      .then(function(r){return r.json();})
-      .then(function(d){pre.textContent=d.body||'(讀不到內容)';})
-      .catch(function(){pre.textContent='(讀取失敗)';});
-  }
+  navigator.clipboard.writeText(document.getElementById('pbody').textContent).then(function(){
+    btn.textContent='已複製'; setTimeout(function(){btn.textContent='複製';},1200);
+  });
+});
+
+// 上下鍵在清單間移動。輸入框是單行的，方向鍵在裡面沒有別的意思，所以不必
+// 先把焦點移出搜尋框——門診打完字直接按方向鍵就能翻。
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){closePane();return;}
+  if(e.key!=='ArrowDown'&&e.key!=='ArrowUp') return;
+  if(!ROWS.length) return;
+  e.preventDefault();
+  select(SEL<0 ? 0 : Math.max(0,Math.min(ROWS.length-1,SEL+(e.key==='ArrowDown'?1:-1))));
 });
 
 function run(){
@@ -205,10 +326,12 @@ function run(){
     .then(function(r){return r.json();})
     .then(function(d){
       var rows=d.rows||[];
+      ROWS=rows; SEL=-1;
       if(!rows.length){
         metaEl.textContent='';
         listEl.innerHTML='<div class="empty">沒有符合的清單。<br>'
           +'試試病人的特徵，例如「乳癌 三期 檢查」或「大腸癌 MSI-H」。</div>';
+        closePane();
         return;
       }
       var bits=[];
@@ -217,6 +340,9 @@ function run(){
       if(d.text && d.text.length) bits.push('全文：'+d.text.join('、'));
       metaEl.textContent=rows.length+' 份'+(bits.length?'　·　'+bits.join('　·　'):'');
       listEl.innerHTML=rows.map(card).join('');
+      // 換一批結果就把右欄清掉——原本選的那份多半不在新結果裡，留著會讓右邊
+      // 的內容和左邊的清單對不起來。
+      closePane();
     })
     .catch(function(){metaEl.textContent='搜尋失敗';});
 }

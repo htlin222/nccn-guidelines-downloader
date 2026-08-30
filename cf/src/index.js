@@ -54,6 +54,7 @@ import { SKILL_FILENAME, buildSkillZip } from "./lib/skillpack.js";
 import { renderPage } from "./views/home.js";
 import { renderNotes } from "./views/notes.js";
 import { buildSearch, parseQuery, rankRows } from "./lib/notes.js";
+import { remember } from "./lib/cache.js";
 import { renderViewer } from "./views/viewer.js";
 import { faviconResponse, manifestResponse, SW_JS } from "./views/static.js";
 
@@ -85,22 +86,40 @@ export default {
 		if (pathname === "/api/notes") {
 			const q = url.searchParams.get("q") || "";
 			try {
-				// 別名表每次從 D1 讀。它是手寫檔，改完 load_snippets.sh 一跑就該生效，
-				// 不值得為了省一次查詢而讓「改了字典卻沒反應」變成一種可能。
-				const al = await env.DB.prepare(
-					"SELECT axis, alias, value FROM facet_alias",
-				).all();
-				const alias = {};
-				for (const r of al.results || []) {
-					(alias[r.axis] = alias[r.axis] || {})[r.alias] = r.value;
-				}
+				// 別名表原本每次現讀 D1，理由是「改了字典卻沒反應」比省一次查詢重要。
+				// 現在改成走 KV，而那個理由沒有被犧牲：key 帶 notes:gen 世代號，
+				// load_snippets.sh 每次載完就改寫它，所以改字典仍然一跑就生效。
+				// 省下來的是每一次搜尋都要付的一趟 D1 往返。
+				const alias = JSON.parse(
+					await remember(env, ctx, "alias", "", async () => {
+						const al = await env.DB.prepare(
+							"SELECT axis, alias, value FROM facet_alias",
+						).all();
+						const m = {};
+						for (const r of al.results || []) {
+							(m[r.axis] = m[r.axis] || {})[r.alias] = r.value;
+						}
+						return m;
+					}, "notes"),
+				);
 				const parsed = parseQuery(q, alias);
-				const { sql, binds } = buildSearch(parsed, 80);
-				const res = await env.DB.prepare(sql)
-					.bind(...binds)
-					.all();
+				// 查詢結果也進 KV，key 用解析後的 facet + 文字而不是原始字串：
+				// 「乳癌 三期」與「三期 乳癌」是同一個查詢，不該各佔一份。
+				const ckey =
+					parsed.facets.map((f) => f.axis + "=" + f.value).sort().join("&") +
+					"|" +
+					[...parsed.text].sort().join(" ");
+				const body = await remember(env, ctx, "q", ckey, async () => {
+					const { sql, binds } = buildSearch(parsed, 80);
+					const res = await env.DB.prepare(sql)
+						.bind(...binds)
+						.all();
+					// 空結果照樣快取——那是個正當答案。只有下面 catch 到的錯誤不快取。
+					return { rows: rankRows(res.results || []) };
+				}, "notes");
+				const out = JSON.parse(body);
 				return json({
-					rows: rankRows(res.results || []),
+					rows: out.rows,
 					facets: parsed.facets,
 					text: parsed.text,
 				});
@@ -113,12 +132,22 @@ export default {
 			const [, , , gid, ref] = pathname.split("/");
 			if (!gid || !ref) return json({ error: "bad path" }, 400);
 			try {
-				const row = await env.DB.prepare(
-					"SELECT gid, ref, title, body, page, version, review FROM snippets WHERE gid=? AND ref=?",
-				)
-					.bind(decodeURIComponent(gid), decodeURIComponent(ref))
-					.first();
-				return row ? json(row) : json({ error: "not found" }, 404);
+				const g = decodeURIComponent(gid);
+				const r = decodeURIComponent(ref);
+				// loader 回 null 代表這份不存在，remember 就不會把 404 釘住 30 天。
+				const body = await remember(env, ctx, "s", g + "/" + r, async () => {
+					const row = await env.DB.prepare(
+						"SELECT gid, ref, title, body, page, version, review FROM snippets WHERE gid=? AND ref=?",
+					)
+						.bind(g, r)
+						.first();
+					return row || null;
+				}, "notes");
+				return body
+					? new Response(body, {
+							headers: { "content-type": "application/json; charset=utf-8" },
+						})
+					: json({ error: "not found" }, 404);
 			} catch (e) {
 				return json({ error: String(e && e.message) }, 500);
 			}
