@@ -93,6 +93,16 @@ name = "..."; type = "number|text|enum"; options = [...]  # enum 才需要 optio
 **`see_also` 必須寫在 `[facets]` 之前。** TOML 裡 `[facets]` 之後的每一個 key 都
 屬於那個 table，寫在後面會變成一個叫 `see_also` 的 facet 軸，verify 直接 reject。
 
+**`see_also` 不受 XREF 關檢查，這是刻意的。** body 裡的交叉引用必須出現在這一頁的
+素材裡（見「驗證」第 3 關），因為那是在替來源說話——那一頁沒說的導引不屬於它。
+`see_also` 不一樣，它問的是「同一次門診接下來大概率會開哪一頁」，那是門診動線，
+不是來源引用。`ALL-2` 的 see_also 寫 `ALL-1` 完全合理，即使 ALL-2 的內文從未提到
+ALL-1。實測把 body 的規則套到 see_also 會誤殺 511 個檔案、883 條連結。
+
+代價是捏造的 see_also 四關全過（`smoking/SC-5` 曾指向該頁從未提及的 SC-4），
+只能靠對抗性審查擋。這是接受的取捨，不是待修的洞——收緊它會把「這一頁講什麼」
+和「接下來看哪一頁」混成同一件事。
+
 `kind`（decision / principles）不要填——由 ref 尾碼機械決定：數字結尾是 decision，
 字母結尾是 principles，`COL-2A` 這種數字加字母的續頁算 decision。
 
