@@ -3,10 +3,10 @@ id           = "ped_sts/PRMS-9"
 gid          = "ped_sts"
 ref          = "PRMS-9"
 page         = 12
-title        = "Biliary/liver mass: biopsy only for diagnosis, then systemic therapy and RT"
+title        = "Biliary/liver mass: biopsy for diagnosis only, then systemic therapy and RT"
 nccn_version = "1.2026"
-nccn_date    = "02/17/2026"
-generated    = "2026-08-28"
+nccn_date    = "02/017/2026"
+generated    = "2026-08-30"
 see_also     = ["PRMS-10", "PRMS-F"]
 
 [facets]
@@ -48,13 +48,12 @@ type = "text"
 # Surgery
 
 - Biopsy only, to establish diagnosis
-    - Per Principles of Pathologic Assessment
-- Do not plan aggressive surgery at this site
+    - See Principles of Pathologic Assessment
+- Aggressive surgery is not required at this site
     - Tumors at this site respond relatively well with multimodal therapy without aggressive surgery
     - The primary role of surgery is for diagnosis and staging
-- Do not plan invasive surgery to establish bile drainage
+- Invasive surgery to establish bile drainage is typically not necessary
     - Biliary obstruction typically improves with chemotherapy
-    - Invasive surgery to establish bile drainage is typically not necessary
 
 # Next
 

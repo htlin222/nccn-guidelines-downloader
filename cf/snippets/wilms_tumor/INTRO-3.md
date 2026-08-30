@@ -6,27 +6,23 @@ page         = 9
 title        = "Reference list for the introduction to Wilms tumor"
 nccn_version = "1.2026"
 nccn_date    = "05/04/2026"
-generated    = "2026-08-28"
+generated    = "2026-08-30"
 see_also     = ["INTRO-1", "INTRO-2"]
 
 [facets]
 disease = "wilms_tumor"
-
-[[variables]]
-name = "reference_number"
-type = "number"
 +++
 
 # Source
 
 - NCCN Wilms Tumor (Nephroblastoma) v1.2026, INTRO-3, p9
-- References for the introduction to Wilms tumor
-- This page is the reference list only; it carries no recommendation of its own
-- All recommendations category 2A unless otherwise indicated
+- INTRODUCTION TO WILMS TUMOR REFERENCES
+- This page is the reference list for the introduction; it carries no algorithm, no decision node, and no footnotes
+- All recommendations are category 2A unless otherwise indicated
 
 # Assessment
 
-- Reference being looked up: ___ (reference_number)
+- Nothing on this page is assessed against a patient
 
 # References
 

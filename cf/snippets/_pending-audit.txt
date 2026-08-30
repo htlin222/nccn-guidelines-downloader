@@ -27,40 +27,4 @@
 # 2026-08-30 第三次撞額度（11:30am 重置）。生成完成、audit 全數失敗的 41 份。
 # 其中 wilms_tumor 的 WILMS-9/10/11/12/13、ST-1、CAT-1 連生成都沒跑完，不在這裡
 # ——它們沒有檔案，snippets_status.sh 會自動把它們算成待辦。
-ped_hodgkin/CAT-1
-ped_sts/CAT-1
-ped_sts/ST-1
-ped_sts/PRMS-1
-ped_sts/PRMS-2
-ped_sts/PRMS-3
-ped_sts/PRMS-4
-ped_sts/PRMS-5
-ped_sts/PRMS-6
-ped_sts/PRMS-7
-ped_sts/PRMS-8
-ped_sts/PRMS-9
-ped_sts/PRMS-10
-ped_sts/PRMS-11
-ped_sts/PRMS-12
-ped_sts/PRMS-13
-ped_sts/PRMS-14
-ped_sts/PRMS-15
-wilms_tumor/INTRO-1
-wilms_tumor/INTRO-2
-wilms_tumor/INTRO-3
-wilms_tumor/WILMS-1
-wilms_tumor/WILMS-2
-wilms_tumor/WILMS-3
-wilms_tumor/WILMS-4
-wilms_tumor/WILMS-5
-wilms_tumor/WILMS-5A
-wilms_tumor/WILMS-5B
-wilms_tumor/WILMS-6
-wilms_tumor/WILMS-6A
-wilms_tumor/WILMS-7
-wilms_tumor/WILMS-7A
-wilms_tumor/WILMS-8
-wilms_tumor/WILMS-8A
-wilms_tumor/WILMS-8B
-wilms_tumor/WILMS-9A
-wilms_tumor/WILMS-9B
+# 2026-08-30 稍後：那 37 份已補審並通過（抓到 7 個問題），清單清空。

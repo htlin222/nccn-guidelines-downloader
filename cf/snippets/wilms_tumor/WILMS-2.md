@@ -6,7 +6,7 @@ page         = 11
 title        = "Findings and initial treatment for a renal tumor, by resectability, laterality, and predisposing condition"
 nccn_version = "1.2026"
 nccn_date    = "05/04/2026"
-generated    = "2026-08-28"
+generated    = "2026-08-30"
 see_also     = ["WILMS-3", "WILMS-5", "WILMS-6", "WILMS-8", "WILMS-10", "WILMS-11", "WILMS-C", "WILMS-D", "WILMS-E", "WILMS-I", "ST-1"]
 
 [facets]
@@ -21,6 +21,9 @@ name = "laterality"
 type = "enum"
 options = ["unilateral", "unilateral multifocal", "bilateral"]
 [[variables]]
+name = "tumor_size"
+type = "number"
+[[variables]]
 name = "predisposing_condition"
 type = "enum"
 options = ["present", "absent", "unknown"]
@@ -28,9 +31,6 @@ options = ["present", "absent", "unknown"]
 name = "resectable"
 type = "enum"
 options = ["resectable", "not resectable"]
-[[variables]]
-name = "tumor_size"
-type = "number"
 [[variables]]
 name = "nodes_sampled"
 type = "number"
@@ -54,17 +54,23 @@ type = "text"
     - Bilateral renal tumors
 - Largest tumor dimension ___ (tumor_size) cm
 - Predisposing condition ___ (predisposing_condition)
-    - Genetic disorders such as Denys-Drash, WAGR, Beckwith-Wiedemann, Frasier, and Perlman syndromes
+    - Genetic disorders that predispose to development of WT
+        - Denys-Drash
+        - WAGR
+        - Beckwith-Wiedemann
+        - Frasier
+        - Perlman
     - Contralateral nephrogenic rests in children <12 months
     - Ten percent to 33% of WT occurs in children with predisposing conditions
     - Children with known predisposing conditions should be screened for WT with PE and abdominal US every 3 months until 7 years of age (ie, all of year 6)
     - See Principles of Cancer Risk Assessment and Counseling (WILMS-I)
 - Tumor resectability ___ (resectable)
-    - Renal tumors may be unresectable at diagnosis because of tumor size
-    - Tumor thrombus extending above the hepatic veins
-    - Bilateral tumors
-    - Involvement of surrounding organs
-    - Pulmonary function compromise from extensive metastatic disease
+    - Renal tumors may be unresectable at diagnosis because of
+        - Tumor size
+        - Tumor thrombus extending above the hepatic veins
+        - Bilateral tumors
+        - Involvement of surrounding organs
+        - Pulmonary function compromise from extensive metastatic disease
 
 # Unilateral renal tumor, tumor resectable
 
@@ -95,7 +101,8 @@ type = "text"
     - For tumors <2 cm, consider close surveillance given the challenge of differentiating WT from proliferating nephrogenic rests
 - Tumor biopsy not indicated
     - Initial biopsy is not recommended for children with unilateral tumor and known predisposing condition
-    - Biopsy should be considered for children in this category who also are >10 years of age, or with concern for pathology other than WT
+    - Biopsy should be considered for children in this category who also are >10 years of age
+    - Biopsy should be considered for children in this category with concern for pathology other than WT
 
 # Bilateral renal tumors, with or without predisposing condition
 
@@ -104,7 +111,8 @@ type = "text"
     - Small nodules that are presumed to be nephrogenic rest on imaging can be observed without resection or biopsy
 - Tumor biopsy not indicated
     - Initial biopsy is not recommended for children with imaging findings of bilateral renal tumors
-    - Biopsy should be considered for children in this category who also are >10 years of age, or with concern for pathology other than WT
+    - Biopsy should be considered for children in this category who also are >10 years of age
+    - Biopsy should be considered for children in this category with concern for pathology other than WT
 
 # Next
 

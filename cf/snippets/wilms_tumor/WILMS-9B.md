@@ -75,7 +75,6 @@ options = ["yes", "no"]
 - If biopsied, a tumor is considered to be stage III for determination of chemotherapy regimen
     - Biopsy alone does not upstage a tumor to stage III for determining whether to give radiation
 - Neoadjuvant chemotherapy is not a criterion for upstaging to stage III in this population
-- Local stage III refers to staging of the primary tumor regardless of metastases
 
 # Chemotherapy and reassessment after the 6-week biopsy
 
@@ -98,6 +97,7 @@ options = ["yes", "no"]
     - Plan for possible abdominal and lung fields with initial abdominal RT planning, even if lung RT ultimately is not given
     - Planning this way minimizes the degree of overlapping fields
     - Some degree of overlap between the fields is expected in order to cover the target
+- Local stage III refers to staging of the primary tumor regardless of metastases
 
 # Molecular biomarkers
 

@@ -3,10 +3,10 @@ id           = "ped_sts/PRMS-15"
 gid          = "ped_sts"
 ref          = "PRMS-15"
 page         = 18
-title        = "Surveillance for patients with no known active disease"
+title        = "Surveillance schedule for patients with no known active disease"
 nccn_version = "1.2026"
 nccn_date    = "02/17/2026"
-generated    = "2026-08-28"
+generated    = "2026-08-30"
 see_also     = ["PRMS-14"]
 
 [facets]
@@ -67,7 +67,7 @@ options = ["no known active disease", "recurrent or progressive RMS"]
 
 # Imaging
 
-- Imaging is per Principles of Imaging
+- All imaging below follows Principles of Imaging
 - Primary site
     - Every 3–6 mo for 2–3 y
     - Then every 6–12 mo for years 4 and 5
@@ -81,9 +81,9 @@ options = ["no known active disease", "recurrent or progressive RMS"]
 
 # Patients treated on clinical trials
 
-- Follow the off-treatment surveillance guidelines of the trial
+- Follow off-treatment surveillance guidelines for patients treated on clinical trials
 
 # Next
 
-- No known active disease, continue surveillance on this schedule
+- No known active disease, continue surveillance
 - Recurrent or progressive RMS, go to PRMS-14

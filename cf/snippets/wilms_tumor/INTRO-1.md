@@ -7,7 +7,7 @@ title        = "Who manages suspected Wilms tumor, how it presents, and who need
 nccn_version = "1.2026"
 nccn_date    = "05/04/2026"
 generated    = "2026-08-28"
-see_also     = ["WILMS-1"]
+see_also     = ["INTRO-2", "WILMS-1"]
 
 [facets]
 disease   = "wilms_tumor"
@@ -93,9 +93,10 @@ type = "text"
 
 # Sites of spread
 
-- Lung (81%)
-- Lung and liver (15%)
-- Other (4%)
+- Most common sites of hematogenous metastases
+    - Lung (81%)
+    - Lung and liver (15%)
+    - Other (4%)
 - Spread to regional lymph nodes (LNs) also occurs
 
 # Genetic predisposition

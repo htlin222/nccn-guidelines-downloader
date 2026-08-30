@@ -3,10 +3,10 @@ id           = "ped_hodgkin/CAT-1"
 gid          = "ped_hodgkin"
 ref          = "CAT-1"
 page         = 54
-title        = "How to read the category of evidence and consensus, and the category of preference, printed on any recommendation in this guideline"
+title        = "How to read the category of evidence and the category of preference on any recommendation in this guideline"
 nccn_version = "1.2026"
 nccn_date    = "05/13/2026"
-generated    = "2026-08-28"
+generated    = "2026-08-30"
 
 [facets]
 disease = "ped_hodgkin"
@@ -15,52 +15,48 @@ disease = "ped_hodgkin"
 name = "recommendation"
 type = "text"
 [[variables]]
-name = "evidence_category"
+name = "nccn_category"
 type = "enum"
-options = ["1", "2A", "2B", "3", "none stated"]
+options = ["1", "2A", "2B", "3"]
 [[variables]]
-name = "preference_category"
+name = "nccn_preference"
 type = "enum"
-options = ["preferred", "other recommended", "useful in certain circumstances", "none stated"]
+options = ["preferred", "other-recommended", "useful-in-certain-circumstances", "none-stated"]
 +++
 
 # Source
 
 - NCCN Pediatric Hodgkin Lymphoma v1.2026, CAT-1, p54
-- Defines the NCCN Categories of Evidence and Consensus, and the NCCN Categories of Preference
-- Applies to every recommendation in this guideline, not to a single decision node
+- Definitions only, no patient decision on this page
+- Applies to every recommendation in this guideline
 - All recommendations are category 2A unless otherwise indicated
 - All recommendations are considered appropriate
 
 # Assessment
 
-- Recommendation being applied ___ (recommendation)
-- Category of evidence and consensus printed with it ___ (evidence_category)
-    - If none is otherwise indicated, it is category 2A
-- Category of preference printed with it ___ (preference_category)
-    - All recommendations are considered appropriate, whichever preference category is printed
+- Recommendation being applied: ___ (recommendation)
+- Category of evidence and consensus printed with it: ___ (nccn_category)
+    - If no category is printed, it is category 2A
+- Category of preference printed with it: ___ (nccn_preference)
 
-# NCCN categories of evidence and consensus
+# Categories of evidence and consensus
 
 - Category 1
     - Based upon high-level evidence
-        - 1 or more randomized phase 3 trials
-        - Or high-quality, robust meta-analyses
-    - There is uniform NCCN consensus that the intervention is appropriate
-        - 85% or more support of the Panel
+        - At least 1 randomized phase 3 trial, or high-quality, robust meta-analyses
+    - Uniform NCCN consensus, at least 85% support of the Panel, that the intervention is appropriate
 - Category 2A
     - Based upon lower-level evidence
-    - There is uniform NCCN consensus that the intervention is appropriate
-        - 85% or more support of the Panel
+    - Uniform NCCN consensus, at least 85% support of the Panel, that the intervention is appropriate
 - Category 2B
     - Based upon lower-level evidence
-    - There is NCCN consensus that the intervention is appropriate
-        - 50% or more, but less than 85% support of the Panel
+    - NCCN consensus of at least 50%, but under 85% support of the Panel, that the intervention is appropriate
 - Category 3
     - Based upon any level of evidence
-    - There is major NCCN disagreement that the intervention is appropriate
+    - Major NCCN disagreement that the intervention is appropriate
+- All recommendations are category 2A unless otherwise indicated
 
-# NCCN categories of preference
+# Categories of preference
 
 - Preferred
     - Interventions that are based on superior efficacy, safety, and evidence
@@ -70,4 +66,5 @@ options = ["preferred", "other recommended", "useful in certain circumstances", 
     - Or significantly less affordable for similar outcomes
 - Useful in certain circumstances
     - Other interventions that may be used for selected patient populations
-    - The population is defined with the recommendation
+    - The population is defined with the recommendation itself
+- All recommendations are considered appropriate

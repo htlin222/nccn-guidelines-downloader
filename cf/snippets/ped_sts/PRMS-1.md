@@ -71,7 +71,7 @@ options = ["yes", "no"]
 
 - R0 resection (PRMS-D)
 - Margins ___ (margin_status)
-    - Negative margins, no re-excision step
+    - Negative margins, go directly to pathologic confirmation of RMS
     - Positive margins, consider pre-treatment re-excision (PRE) (PRMS-D)
         - Consider PRE if there is gross residual tumor
         - Consider PRE if margins are microscopically involved

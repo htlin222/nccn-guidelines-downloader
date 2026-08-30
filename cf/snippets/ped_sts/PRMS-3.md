@@ -5,8 +5,8 @@ ref          = "PRMS-3"
 page         = 6
 title        = "Biopsy, local management, and nodal assessment of a head or neck mass"
 nccn_version = "1.2026"
-nccn_date    = "02/017/2026"
-generated    = "2026-08-28"
+nccn_date    = "02/17/2026"
+generated    = "2026-08-30"
 see_also     = ["PRMS-D", "PRMS-E", "PRMS-F", "PRMS-10"]
 
 [facets]
@@ -46,34 +46,32 @@ type = "text"
 - Lymph nodes on clinical assessment or imaging ___ (node_status)
 - Risk group ___ (risk_group)
 
-# Parameningeal mass
+# Parameningeal
 
-- Biopsy
-    - Per Principles of Pathologic Assessment
+- Biopsy, per Principles of Pathologic Assessment
     - Adequate biopsy is required
-        - Should provide sufficient tissue to establish the diagnosis
-        - Should provide sufficient tissue for further molecular genetic analysis
+        - Sufficient tissue to establish the diagnosis
+        - Sufficient tissue for further molecular genetic analysis
     - Lumbar puncture with cytology after diagnosis is confirmed
 
-# Other head or neck, or orbital mass
+# Other head or neck, or orbital
 
-- Other head and neck sites as defined in Raney RB, et al. Pediatr Blood Cancer 2008;50:958-964
-- RMS of the orbit should not undergo exenteration, but biopsy is needed for diagnosis
+- Other head or neck site, per Raney RB, et al. Pediatr Blood Cancer 2008;50:958-964
+- Orbital site
+    - RMS of the orbit should not undergo exenteration, but biopsy is needed for diagnosis
     - Oberlin O, et al. J Clin Oncol 2001;19:197-204
 - R0 if feasible without impact to form or function (PRMS-D)
     - Narrow resection margins (<1 mm) are acceptable because of anatomical restrictions
     - Cosmetic and functional factors should always be considered
-- Biopsy only if R0 would result in functional impairment
-    - Per Principles of Pathologic Assessment
+- Biopsy only if R0 would result in functional impairment, per Principles of Pathologic Assessment
     - Adequate biopsy is required
-        - Should provide sufficient tissue to establish the diagnosis
-        - Should provide sufficient tissue for further molecular genetic analysis
+        - Sufficient tissue to establish the diagnosis
+        - Sufficient tissue for further molecular genetic analysis
 
 # Regional lymph nodes
 
 - Suspicious lymph nodes on clinical assessment or imaging
-    - Biopsy of concerning nodes (PRMS-E)
-    - Per Principles of Pathologic Assessment
+    - Biopsy of concerning nodes (PRMS-E), per Principles of Pathologic Assessment
 - No concerning lymph nodes on clinical assessment or imaging
     - Lymph node biopsy not required (PRMS-E)
 

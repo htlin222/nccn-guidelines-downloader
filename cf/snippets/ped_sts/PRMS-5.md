@@ -3,11 +3,11 @@ id           = "ped_sts/PRMS-5"
 gid          = "ped_sts"
 ref          = "PRMS-5"
 page         = 8
-title        = "Soft tissue mass of the trunk: primary surgery, margin status, and what follows"
+title        = "Soft tissue mass of the trunk confirmed as RMS: surgery, margin status, nodal assessment, and the clinical group they assign"
 nccn_version = "1.2026"
 nccn_date    = "02/17/2026"
-generated    = "2026-08-28"
-see_also     = ["PRMS-4", "PRMS-6", "PRMS-10", "PRMS-D", "PRMS-E", "PRMS-F"]
+generated    = "2026-08-30"
+see_also     = ["PRMS-D", "PRMS-E", "PRMS-F", "PRMS-10"]
 
 [facets]
 disease   = "ped_sts"
@@ -20,7 +20,11 @@ type = "number"
 name = "site"
 type = "text"
 [[variables]]
-name = "margin"
+name = "diagnosis_method"
+type = "enum"
+options = ["excision", "biopsy"]
+[[variables]]
+name = "margin_status"
 type = "enum"
 options = ["negative", "positive", "unknown"]
 [[variables]]
@@ -31,6 +35,9 @@ options = ["positive", "negative", "pending"]
 name = "nodes"
 type = "enum"
 options = ["none-concerning", "suspicious"]
+[[variables]]
+name = "risk_group"
+type = "text"
 +++
 
 # Source
@@ -43,62 +50,56 @@ options = ["none-concerning", "suspicious"]
 
 - ___ (age) yo
 - Soft tissue mass of the trunk, site ___ (site)
-- RMS confirmed
-- Margin status ___ (margin)
+- RMS confirmed by ___ (diagnosis_method)
+- Margins ___ (margin_status)
 - FOXO1 gene fusion ___ (foxo1)
 - Lymph nodes on clinical assessment or imaging ___ (nodes)
+- Risk group ___ (risk_group)
 
-# Initial surgical decision
+# Choose the surgical approach
 
 - Amenable to R0, non-radical excision without impact to form or function (PRMS-D)
     - Initial primary resection is performed if there is a realistic expectation of achieving negative margins (R0 resection)
     - and if cosmetic and functional outcomes are acceptable
     - Excision confirms RMS
-        - Principles of Pathologic Assessment
+        - Per Principles of Pathologic Assessment
 - Complete excision not possible without impact on form, function, or morbidity
     - Biopsy confirms RMS
-        - Principles of Pathologic Assessment
+        - Per Principles of Pathologic Assessment
         - Adequate biopsy is required
         - Biopsy should provide sufficient tissue to establish the diagnosis
         - Biopsy should provide sufficient tissue for further molecular genetic analysis
 
-# Excision, negative margins
+# Margin status after excision
 
-- Clinical Group I
-- FOXO1 gene fusion-positive
-    - Systemic therapy (as indicated for risk group) (PRMS-10)
-    - and RT (PRMS-F)
-- FOXO1 gene fusion-negative
-    - Systemic therapy (as indicated for risk group) (PRMS-10)
-
-# Excision, positive or unknown margins
-
-- Primary re-excision if R0 resection can be accomplished without significant morbidity (PRMS-D)
-    - If there is suspicion or knowledge of residual tumor after the initial resection, primary re-excision should be employed
-    - unless this would result in loss of form or function
-- Negative margins after re-excision
+- Negative margins
     - Clinical Group I
-    - FOXO1 gene fusion-positive
-        - Systemic therapy (as indicated for risk group) (PRMS-10)
-        - and RT (PRMS-F)
-    - FOXO1 gene fusion-negative
-        - Systemic therapy (as indicated for risk group) (PRMS-10)
-- Clinical Group II (R1) or III (R2) if margins cannot be cleared surgically
-    - Systemic therapy (as indicated for risk group) (PRMS-10)
-    - and RT (PRMS-F)
+- Positive or unknown margins
+    - Primary re-excision if R0 resection can be accomplished without significant morbidity (PRMS-D)
+        - If there is suspicion or knowledge of residual tumor after the initial resection, PRE should be employed
+        - Unless this would result in loss of form or function
+    - Negative margins after primary re-excision
+        - Clinical Group I
+    - Clinical Group II (R1) or III (R2) if margins cannot be cleared surgically
 
-# Complete excision not possible, lymph node assessment
+# Lymph node assessment when complete excision is not possible
 
 - No concerning lymph nodes on clinical assessment or imaging
 - Suspicious lymph nodes on clinical assessment or imaging
-    - Biopsy of concerning nodes for pathologic confirmation (if feasible) (PRMS-E)
-        - Principles of Pathologic Assessment
+    - Biopsy of concerning nodes for pathologic confirmation, if feasible (PRMS-E)
+        - Per Principles of Pathologic Assessment
 
 # Next
 
-- Systemic therapy as indicated for risk group, go to PRMS-10
-- RT, see PRMS-F
-- After biopsy only, complete excision not possible
-    - Systemic therapy (as indicated for risk group) (PRMS-10)
+- Clinical Group I and FOXO1 gene fusion-positive
+    - Systemic therapy, as indicated for risk group (PRMS-10)
     - and RT (PRMS-F)
-    - and Evaluate for DPE (PRMS-D)
+- Clinical Group I and FOXO1 gene fusion-negative
+    - Systemic therapy, as indicated for risk group (PRMS-10)
+- Clinical Group II (R1) or III (R2)
+    - Systemic therapy, as indicated for risk group (PRMS-10)
+    - and RT (PRMS-F)
+- Complete excision not possible, RMS confirmed by biopsy
+    - Systemic therapy, as indicated for risk group (PRMS-10)
+    - and RT (PRMS-F)
+    - and evaluate for DPE (PRMS-D)

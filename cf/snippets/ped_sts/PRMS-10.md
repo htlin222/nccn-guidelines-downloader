@@ -3,10 +3,10 @@ id           = "ped_sts/PRMS-10"
 gid          = "ped_sts"
 ref          = "PRMS-10"
 page         = 13
-title        = "Risk stratification of rhabdomyosarcoma by stage, clinical group, age, and FOXO1 fusion status"
+title        = "Risk stratification of RMS by stage, clinical group, age, and FOXO1 fusion status"
 nccn_version = "1.2026"
 nccn_date    = "02/17/2026"
-generated    = "2026-08-28"
+generated    = "2026-08-30"
 see_also     = ["ST-1", "PRMS-11", "PRMS-12", "PRMS-13"]
 
 [facets]
@@ -45,7 +45,7 @@ options = ["very-low-risk", "low-risk", "intermediate-risk", "high-risk"]
 # Source
 
 - NCCN Pediatric Soft Tissue Sarcoma v1.2026, PRMS-10, p13
-- Applies to RMS after diagnosis, for assignment to a risk group
+- Applies to RMS at diagnosis, to assign a risk group
 - Stage and Clinical Group are taken from the Staging and Clinical Group Tables (ST-1)
 - All recommendations are category 2A unless otherwise indicated
 
@@ -55,32 +55,55 @@ options = ["very-low-risk", "low-risk", "intermediate-risk", "high-risk"]
 - Stage ___ (stage), per the Staging Table (ST-1)
 - Clinical Group ___ (clinical_group), per the Clinical Group Table (ST-1)
 - Tumor size ___ (tumor_size) cm
-- Primary site: ___ (primary_site)
+- Primary site ___ (primary_site)
 - FOXO1 ___ (foxo1)
-- Risk group assigned: ___ (risk_group)
+- Risk group assigned ___ (risk_group)
 
 # Very-low-risk
 
-- Stage 1, Group I, <10 y of age, tumor size less than or equal to 5 cm, FOXO1 gene-fusion negative
+- Stage 1, Group I
+    - <10 y of age
+    - Tumor size ≤5 cm
+    - FOXO1 gene-fusion negative
 
 # Low-risk
 
-- Stage 1, Group I–II, any age, FOXO1 gene-fusion negative
-- Stage 1, Group III (orbital), any age, FOXO1 gene-fusion negative
-- Stage 2, Group I–II, any age, FOXO1 gene-fusion negative
+- Stage 1, Group I–II
+    - Any age
+    - FOXO1 gene-fusion negative
+- Stage 1, Group III (orbital)
+    - Any age
+    - FOXO1 gene-fusion negative
+- Stage 2, Group I–II
+    - Any age
+    - FOXO1 gene-fusion negative
 
 # Intermediate-risk
 
-- Stage 1, Group III (non-orbit), any age, FOXO1 gene-fusion negative
-- Stage 3, Group I–II, any age, FOXO1 gene-fusion negative
-- Stage 2–3, Group III, any age, FOXO1 gene-fusion negative
-- Stage 1–3, Group I–III, any age, FOXO1 gene-fusion positive
-- Stage 4, Group IV, <10 y of age, FOXO1 gene-fusion negative
+- Stage 1, Group III (non-orbit)
+    - Any age
+    - FOXO1 gene-fusion negative
+- Stage 3, Group I–II
+    - Any age
+    - FOXO1 gene-fusion negative
+- Stage 2–3, Group III
+    - Any age
+    - FOXO1 gene-fusion negative
+- Stage 1–3, Group I–III
+    - Any age
+    - FOXO1 gene-fusion positive
+- Stage 4, Group IV
+    - <10 y of age
+    - FOXO1 gene-fusion negative
 
 # High-risk
 
-- Stage 4, Group IV, any age, FOXO1 gene-fusion positive
-- Stage 4, Group IV, 10 y of age or older, FOXO1 gene-fusion negative
+- Stage 4, Group IV
+    - Any age
+    - FOXO1 gene-fusion positive
+- Stage 4, Group IV
+    - ≥10 y of age
+    - FOXO1 gene-fusion negative
 
 # Next
 

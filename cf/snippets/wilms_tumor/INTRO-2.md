@@ -6,7 +6,7 @@ page         = 8
 title        = "Treatment overview for Wilms tumor: what determines therapy, and which consultations to arrange"
 nccn_version = "1.2026"
 nccn_date    = "05/04/2026"
-generated    = "2026-08-28"
+generated    = "2026-08-30"
 see_also     = ["INTRO-1", "INTRO-3"]
 
 [facets]
@@ -61,7 +61,15 @@ type = "text"
 # Range of treatment
 
 - Treatment for WT ranges from observation after surgery only, to intensive chemotherapy, radiation, and surgery
-    - Which of these applies depends on the factors assessed above
+    - Which end of that range applies depends on the factors assessed above
+        - Unilateral or bilateral WT
+        - Local stage
+        - Presence of metastases
+        - Patient age
+        - Tumor weight
+        - Biologic risk factors
+        - Histology
+        - Clinical response to therapy
 - Studies of long-term survivors show these therapies are effective
     - Judicious use of available therapies is necessary to maximize cure while minimizing long-term toxicities
     - Appropriate assignment of therapy to balance these goals employs an evolving system of risk stratification
@@ -71,8 +79,10 @@ type = "text"
 - Consult pediatric oncologic surgeon or urologist when the renal tumor is discovered
 - Consider second opinion consultations and referral to tertiary care centers for complex surgeries
 - Consult a radiation oncologist at time of suspected or confirmed diagnosis of WT
-- Imaging studies, pathology, and biomarker testing results used to determine stage and risk group
-    - Perform in consultation with experienced specialists
+- Results used to determine stage and risk group should be performed in consultation with experienced specialists
+    - Imaging studies
+    - Pathology
+    - Biomarker testing
 
 # Referrals
 
