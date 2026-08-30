@@ -156,7 +156,8 @@ def check(path):
     if not os.path.exists(src_path):
         fail(errs, name, "找不到素材檔 %s" % src_path)
         return errs
-    src = norm(open(src_path, encoding="utf-8").read())
+    src_raw = open(src_path, encoding="utf-8").read()
+    src = norm(src_raw)
 
     for pat, label in ((DRUG_SUFFIX, "藥名"), (CATEGORY, "category 標註")):
         for hit in {h.group(0) for h in pat.finditer(body)}:
@@ -185,10 +186,33 @@ def check(path):
     #
     # 誤殺的情況是素材抽取壞了（pdftotext 把 ref 切碎，像 mastocytosis 的 SM-G），
     # 那時候該修的是素材或那一行，不是放寬這道檢查。
+    # 第二個洞：norm() 抹掉連字號之後，短 ref 是長 ref 的前綴。AYAO-9A 的頁尾讓
+    # norm("AYAO-9") = "ayao9" 通過檢查，於是核對項目裡那句「見 AYAO-9」過關，
+    # 而那一頁從未指向 AYAO-9。判準是「素材裡有沒有這個 ref 的完整 token」——
+    # 只以更長 ref 的前綴出現，就是沒有。
+    #
+    # 唯一放行的是 # Source 區塊。`-NA` 續頁在那裡寫「這是 -N 那條路徑的註腳」
+    # 是在說明自己是什麼，那個關係由 ref 命名本身決定，不是來源說過的話；
+    # 十二份續頁都是這樣寫的。同一句寫進核對項目或 # Next 就不一樣了——那是
+    # 在替讀者指路，而指路必須是那一頁真的指的。
+    src_refs = {norm(h.group(1)) for h in XREF.finditer(src_raw)}
+    # # Source 之後的第一個標題起，全部算「指路」的部分。判準是 ref 有沒有出現在
+    # 這裡，不是有沒有出現在 # Source——INCTLD-1 兩邊都寫了，只看 # Source 會漏。
+    outside_source = "".join(re.split(r"^# (?!Source)", body, flags=re.M)[1:])
     for x in {h.group(1) for h in XREF.finditer(body)}:
-        if x == ref or norm(x) in src:
+        if x == ref:
             continue
-        fail(errs, name, "交叉引用 %s 沒有出現在這一頁的素材裡（外部為真也不算）" % x)
+        if norm(x) not in src:
+            fail(errs, name, "交叉引用 %s 沒有出現在這一頁的素材裡（外部為真也不算）" % x)
+            continue
+        if norm(x) in src_refs:
+            continue
+        if not any(t.startswith(norm(x)) for t in src_refs):
+            continue  # 素材抽取壞掉時的散字比對，維持原本的寬鬆
+        if x not in outside_source:
+            continue  # 只出現在 # Source 的自我描述
+        fail(errs, name,
+             "交叉引用 %s 在素材裡只以更長 ref 的前綴出現，這一頁沒有真的指向它" % x)
 
     return errs
 

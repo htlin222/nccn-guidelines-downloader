@@ -82,7 +82,7 @@ options = ["yes", "no"]
     - Because of their excellent prognosis
     - Because of the absence of extracutaneous progression
 - Must be distinguished from malignant CTCL
-- The primary cutaneous indolent LPDs include two entities, see Table 1 (INCTLD-2)
+- The primary cutaneous indolent LPDs include two entities, see Table 1
     - Primary cutaneous CD4+ small/medium T-cell LPD (PCSM-TLPD)
     - Primary cutaneous CD8+ acral T-cell LPD (PCA-TLPD)
 

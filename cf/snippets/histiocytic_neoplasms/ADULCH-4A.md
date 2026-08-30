@@ -83,7 +83,3 @@ options = ["complete-response", "partial-response", "stable-disease", "progressi
     - Does not meet other criteria
 - CT or MRI
     - Does not meet other criteria
-
-# Next
-
-- Response assessment feeds the follow-up and relapsed/refractory pathway, go to ADULCH-4
