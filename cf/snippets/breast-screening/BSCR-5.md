@@ -12,7 +12,6 @@ see_also     = ["BSCR-1A", "BSCR-6", "BSCR-8", "BSCR-9", "BSCR-10", "BSCR-11", "
 [facets]
 disease    = "breast-screening"
 timepoint  = ["screening", "diagnosis"]
-population = "male"
 
 [[variables]]
 name = "age"
