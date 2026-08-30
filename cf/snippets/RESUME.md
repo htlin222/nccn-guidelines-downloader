@@ -45,18 +45,36 @@ catalogue 是 **91 份 NCCN 指引**（另有 91 份 MD Anderson，還沒開始�
 
 2026-08-30 收工時：**957 份**，已 dump 的 78 份指引全部做完。
 
-**尚未 dump 的 13 份**（catalogue 共 91）：
+**最後 13 份已經 dump 完，字典也補好了**（2026-08-30 晚）。剩下的就是把 295 個
+節點生完：
 
-    hct smoking survivorship aya older_adult hiv
-    breast_risk breast-screening colorectal_screening
-    genetics_bopp genetics_ceg lung_screening prostate_detection
+    hct 10   smoking 7   hiv 6   older_adult 10   breast_risk 9
+    prostate_detection 7   aya 17   lung_screening 20
+    breast-screening 21   colorectal_screening 24
+    genetics_bopp 23   genetics_ceg 51   survivorship 90
 
-都是篩檢、遺傳評估、特殊族群與存活者照護。做法跟前面完全一樣，先
-`bash dump_snippet_src.sh <gid>`，再看 `--todo`。
+待辦清單這樣重建（狀態就是檔案系統，跑幾次都一樣）：
 
-**這批開始前先看一眼字典。** 遺傳與篩檢那幾份會用到現在沒有的值——BRCA1/2 之外的
-PALB2、CHEK2、ATM、Lynch 相關的 MLH1/MSH2/MSH6/PMS2/EPCAM，以及 timepoint 可能
-需要 risk-reduction。事前補是十分鐘，事後回填是一整輪。
+```bash
+cd cf
+for g in hct smoking hiv older_adult breast_risk prostate_detection aya \
+         lung_screening breast-screening colorectal_screening \
+         genetics_bopp genetics_ceg survivorship; do
+  bash snippets_status.sh "$g" --todo | sed "s|^|$g/|"
+done
+```
+
+輸出切成 40 個一批餵給生成 workflow。**順序刻意不是字母序**——小份的排前面，
+survivorship 那 90 個排最後。撞額度中斷時，前面已經有幾份指引是完整的，
+而不是十三份各做一半。
+
+字典已經補過了（commit `982bb4f`）：biomarker +45（41 個 germline 基因，加
+lynch / fap / afap / serrated-polyposis），timepoint +3（risk-reduction、
+survivorship、genetic-testing）。PJS→stk11、JPS→smad4、PHTS→pten、LFS→tp53、
+HDGC→cdh1、MAP→mutyh、GAPPS→apc 走別名，不另立值。**開始前不必再補字典。**
+
+genetics_ceg 的 GENE-1..22 是一頁一個基因，那 45 個值就是為它們加的；填 facet 時
+一頁只填該頁真正在講的那個基因，不要把 GENE-19 那種參考文獻頁上出現的基因全填上。
 
 ---
 
@@ -132,24 +150,15 @@ Workflow({ scriptPath: "<repo>/cf/snippets/_workflow-backfill-facets.js",
 
 ---
 
-## 先做這件事：處理 10 份未審的 antiemesis
+## 未審清單：`_pending-audit.txt`
 
-`snippets/_pending-audit.txt` 列著它們，D1 裡是 `review='unaudited'`。分兩種：
+現在是空的。它存在是因為撞額度時「生成完成、審查沒跑」的清單跟跑完整流程的
+清單不是同一個東西，即使它們長得一模一樣。`load_snippets.sh` 讀這個檔，把那些
+清單的 review 設成 `unaudited`，讓狀態在 D1 裡看得見，而不是只存在某個人的記憶裡。
 
-- **AE-1 AE-9 AE-13 AE-14 AE-15 AE-16** — 生成完成，只有 audit 失敗。補審即可。
-- **AE-6 PEDAE-1 PEDAE-3 PEDAE-9** — 生成 agent 自己也中斷了，但檔案已經寫出。
-  它們通過四關所以格式完整，但生成 agent 沒跑完自己的驗證循環，所以連生成階段的
-  自我修正都不確定跑過。**這四份要重生成，不是補審。**
-
-兩種都是把 ref 丟回生成 workflow 跑一遍（它會重新生成再審查）：
-
-```
-Workflow({ scriptPath: "<repo>/cf/snippets/_workflow-generate.js",
-           args: ["antiemesis/AE-1", "antiemesis/AE-6", ...] })
-```
-
-跑完把 `_pending-audit.txt` 裡對應的行刪掉，重新 `bash load_snippets.sh`——
-它會把 `unaudited` 清掉。
+**中斷時要做的事**：把生成完成但沒審到的 ref 一行一個寫進去，再 `load_snippets.sh`。
+補跑就是把那些 ref 丟回生成 workflow（它會重新生成再審查），跑完刪掉對應的行、
+重新 load。
 
 **為什麼未審不能當已審**：四關擋得住編出來的藥名與數字，擋不住下面這些——全部
 實際發生過，而且全部四關通過：
@@ -162,11 +171,12 @@ Workflow({ scriptPath: "<repo>/cf/snippets/_workflow-generate.js",
   條件掛錯地方讀者不會發現任何異常**）
 - `SELLAR-1` 把「無法手術處理的殘留腫瘤，考慮放療或觀察」寫成「轉介放療」
 
+
 ## 還沒做的事
 
-- **人工審閱。** D1 現在是 246 份 `review=NULL`（跑過完整流程）與 21 份
-  `review='unaudited'`。兩者都還沒有人看過——機械四關與對抗性審查都是模型，
-  真正的臨床把關還沒發生。`load_snippets.sh` 刻意不覆寫人填的 `review` 值。
+- **人工審閱。** D1 現在 957 份全是 `review=NULL`——都跑過完整流程（生成 + 對抗性
+  審查），但沒有一份有人看過。機械四關與對抗性審查都是模型，真正的臨床把關還沒
+  發生。`load_snippets.sh` 刻意不覆寫人填的 `review` 值。
 - **參考附錄（principles）。** `BINV-A` 這類字母結尾的 ref 是查閱資料不是門診情境，
   目前不生成，只以 `see_also` 出現。確認真的需要再說。
 - **取用端點。** `/api/v1/snippet/...` 還沒寫。issue #4 記了傾向：預設只回
