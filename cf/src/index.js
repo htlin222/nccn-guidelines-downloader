@@ -54,12 +54,7 @@ import { SKILL_FILENAME, buildSkillZip } from "./lib/skillpack.js";
 import { renderPage } from "./views/home.js";
 import { renderNotes } from "./views/notes.js";
 import { buildSearch, parseQuery, rankRows } from "./lib/notes.js";
-import {
-	NOTES_GEN_KEY,
-	cacheKey,
-	generation,
-	remember,
-} from "./lib/cache.js";
+import { remember } from "./lib/cache.js";
 // hashKey 就是 sha256 十六進位，名字是金鑰用途留下的。這裡借它算生成內容的
 // 指紋，不值得為了名字再抄一份同樣的 crypto.subtle.digest。
 import { hashKey as sha256 } from "./lib/apikey.js";
@@ -192,16 +187,7 @@ export default {
 								.run();
 						}
 					}
-					// 這一份的快取要立刻失效。世代號是整批失效用的，為了一次編輯把
-					// 全站快取丟掉太貴，所以只刪這一個 key。
-					ctx?.waitUntil(
-						(async () => {
-							const gen = await generation(env, NOTES_GEN_KEY);
-							await env.NCCN_KV.delete(
-								cacheKey(gen, "s", g + "/" + r, "notes"),
-							).catch(() => {});
-						})(),
-					);
+					// 這裡刻意不去動 KV。修改本來就不經過 KV——見下面讀取路徑的說明。
 					return json({ ok: true });
 				} catch (e) {
 					return json({ error: String(e && e.message) }, 500);
@@ -209,35 +195,45 @@ export default {
 			}
 
 			try {
-				// loader 回 null 代表這份不存在，remember 就不會把 404 釘住 30 天。
-				const body = await remember(env, ctx, "s", g + "/" + r, async () => {
+				// 只有生成內容進 KV，使用者的修改每次從 D1 讀。
+				//
+				// 這是踩過才改的：原本整包（含修改）一起快取，PUT 之後再刪那個 KV
+				// key。看起來嚴密，實際上存完馬上重讀還是拿到舊的——remember() 用
+				// cacheTtl 3600 讀 KV，而 KV 有自己的邊緣快取又是最終一致，
+				// 「這個 key 刪掉了」是照 KV 的時程生效，不是照我的。
+				// §5.6 的撤銷金鑰是同一個坑的另一個版本。
+				//
+				// 所以分法是：生成內容一週才變一次，快取它；修改是使用者剛剛按下
+				// 儲存的東西，必須讀得到自己寫的。多的那一趟 D1 是主鍵查詢
+				// （rows_read=1），而且一次點擊才一趟，不像搜尋是每次打字都跑。
+				const base = await remember(env, ctx, "s", g + "/" + r, async () => {
+					// loader 回 null 代表這份不存在，remember 就不會把 404 釘住 30 天。
 					const row = await env.DB.prepare(
 						"SELECT gid, ref, title, body, page, version, review FROM snippets WHERE gid=? AND ref=?",
 					)
 						.bind(g, r)
 						.first();
-					if (!row) return null;
-					const ed = await env.DB.prepare(
-						"SELECT body, base_hash, editor, updated FROM snippet_edits WHERE gid=? AND ref=?",
-					)
-						.bind(g, r)
-						.first();
-					if (!ed) return row;
-					return {
-						...row,
-						body: ed.body,
-						generated: row.body,
-						edited: { editor: ed.editor, updated: ed.updated },
-						// base 對不上代表這份修改是針對舊版寫的——之後重新生成過了。
-						// 讀的人該知道，不然一份舊修改會安靜地擋住新版內容。
-						stale: ed.base_hash ? ed.base_hash !== (await sha256(row.body)) : false,
-					};
+					return row || null;
 				}, "notes");
-				return body
-					? new Response(body, {
-							headers: { "content-type": "application/json; charset=utf-8" },
-						})
-					: json({ error: "not found" }, 404);
+				if (!base) return json({ error: "not found" }, 404);
+
+				const row = JSON.parse(base);
+				const ed = await env.DB.prepare(
+					"SELECT body, base_hash, editor, updated FROM snippet_edits WHERE gid=? AND ref=?",
+				)
+					.bind(g, r)
+					.first();
+				if (ed) {
+					row.generated = row.body;
+					row.body = ed.body;
+					row.edited = { editor: ed.editor, updated: ed.updated };
+					// base 對不上代表這份修改是針對舊版寫的——之後重新生成過了。
+					// 讀的人該知道，不然一份舊修改會安靜地擋住新版內容。
+					row.stale = ed.base_hash
+						? ed.base_hash !== (await sha256(row.generated))
+						: false;
+				}
+				return json(row);
 			} catch (e) {
 				return json({ error: String(e && e.message) }, 500);
 			}
