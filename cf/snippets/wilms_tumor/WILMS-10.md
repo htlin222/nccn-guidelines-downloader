@@ -6,13 +6,14 @@ page         = 27
 title        = "Adjuvant chemotherapy and radiation therapy for unilateral Wilms tumor with focal or diffuse anaplasia after primary nephrectomy"
 nccn_version = "1.2026"
 nccn_date    = "05/04/2026"
-generated    = "2026-08-28"
-see_also     = ["ST-1", "WILMS-8B", "WILMS-G", "WILMS-H"]
+generated    = "2026-08-30"
+see_also     = ["ST-1", "WILMS-8B", "WILMS-13", "WILMS-G", "WILMS-H"]
 
 [facets]
 disease   = "wilms_tumor"
 stage     = ["I", "II", "III", "IV"]
 timepoint = "adjuvant"
+intent    = "curative"
 
 [[variables]]
 name = "anaplasia"
@@ -41,21 +42,21 @@ type = "text"
 # Source
 
 - NCCN Wilms Tumor (Nephroblastoma) v1.2026, WILMS-10, p27
-- Applies to unilateral Wilms tumor with focal or diffuse anaplasia treated with primary nephrectomy
-- Staging follows COG Staging of Wilms Tumor (ST-1)
+- Applies to unilateral Wilms tumor with focal or diffuse anaplasia, primary nephrectomy
+- Stage is by COG Staging of Wilms Tumor (ST-1)
 - Chemotherapy detail: Principles of Chemotherapy (WILMS-G)
 - Radiation detail: Principles of Radiation Therapy (WILMS-H)
 - All recommendations are category 2A unless otherwise indicated
 
 # Assessment
 
-- Unilateral Wilms tumor, primary nephrectomy performed
+- Unilateral Wilms tumor, primary nephrectomy done
 - Anaplasia ___ (anaplasia)
-- COG stage ___ (stage) (ST-1)
-- Local stage ___ (local_stage)
+- Stage ___ (stage) (ST-1)
+- Local stage of the primary tumor ___ (local_stage)
 - Age ___ (age_months) months
 - Lung metastases ___ (lung_mets)
-- Other extrapulmonary metastatic sites ___ (extrapulmonary_sites)
+- Other extrapulmonary sites ___ (extrapulmonary_sites)
 
 # Focal anaplasia, primary nephrectomy
 
@@ -65,6 +66,7 @@ type = "text"
     - Radiation therapy (WILMS-H)
         - Flank for stage I or II
         - Flank or whole abdomen for stage III (ST-1)
+        - RT to the primary and metastatic sites is often given 10 to 14 days after surgery
 - Stage IV
     - Adjuvant chemotherapy: Revised Regimen UH-1 (WILMS-G)
     - Radiation therapy (WILMS-H)
@@ -72,12 +74,16 @@ type = "text"
         - Flank or whole abdomen for local stage III (ST-1)
         - Whole lung for lung metastases
         - Other extrapulmonary sites
+        - RT to the primary and metastatic sites is often given 10 to 14 days after surgery
+        - Delay RT for patients <6 months of age on Revised Regimen UH-1, until they are ≥6 months of age and are tolerating therapy well
 
 # Diffuse anaplasia, primary nephrectomy
 
 - Stage I
     - Adjuvant chemotherapy: Regimen DD4A (WILMS-G)
-    - Radiation therapy: flank radiation (WILMS-H)
+    - Radiation therapy (WILMS-H)
+        - Flank radiation
+        - RT to the primary and metastatic sites is often given 10 to 14 days after surgery
 - Stage II–IV
     - Adjuvant chemotherapy: Revised Regimen UH-2 (WILMS-G)
     - Radiation therapy (WILMS-H)
@@ -86,9 +92,5 @@ type = "text"
             - A higher dose of radiation for stage III DAWT lowers the risk of local recurrence (Daw NC, et al. J Clin Oncol 2020;38:1558-1568)
         - Whole lung for lung metastases
         - Other extrapulmonary sites
-
-# Radiation therapy timing
-
-- RT to the primary and metastatic sites is often given 10 to 14 days after surgery
-- RT should be delayed for patients <6 months of age treated on Revised Regimens UH-1 and UH-2
-    - Delay until they are ≥6 months of age and are tolerating therapy well
+        - RT to the primary and metastatic sites is often given 10 to 14 days after surgery
+        - Delay RT for patients <6 months of age on Revised Regimen UH-2, until they are ≥6 months of age and are tolerating therapy well

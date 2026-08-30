@@ -3,10 +3,10 @@ id           = "wilms_tumor/WILMS-9"
 gid          = "wilms_tumor"
 ref          = "WILMS-9"
 page         = 24
-title        = "Neoadjuvant therapy, resectability at 6 weeks, surgery, histology-directed adjuvant chemotherapy, and radiation for metastatic bilateral renal tumors"
+title        = "Metastatic bilateral renal tumors: neoadjuvant Regimen VAD, week 6 findings, surgery, histology-directed adjuvant chemotherapy, and radiation"
 nccn_version = "1.2026"
 nccn_date    = "05/04/2026"
-generated    = "2026-08-28"
+generated    = "2026-08-30"
 see_also     = ["WILMS-9A", "WILMS-13", "WILMS-C", "WILMS-D", "WILMS-G", "WILMS-H", "ST-1"]
 
 [facets]
@@ -45,6 +45,7 @@ type = "text"
 - NCCN Wilms Tumor (Nephroblastoma) v1.2026, WILMS-9, p24
 - Applies to metastatic bilateral renal tumors, with or without predisposing condition
 - Upfront biopsy or resection is discouraged
+- Principles of Surgery (WILMS-D)
 - All recommendations are category 2A unless otherwise indicated
 
 # Assessment
@@ -54,12 +55,13 @@ type = "text"
 - Upfront biopsy performed ___ (upfront_biopsy)
     - If biopsied, a tumor is considered to be stage III for determination of chemotherapy regimen
     - Biopsy alone does not upstage a tumor to stage III for determining whether to give radiation
-- Renal tumor response on re-imaging at week 6 ___ (renal_response_wk6)
-- Resectability at 6 weeks ___ (resectable_wk6)
+- Renal tumor response at week 6 re-imaging ___ (renal_response_wk6)
+- Resectability by partial nephrectomy at 6 weeks ___ (resectable_wk6)
     - Small nodules that are presumed to be nephrogenic rest on imaging can be observed without resection or biopsy
 - Histology of the resected tumor ___ (histology)
 - Local stage of the primary tumor ___ (local_stage)
     - Local stage III refers to staging of the primary tumor regardless of metastases
+    - COG Staging of Wilms Tumor (ST-1)
 
 # Neoadjuvant therapy
 
@@ -69,7 +71,7 @@ type = "text"
 - Re-image at week 6
     - Re-image primary and metastatic sites
 
-# Findings at 6 weeks
+# Findings at week 6
 
 - CR of renal tumors
     - Switch to Regimen DD4A
@@ -81,9 +83,9 @@ type = "text"
 # Surgery
 
 - Partial nephrectomy (one or both sides) when feasible
-- Total nephrectomy (after 12 weeks)
+- Or total nephrectomy (after 12 weeks)
     - Total nephrectomy is indicated in patients with bilateral WT if partial nephrectomy is not feasible after 12 weeks of chemotherapy
-- Regional LN sampling
+- With regional LN sampling
 - Pathology is WT
     - Principles of Pathology (WILMS-C)
     - Principles of Surgery (WILMS-D)
@@ -91,29 +93,27 @@ type = "text"
 # Histology results and adjuvant chemotherapy
 
 - Molecular biomarkers were not used to direct therapy in the AREN0534 trial
+- Principles of Chemotherapy (WILMS-G)
 - FHWT not blastemal predominant
     - Switch to Regimen DD4A
 - FHWT blastemal predominant
     - Switch to Regimen I
 - WT with anaplasia
     - Go to WILMS-13
-- Principles of Chemotherapy (WILMS-G)
 
 # Radiation therapy
 
 - Principles of Radiation Therapy (WILMS-H)
-- After CR of renal tumors, without resection
+- After CR of renal tumors on Regimen DD4A
     - No flank radiation
     - Whole lung for lung metastases and/or other extrapulmonary sites (eg, LNs)
 - After partial or total nephrectomy
     - Flank or whole abdomen for local stage III
-        - COG Staging of Wilms Tumor (ST-1)
-        - Local stage III refers to staging of the primary tumor regardless of metastases
     - Whole lung for lung metastases
     - Other extrapulmonary sites
 - RT to the primary site is often given 10 to 14 days after surgery
 - Plan for possible abdominal and lung fields with initial abdominal RT planning, even if lung RT ultimately is not given, to minimize the degree of overlapping fields
-    - There is concern for overlapping fields if the abdomen and lung are treated at different times
+    - Concern for overlapping fields if the abdomen and lung are treated at different times
     - Some degree of overlap between the fields is expected in order to cover the target
 - Biopsy alone does not upstage a tumor to stage III for determining whether to give radiation
 

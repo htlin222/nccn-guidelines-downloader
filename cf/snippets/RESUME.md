@@ -38,13 +38,25 @@ catalogue 是 **91 份 NCCN 指引**（另有 91 份 MD Anderson，還沒開始�
 
 優先順序（使用者定的）：
 
-1. **乳癌、大腸癌、肺癌** — 主要照顧的癌別。**已完成 53 份。**
-2. **消化道其餘** — rectal、gastric、pancreatic、esophageal、btc、hcc、
-   appendiceal、small_bowel、ampullary、gist、anal。**已完成 116 份。**
-3. **血液科** — 18 份指引全部完成，**194 份**。
-4. 其餘實體瘤 — prostate 已完成 18；bladder、kidney、ovarian、uterine、cervical、
-   cns、head-and-neck、cutaneous_melanoma、nmsc、squamous、mcc、bone、sarcoma、
-   thyroid、meso_pleural 素材已備好；還有 43 份指引連素材都還沒 dump。
+1. **乳癌、大腸癌、肺癌** — 主要照顧的癌別。**完成**（53）
+2. **消化道其餘** — **完成**（116）
+3. **血液科** — 18 份指引，**完成**（194）
+4. 其餘實體瘤、支持治療、兒童腫瘤 — **完成**
+
+2026-08-30 收工時：**957 份**，已 dump 的 78 份指引全部做完。
+
+**尚未 dump 的 13 份**（catalogue 共 91）：
+
+    hct smoking survivorship aya older_adult hiv
+    breast_risk breast-screening colorectal_screening
+    genetics_bopp genetics_ceg lung_screening prostate_detection
+
+都是篩檢、遺傳評估、特殊族群與存活者照護。做法跟前面完全一樣，先
+`bash dump_snippet_src.sh <gid>`，再看 `--todo`。
+
+**這批開始前先看一眼字典。** 遺傳與篩檢那幾份會用到現在沒有的值——BRCA1/2 之外的
+PALB2、CHEK2、ATM、Lynch 相關的 MLH1/MSH2/MSH6/PMS2/EPCAM，以及 timepoint 可能
+需要 risk-reduction。事前補是十分鐘，事後回填是一整輪。
 
 ---
 
