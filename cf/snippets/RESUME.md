@@ -43,7 +43,32 @@ catalogue 是 **91 份 NCCN 指引**（另有 91 份 MD Anderson，還沒開始�
 3. **血液科** — 18 份指引，**完成**（194）
 4. 其餘實體瘤、支持治療、兒童腫瘤 — **完成**
 
-2026-08-30 收工時：**957 份**，已 dump 的 78 份指引全部做完。
+2026-08-30 收工時：957 份。**同日稍晚做到 1185 份**——但其中 28 份未審，
+見下面「未審清單」。
+
+## 接手第一件事（2026-08-30 傍晚暫停）
+
+暫停時的狀態，三句話：
+
+1. **1185 份檔案，1157 份跑完整流程，28 份只生成沒審。** 那 28 份在
+   `_pending-audit.txt`，全是 survivorship 與 genetics_ceg 的收尾。
+2. **D1 還停在 957 份。** 這個 session 一路 commit 但沒有跑過
+   `bash load_snippets.sh`，所以檔案與 D1 差 228 份。接手先跑它。
+3. **生成 workflow 已改成 Sonnet**（`_workflow-generate.js` 的 `MODEL`）。
+   那 28 份是這個專案第一批 Sonnet 產出，前面 1157 份都是 Opus。
+
+接下來的順序：
+
+```bash
+cd cf && set -a && . ../.env && set +a
+bash load_snippets.sh                     # 先把 D1 補上，順便標記 unaudited
+```
+
+然後把 `_pending-audit.txt` 那 28 份丟回生成 workflow（它會重生成再審查），
+跑完刪掉那些行、重新 load。再把剩下的待辦跑完：
+
+    survivorship 還有約 62 個節點，加上 genetics_ceg/GENE-22 與
+    survivorship/PH-3A（生成 agent 回報 ok 但檔案沒落地，所以算待辦）
 
 **最後 13 份已經 dump 完，字典也補好了**（2026-08-30 晚）。剩下的就是把 295 個
 節點生完：
