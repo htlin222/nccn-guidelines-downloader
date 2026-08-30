@@ -188,7 +188,10 @@ var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
 var listEl=document.getElementById('list'), metaEl=document.getElementById('meta'),
     chipsEl=document.getElementById('chips'), q=document.getElementById('q');
-var STATE={q:'',chips:[]}, TIMER=null, LAST='';
+// LAST 用 null 不用 ''：run() 靠 query===LAST 擋掉重複查詢，而載入時的查詢
+// 就是空字串——初值寫 '' 會讓第一次 run() 直接 return，清單永遠等到你打字才
+// 出現。單欄時那看起來像「等你打字」，兩欄時左右都空，看起來像壞掉。
+var STATE={q:'',chips:[]}, TIMER=null, LAST=null;
 
 // 常用的檢索組合。它們不是「所有可能的 facet」——那會是一面兩百顆按鈕的牆，
 // 而門診要的是三秒內點到。這幾顆涵蓋的是「現在這個病人走到哪一步」。
@@ -207,18 +210,7 @@ chipsEl.addEventListener('click',function(e){
   var el=e.target.closest('.chip'); if(!el) return;
   var i=+el.dataset.i, at=STATE.chips.indexOf(i);
   if(at>=0) STATE.chips.splice(at,1); else STATE.chips.push(i);
-  // header 是 sticky 的，右欄要貼在它底下。高度會隨 chips 換行與視窗寬度變，
-// 所以量出來寫進 --htop，不寫死。
-var headerEl=document.querySelector('header');
-function syncHeader(){
-  document.documentElement.style.setProperty('--htop',
-    Math.round(headerEl.getBoundingClientRect().height)+'px');
-}
-syncHeader();
-addEventListener('resize',syncHeader);
-if(window.ResizeObserver) new ResizeObserver(syncHeader).observe(headerEl);
-
-paintChips(); run();
+  paintChips(); run();
 });
 
 function effectiveQuery(){
@@ -355,6 +347,17 @@ document.getElementById('theme').addEventListener('click',function(){
   document.documentElement.dataset.theme=next;
   try{localStorage.setItem('theme',next);}catch(e){}
 });
+// header 是 sticky 的，右欄要貼在它底下。高度會隨 chips 換行與視窗寬度變，
+// 所以量出來寫進 --htop，不寫死。
+var headerEl=document.querySelector('header');
+function syncHeader(){
+  document.documentElement.style.setProperty('--htop',
+    Math.round(headerEl.getBoundingClientRect().height)+'px');
+}
+syncHeader();
+addEventListener('resize',syncHeader);
+if(window.ResizeObserver) new ResizeObserver(syncHeader).observe(headerEl);
+
 paintChips(); run();
 </script>
 </body></html>`;
