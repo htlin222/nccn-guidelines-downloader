@@ -5,6 +5,7 @@ cookie.txt
 .dev.vars
 *.pem
 *.key
+groq_token
 
 # ── Downloaded / generated PDFs (large + © NCCN) ───────
 *.pdf
