@@ -540,24 +540,29 @@ function paintPage(i){ var p=pages[i]; if(!p||!p.pg||p.done)return Promise.resol
 // 版位先就位，畫質後補。每頁的 .page 立刻換成新尺寸（捲軸與總高度因此永遠是對
 // 的），已經畫好的 canvas 用一個 CSS scale 撐過去頂著——模糊但不空白、不跳動。
 // 文字層與連結層的座標屬於舊的 viewport，跟著縮只會歪掉，所以先藏起來。
+// 縮放本身就是一次版位大改：cur 那頁以上的每一頁高度都變了，它的 offsetTop 跟著
+// 平移，但 scrollTop 是原始像素值，不會跟著動。以前只有 relayout()（防抖 150ms
+// 後才跑一次）會把 scrollTop 貼回 cur 頁，這中間那段時間 scrollTop 對不上新版
+// 位——連按縮放鍵、或恰好在這段空檔滾動一下，updateCur() 讀到的就是這個對不上
+// 的位置，算出錯的頁碼，relayout() 再把這個錯頁碼當成錨點寫回去，等於把跳掉的
+// 頁碼焊死。所以錨點要在「每一次真的改了版位」時立刻重新貼齊，不能等防抖。
 function previewScale(){ var sc=activeScale();
+  var ap=pages[cur-1], anchor=null;
+  if(ap&&ap.el&&ap.el.offsetHeight) anchor=Math.max(0,Math.min(1,(viewer.scrollTop-ap.el.offsetTop)/ap.el.offsetHeight));
   for(var k=0;k<pages.length;k++){ var p=pages[k];
     p.el.style.width=(p.w*sc)+'px'; p.el.style.height=(p.h*sc)+'px';
     var cv=p.el.querySelector('canvas');
     if(cv&&p.sc){ cv.style.transformOrigin='0 0'; cv.style.transform='scale('+(sc/p.sc)+')'; }
     var tl=p.el.querySelector('.textLayer'); if(tl)tl.style.visibility='hidden';
     var al=p.el.querySelector('.annotationLayer'); if(al)al.style.visibility='hidden'; }
+  if(anchor!==null) viewer.scrollTop=Math.max(0,ap.el.offsetTop+anchor*ap.el.offsetHeight);
   setZpct(); invalidate(); }
-// 符合寬度時，開關右側 pane 會改變頁面尺寸，總高度一變，px 的 scrollTop 就落到
-// 別頁去了——所以重算前先記住目前頁與頁內的相對位置，重算後貼回原處。
-function relayout(){ var ap=pages[cur-1], anchor=null;
-  if(ap&&ap.el&&ap.el.offsetHeight) anchor=Math.max(0,Math.min(1,(viewer.scrollTop-ap.el.offsetTop)/ap.el.offsetHeight));
+function relayout(){
   rq.length=0;
   previewScale();
   for(var k=0;k<pages.length;k++){ var p=pages[k]; cancelPage(p); p.done=false;
     if(!p.el.querySelector('canvas')) p.el.innerHTML='';
     io.unobserve(p.el); io.observe(p.el); }
-  if(anchor!==null) viewer.scrollTop=Math.max(0,ap.el.offsetTop+anchor*ap.el.offsetHeight);
   schedule(true); }
 function scrollToPage(n){ if(pages[n-1]) pages[n-1].el.scrollIntoView({block:'start'}); }
 // 每頁的 offsetTop 只在版面真的變動時量一次，量完給 updateCur() 二分搜。以前是
