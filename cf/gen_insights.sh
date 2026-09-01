@@ -182,6 +182,10 @@ def bump_gemini(day, model_id, mode, cool=None):
             f"calls = ai_calls.calls + 1, cool = COALESCE(excluded.cool, ai_calls.cool)"
         )
 
+# 封面／目錄／參考文獻頁的固定標記。raw 轉寫踩到這句就代表這一頁沒有臨床
+# 內容可轉——generate_notes() 會直接短路，不叫 Groq（見那裡的註解）。
+NO_CONTENT_MARKER = "（本頁無臨床內容）"
+
 RAW_SYSTEM = (
     "你是台灣的血液腫瘤科主治醫師，正在把 NCCN 治療指引某一頁的完整內容轉寫成文字。\n"
     "這不是摘要，是逐項的忠實轉寫——你的輸出會是接下來四種不同格式（重點整理、\n"
@@ -199,7 +203,7 @@ RAW_SYSTEM = (
     "   不要只列標號。\n"
     "6. 只根據這一頁實際看到的內容作答，不要用你自己的醫學知識補充或修正頁面上沒有的東西。\n"
     "7. 若這一頁只是封面、目錄、專家名單、版權聲明或參考文獻，就只回一行\n"
-    "   「（本頁無臨床內容）」。"
+    f"   「{NO_CONTENT_MARKER}」。"
 )
 RAW_ASK = "請完整轉寫這一頁的全部內容，包含每一個決策節點、分支條件、數字與註腳。"
 
@@ -319,7 +323,7 @@ NOTES_SYSTEM = (
     "3. 藥名、基因、生物標記、分期、檢驗名稱、NCCN category 等級一律保留英文原文\n"
     "   （例如 trastuzumab、HER2、pT1a、pN0、category 1），不要翻譯成中文。\n"
     "4. 只根據我提供的這一頁內容作答。這一頁沒寫的，不要自己補充或臆測。\n"
-    "5. 若這一頁只是封面、目錄、專家名單、版權聲明或參考文獻，就只輸出一行「- （本頁無臨床內容）」。"
+    f"5. 若這一頁只是封面、目錄、專家名單、版權聲明或參考文獻，就只輸出一行「- {NO_CONTENT_MARKER}」。"
 )
 
 def groq_usage(day):
@@ -381,7 +385,31 @@ def call_groq_once(user):
     except Exception as e:
         return {"ok": False, "status": 0, "message": str(e)[:300]}
 
+def write_notes(gid, page, model, notes_by_kind):
+    now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    wrote = 0
+    for k, bullets in notes_by_kind.items():
+        if not bullets:
+            continue
+        md = esc("\n".join(bullets))
+        d1_exec(
+            f"INSERT INTO insights(gid, page, kind, md, model, src, created) VALUES("
+            f"'{esc(gid)}',{int(page)},'{k}','{md}','{esc(model)}','vision','{now}') "
+            f"ON CONFLICT(gid, page, kind) DO UPDATE SET md=excluded.md, model=excluded.model, "
+            f"src=excluded.src, created=excluded.created"
+        )
+        wrote += 1
+    return wrote > 0
+
 def generate_notes(gid, page, name, raw_body, day):
+    # raw 轉寫本身就說「這頁沒有臨床內容」——直接用同一句話填四個格式，不叫
+    # Groq。實測發現的邊界：這種頁面送進去，Groq 會照 NOTES_SYSTEM 的規則老實
+    # 吐出純文字的「- （本頁無臨床內容）」，但 response_format=json_object 要求
+    # 輸出必須是合法 JSON，兩者互斥，回 400 json_validate_failed——這頁根本沒
+    # 有四種格式可以分別轉寫，繞開這次呼叫才是對的，不是叫它「不要這樣」能解的。
+    if NO_CONTENT_MARKER in raw_body:
+        return write_notes(gid, page, "n/a", {k: [NO_CONTENT_MARKER] for k in KINDS})
+
     reqs, tokens = groq_usage(day)
     if reqs >= GROQ_RPD_BUDGET or tokens >= GROQ_TPD_BUDGET:
         return False  # 今日 Groq 額度用完——訊號給呼叫端停手
@@ -422,23 +450,12 @@ def generate_notes(gid, page, name, raw_body, day):
     if not obj:
         print("  Groq 沒有回傳可解析的 JSON")
         return False
-    now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    wrote = 0
+    notes_by_kind = {}
     for k in KINDS:
         v = obj.get(k)
         joined = "\n".join(v) if isinstance(v, list) else str(v or "")
-        bullets = to_bullets(joined, 7 if k == "sdm" else 8)
-        if not bullets:
-            continue
-        md = esc("\n".join(bullets))
-        d1_exec(
-            f"INSERT INTO insights(gid, page, kind, md, model, src, created) VALUES("
-            f"'{esc(gid)}',{int(page)},'{k}','{md}','{esc(GROQ_MODEL)}','vision','{now}') "
-            f"ON CONFLICT(gid, page, kind) DO UPDATE SET md=excluded.md, model=excluded.model, "
-            f"src=excluded.src, created=excluded.created"
-        )
-        wrote += 1
-    return wrote > 0
+        notes_by_kind[k] = to_bullets(joined, 7 if k == "sdm" else 8)
+    return write_notes(gid, page, GROQ_MODEL, notes_by_kind)
 
 # ---- 主流程 ----
 def fetch_pdf(gid, out_path):

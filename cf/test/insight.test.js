@@ -7,8 +7,10 @@ import {
 	budgetCap,
 	DEFAULT_BUDGET,
 	KINDS,
+	NO_CONTENT_MARKER,
 	buildRawPrompt,
 	buildGroqNotesPrompt,
+	generateNotesFromRaw,
 } from "../src/lib/insight.js";
 
 const EULA =
@@ -116,6 +118,23 @@ describe("buildGroqNotesPrompt (issue #9: one call, four formats)", () => {
 	// 照抄同一份內容交差，完全不理會下面各自的 ASK[] 規則。
 	it("insists the four formats must look visibly different from each other", () => {
 		expect(buildGroqNotesPrompt("x", "AML", 1)).toContain("必須明顯不同");
+	});
+});
+
+describe("generateNotesFromRaw — no-content short-circuit (issue #9)", () => {
+	// 實測發現的邊界：raw 轉寫是「（本頁無臨床內容）」時，硬塞進
+	// buildGroqNotesPrompt 送出去，Groq 會照 SYSTEM 規則老實吐純文字的
+	// 「- （本頁無臨床內容）」，但 response_format=json_object 要求輸出必須是
+	// 合法 JSON，兩者互斥，回 400 json_validate_failed。短路掉這個呼叫，不叫
+	// Groq，用同一句話填四個格式——連 env 都不需要碰，這也是這裡不用 mock
+	// D1／fetch 就能測的原因。
+	it("skips the Groq call entirely and fills all four kinds with the marker", async () => {
+		const out = await generateNotesFromRaw(
+			{},
+			`- ${NO_CONTENT_MARKER}`,
+			{ gid: "aml", page: 1, name: "AML" },
+		);
+		for (const k of KINDS) expect(out.bullets[k]).toEqual([NO_CONTENT_MARKER]);
 	});
 });
 

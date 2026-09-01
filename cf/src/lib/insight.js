@@ -48,6 +48,10 @@ export const KIND_LABEL = {
 // 免費額度 10,000 neurons/day，留 20% 餘裕給別的用途。可用 wrangler vars 覆寫。
 export const DEFAULT_BUDGET = 8000;
 
+// 封面／目錄／參考文獻頁的固定標記。raw 轉寫踩到這句就代表這一頁沒有臨床
+// 內容可轉——generateNotesFromRaw 會直接短路，不叫 Groq（見那裡的註解）。
+export const NO_CONTENT_MARKER = "（本頁無臨床內容）";
+
 const SYSTEM = [
 	"你是台灣的血液腫瘤科主治醫師，正在讀 NCCN 治療指引的其中一頁。",
 	"輸出規則（務必遵守）：",
@@ -56,7 +60,7 @@ const SYSTEM = [
 	"3. 藥名、基因、生物標記、分期、檢驗名稱、NCCN category 等級一律保留英文原文",
 	"   （例如 trastuzumab、HER2、pT1a、pN0、category 1），不要翻譯成中文。",
 	"4. 只根據我提供的這一頁內容作答。這一頁沒寫的，不要自己補充或臆測。",
-	"5. 若這一頁只是封面、目錄、專家名單、版權聲明或參考文獻，就只輸出一行「- （本頁無臨床內容）」。",
+	`5. 若這一頁只是封面、目錄、專家名單、版權聲明或參考文獻，就只輸出一行「- ${NO_CONTENT_MARKER}」。`,
 ].join("\n");
 
 const ASK = {
@@ -105,7 +109,7 @@ const RAW_SYSTEM = [
 	"   不要只列標號。",
 	"6. 只根據這一頁實際看到的內容作答，不要用你自己的醫學知識補充或修正頁面上沒有的東西。",
 	"7. 若這一頁只是封面、目錄、專家名單、版權聲明或參考文獻，就只回一行",
-	"   「（本頁無臨床內容）」。",
+	`   「${NO_CONTENT_MARKER}」。`,
 ].join("\n");
 
 const RAW_ASK = "請完整轉寫這一頁的全部內容，包含每一個決策節點、分支條件、數字與註腳。";
@@ -677,6 +681,18 @@ export function buildGroqNotesPrompt(rawBody, name, page) {
  * 這一頁、更不該把它當成「今天額度用完」的訊號。
  */
 export async function generateNotesFromRaw(env, rawBody, { gid, page, name }) {
+	// raw 轉寫本身就說「這頁沒有臨床內容」（封面／目錄／參考文獻），直接用同一句
+	// 話填四個格式，不叫 Groq。實測發現的邊界：這種頁面塞進 buildGroqNotesPrompt
+	// 送出去，Groq 會照 SYSTEM 的規則老實吐出純文字的「- （本頁無臨床內容）」，
+	// 但 response_format:json_object 要求輸出必須是合法 JSON，兩者互斥，回
+	// 400 json_validate_failed——不是叫它「不要這樣」能解的，這頁根本沒有四種
+	// 格式可以分別轉寫，繞開這個呼叫本身才是對的。
+	if (String(rawBody || "").includes(NO_CONTENT_MARKER)) {
+		const bullets = {};
+		for (const k of KINDS) bullets[k] = [NO_CONTENT_MARKER];
+		return { bullets, model: "n/a", tokens: 0 };
+	}
+
 	const key = env.GROQ_API_KEY;
 	if (!key) throw new Error("GROQ_API_KEY 未設定");
 	const user = buildGroqNotesPrompt(rawBody, name || gid, page);
