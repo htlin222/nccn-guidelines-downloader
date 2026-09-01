@@ -82,13 +82,6 @@ export function renderNotes(request) {
   .tabs .ni svg{width:15px;height:15px;}
   .iconbtn{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;cursor:pointer;
     background:transparent;border:1px solid hsl(var(--border));color:hsl(var(--foreground));font-size:16px;}
-  .back{display:inline-flex;align-items:center;gap:6px;padding:7px 12px 7px 10px;border-radius:10px;
-    text-decoration:none;font-size:.82rem;font-weight:600;white-space:nowrap;
-    color:hsl(var(--muted-foreground));border:1px solid hsl(var(--border));background:transparent;}
-  .back:hover{color:hsl(var(--foreground));background:hsl(var(--muted));}
-  .back svg{width:15px;height:15px;}
-  /* 窄螢幕只留箭頭：標籤列已經有「指引」可以回去，這裡不值得為它擠掉標題 */
-  @media (max-width:560px){.back span{display:none;}.back{padding:7px 9px;}}
   .searchrow{position:relative;padding-bottom:12px;}
   .searchrow input{width:100%;padding:11px 14px 11px 40px;border-radius:10px;font-size:.95rem;
     background:hsl(var(--card));border:1px solid hsl(var(--border));color:hsl(var(--foreground));}
@@ -186,9 +179,6 @@ export function renderNotes(request) {
 <header>
   <div class="wrap">
     <div class="htop">
-      <a class="back" href="/" title="回首頁">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg><span>回首頁</span>
-      </a>
       <div class="brand"><span class="bicon">${NOTEBOOK_SVG}</span><span>臨床筆記<small id="sub">NCCN 決策節點核對清單</small></span></div>
       <div class="spacer"></div>
       <button class="iconbtn" id="theme" title="切換主題"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path fill="currentColor" stroke="none" d="M12 18a6 6 0 0 1 0-12z"/></svg></button>
