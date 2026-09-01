@@ -14,6 +14,10 @@ NCCN-*.pdf
 cf/.wrangler/
 cf/node_modules/
 node_modules/
+cf/wrangler.dev.jsonc
+
+# ── Isolated worktrees for parallel work ───────────────
+.worktrees/
 # base64 blob, derived from the PNG icons
 cf/assets/icons_b64.json
 
