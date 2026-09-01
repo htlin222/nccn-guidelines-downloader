@@ -30,6 +30,7 @@ export const ALGORITHMS = [
 	{ id: "mda-targeted-temperature-management", name: "Post Cardiac Arrest Targeted Temperature Management (TTM)", cat: "Emergent/Urgent", file: "clinical-management/clin-management-targeted-temperature-management-web-algorithm.pdf" },
 	{ id: "mda-post-cardiac-care", name: "Post-Cardiac Arrest Care - Adult", cat: "Emergent/Urgent", file: "clinical-management/clin-management-post-cardiac-care-web-algorithm.pdf" },
 	{ id: "mda-pert", name: "Pulmonary Embolism Response Team (PERT)", cat: "Emergent/Urgent", file: "clinical-management/clin-management-pert-web-algorithm.pdf" },
+	{ id: "mda-seizure-management", name: "Seizure/Status Epilepticus Management in Cancer Patients", cat: "Emergent/Urgent", file: "clinical-management/clin-management-seizure-management-web-algorithm.pdf" },
 	{ id: "mda-sepsis-management-adult", name: "Sepsis Management - Adult", cat: "Emergent/Urgent", file: "clinical-management/clin-management-sepsis-management-adult-web-algorithm.pdf" },
 	{ id: "mda-spinal-cord-compression", name: "Spinal Cord Compression Management in Cancer Patients", cat: "Emergent/Urgent", file: "clinical-management/clin-management-spinal-cord-compression-web-algorithm.pdf" },
 	{ id: "mda-pneumonia-adult", name: "Suspected Bacterial Pneumonia in Adult Patients (Solid Tumors)", cat: "Emergent/Urgent", file: "clinical-management/clin-management-pneumonia-adult-web-algorithm.pdf" },
