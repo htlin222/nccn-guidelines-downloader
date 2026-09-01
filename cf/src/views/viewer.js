@@ -1264,6 +1264,9 @@ function selPlace(){
   if(!selRange)return;
   var r=selRange.getBoundingClientRect();
   if(!r||(!r.width&&!r.height)){selHide();return;}
+  // 選取被捲出畫面就收掉。不收的話工具列會跟著跑到視窗外，變成一個看不見卻
+  // 還活著的狀態——按 Esc 或點一下才會消失，而使用者不知道要按什麼。
+  if(r.bottom<0||r.top>innerHeight){selTb.hidden=true;selOut.hidden=true;return;}
   selTb.hidden=false;
   var w=selTb.offsetWidth,h=selTb.offsetHeight;
   var x=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2));
