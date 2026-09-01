@@ -10,7 +10,16 @@ name: Update versions & search index
 on:
   schedule:
     - cron: "17 4 * * 1" # Mondays 04:17 UTC (after the daily PDF cron cycles)
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      insights_test_ids:
+        description: "gen_insights.sh: space-separated ids to force-process (skips gen_clean.log), for a small manual test"
+        required: false
+        type: string
+      insights_limit:
+        description: "gen_insights.sh: LIMIT (max vision pages per id), for a small manual test"
+        required: false
+        type: string
 
 jobs:
   versions:
@@ -120,6 +129,8 @@ jobs:
           CLEAN_DIR: ${{ runner.temp }}/clean
           ANTIGRAVITY_API_KEY: ${{ secrets.ANTIGRAVITY_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          CHANGED_IDS: ${{ github.event.inputs.insights_test_ids }}
+          LIMIT: ${{ github.event.inputs.insights_limit }}
         run: bash gen_insights.sh
 
       - name: Extract Discussion TOC → R2
