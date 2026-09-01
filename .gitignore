@@ -6,6 +6,7 @@ cookie.txt
 *.pem
 *.key
 groq_token
+ANTIGRAVITY_API
 
 # ── Downloaded / generated PDFs (large + © NCCN) ───────
 *.pdf
