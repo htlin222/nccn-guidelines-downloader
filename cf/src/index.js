@@ -27,6 +27,8 @@ import {
 	KINDS,
 	PROVIDERS,
 	generateAndCache,
+	SEL_KINDS,
+	generateSelection,
 	hasAntigravity,
 	listInsights,
 	needsVision,
@@ -36,12 +38,7 @@ import {
 	readUsage,
 	visionMap,
 } from "./lib/insight.js";
-import {
-	listBookmarks,
-	listStars,
-	putBookmark,
-	setStar,
-} from "./lib/marks.js";
+import { listBookmarks, listStars, putBookmark, setStar } from "./lib/marks.js";
 import {
 	countNotifications,
 	lastCronAt,
@@ -91,12 +88,19 @@ export default {
 		// 路徑刻意不是 /api/notes/count：那會被下面的 /api/notes/:gid/:ref 吃掉。
 		if (pathname === "/api/notes-count") {
 			try {
-				const body = await remember(env, ctx, "count", "", async () => {
-					const r = await env.DB.prepare(
-						"SELECT COUNT(*) AS n FROM snippets",
-					).first();
-					return { n: (r && r.n) || 0 };
-				}, "notes");
+				const body = await remember(
+					env,
+					ctx,
+					"count",
+					"",
+					async () => {
+						const r = await env.DB.prepare(
+							"SELECT COUNT(*) AS n FROM snippets",
+						).first();
+						return { n: (r && r.n) || 0 };
+					},
+					"notes",
+				);
 				return new Response(body, {
 					headers: { "content-type": "application/json; charset=utf-8" },
 				});
@@ -113,32 +117,49 @@ export default {
 				// load_snippets.sh 每次載完就改寫它，所以改字典仍然一跑就生效。
 				// 省下來的是每一次搜尋都要付的一趟 D1 往返。
 				const alias = JSON.parse(
-					await remember(env, ctx, "alias", "", async () => {
-						const al = await env.DB.prepare(
-							"SELECT axis, alias, value FROM facet_alias",
-						).all();
-						const m = {};
-						for (const r of al.results || []) {
-							(m[r.axis] = m[r.axis] || {})[r.alias] = r.value;
-						}
-						return m;
-					}, "notes"),
+					await remember(
+						env,
+						ctx,
+						"alias",
+						"",
+						async () => {
+							const al = await env.DB.prepare(
+								"SELECT axis, alias, value FROM facet_alias",
+							).all();
+							const m = {};
+							for (const r of al.results || []) {
+								(m[r.axis] = m[r.axis] || {})[r.alias] = r.value;
+							}
+							return m;
+						},
+						"notes",
+					),
 				);
 				const parsed = parseQuery(q, alias);
 				// 查詢結果也進 KV，key 用解析後的 facet + 文字而不是原始字串：
 				// 「乳癌 三期」與「三期 乳癌」是同一個查詢，不該各佔一份。
 				const ckey =
-					parsed.facets.map((f) => f.axis + "=" + f.value).sort().join("&") +
+					parsed.facets
+						.map((f) => f.axis + "=" + f.value)
+						.sort()
+						.join("&") +
 					"|" +
 					[...parsed.text].sort().join(" ");
-				const body = await remember(env, ctx, "q", ckey, async () => {
-					const { sql, binds } = buildSearch(parsed, 80);
-					const res = await env.DB.prepare(sql)
-						.bind(...binds)
-						.all();
-					// 空結果照樣快取——那是個正當答案。只有下面 catch 到的錯誤不快取。
-					return { rows: rankRows(res.results || []) };
-				}, "notes");
+				const body = await remember(
+					env,
+					ctx,
+					"q",
+					ckey,
+					async () => {
+						const { sql, binds } = buildSearch(parsed, 80);
+						const res = await env.DB.prepare(sql)
+							.bind(...binds)
+							.all();
+						// 空結果照樣快取——那是個正當答案。只有下面 catch 到的錯誤不快取。
+						return { rows: rankRows(res.results || []) };
+					},
+					"notes",
+				);
 				const out = JSON.parse(body);
 				return json({
 					rows: out.rows,
@@ -225,15 +246,22 @@ export default {
 				// 所以分法是：生成內容一週才變一次，快取它；修改是使用者剛剛按下
 				// 儲存的東西，必須讀得到自己寫的。多的那一趟 D1 是主鍵查詢
 				// （rows_read=1），而且一次點擊才一趟，不像搜尋是每次打字都跑。
-				const base = await remember(env, ctx, "s", g + "/" + r, async () => {
-					// loader 回 null 代表這份不存在，remember 就不會把 404 釘住 30 天。
-					const row = await env.DB.prepare(
-						"SELECT gid, ref, title, body, page, version, review FROM snippets WHERE gid=? AND ref=?",
-					)
-						.bind(g, r)
-						.first();
-					return row || null;
-				}, "notes");
+				const base = await remember(
+					env,
+					ctx,
+					"s",
+					g + "/" + r,
+					async () => {
+						// loader 回 null 代表這份不存在，remember 就不會把 404 釘住 30 天。
+						const row = await env.DB.prepare(
+							"SELECT gid, ref, title, body, page, version, review FROM snippets WHERE gid=? AND ref=?",
+						)
+							.bind(g, r)
+							.first();
+						return row || null;
+					},
+					"notes",
+				);
 				if (!base) return json({ error: "not found" }, 404);
 
 				const row = JSON.parse(base);
@@ -327,7 +355,8 @@ export default {
 
 		// 鑄一把新金鑰、當場烤進 zip 回傳。瀏覽器會直接存成 nccn.skill。
 		if (pathname === "/api/skill.zip" && request.method === "GET") {
-			const label = (url.searchParams.get("label") || "").trim() || "Claude Code";
+			const label =
+				(url.searchParams.get("label") || "").trim() || "Claude Code";
 			try {
 				const { bytes, prefix } = await buildSkillZip(env, {
 					label,
@@ -586,6 +615,38 @@ export default {
 		}
 
 		// AI 逐頁重點。GET 只讀快取（免費、可隨翻頁自動打），真正花額度的生成一律走 POST。
+		// 選取一段文字之後的兩個 AI 動作（條列 / 中文解釋）。跟 /api/insight 分開，
+		// 因為輸入不是「哪一頁」而是「框起來的哪一段」——同一頁可以框出無數種選取，
+		// 用 (gid,page,kind) 那個鍵存會互相覆蓋。所以這條不進快取，但一樣計入
+		// 每日 neurons 預算，因為真正的限制是那個。
+		if (pathname === "/api/selection" && request.method === "POST") {
+			const p = await request.json().catch(() => ({}));
+			const gid = String(p.id || "");
+			const kind = String(p.kind || "");
+			const page = parseInt(p.page, 10) || 0;
+			if (!VALID_IDS.has(gid))
+				return json({ ok: false, error: "unknown id" }, 404);
+			if (SEL_KINDS.indexOf(kind) < 0)
+				return json({ ok: false, error: "bad kind" }, 400);
+			// 上限擋的是「整頁 select-all 再送出」——那不是這個功能要解的問題，
+			// 而且一次就能把當日額度吃掉一大塊。
+			const text = String(p.text || "").slice(0, 6000);
+			try {
+				const out = await generateSelection(env, {
+					text,
+					kind,
+					page,
+					name: NAME_BY_ID[gid] || gid,
+				});
+				return json({ ok: true, kind, ...out });
+			} catch (e) {
+				return json(
+					{ ok: false, error: String(e.message || e), quota: e.quota },
+					e.status || 500,
+				);
+			}
+		}
+
 		if (pathname === "/api/insight") {
 			const params =
 				request.method === "POST"
@@ -594,7 +655,8 @@ export default {
 			const gid = String(params.id || "");
 			const page = parseInt(params.page, 10);
 			const kind = String(params.kind || "key");
-			if (!VALID_IDS.has(gid)) return json({ ok: false, error: "unknown id" }, 404);
+			if (!VALID_IDS.has(gid))
+				return json({ ok: false, error: "unknown id" }, 404);
 			if (!(page >= 1)) return json({ ok: false, error: "bad page" }, 400);
 			if (KINDS.indexOf(kind) < 0)
 				return json({ ok: false, error: "bad kind" }, 400);

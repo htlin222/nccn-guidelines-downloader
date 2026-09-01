@@ -135,6 +135,32 @@ document.documentElement.dataset.inv=(d&&localStorage.getItem('nccninv')!=='0')?
   .aibody ul{margin:0;padding-left:1.05em;display:flex;flex-direction:column;gap:9px;}
   .aibody li{padding-left:2px;}
   .aibody code{background:hsl(var(--accent));border-radius:4px;padding:0 4px;font-size:.92em;font-family:ui-monospace,monospace;}
+  /* 選取工具列。position:fixed 而不是掛在 .textLayer 裡：選取可以跨頁，而每一頁
+     是獨立的 .pg 容器，掛進去的話跨頁選取會被裁掉。 */
+  .seltb{position:fixed;z-index:60;display:flex;gap:2px;padding:3px;border-radius:10px;
+    background:hsl(var(--bar));border:1px solid hsl(var(--border));
+    box-shadow:0 6px 20px hsl(0 0% 0%/.28);}
+  .seltb[hidden]{display:none;}
+  .seltb button{display:inline-flex;align-items:center;gap:5px;font:inherit;font-size:.75rem;
+    font-weight:600;padding:6px 10px;border-radius:7px;border:0;cursor:pointer;
+    background:transparent;color:hsl(var(--fg));white-space:nowrap;}
+  .seltb button:hover{background:hsl(var(--accent));}
+  .seltb button[disabled]{opacity:.5;cursor:default;}
+  .seltb svg{width:14px;height:14px;}
+  .seltb .on svg{fill:currentColor;}
+  .selout{position:fixed;z-index:59;width:min(420px,92vw);max-height:46vh;overflow:auto;
+    border-radius:10px;background:hsl(var(--bar));border:1px solid hsl(var(--border));
+    box-shadow:0 8px 26px hsl(0 0% 0%/.3);font-size:.8rem;line-height:1.62;}
+  .selout[hidden]{display:none;}
+  .selouth{display:flex;align-items:center;gap:6px;padding:7px 10px;font-size:.7rem;
+    color:hsl(var(--muted-fg));border-bottom:1px solid hsl(var(--border));
+    position:sticky;top:0;background:hsl(var(--bar));}
+  .selouth .sp{flex:1;}
+  .selouth .btn{padding:3px 8px;font-size:.72rem;}
+  .seloutb{padding:10px 12px;}
+  .seloutb ul{margin:0;padding-left:1.05em;display:flex;flex-direction:column;gap:8px;}
+  .seloutb pre{margin:0;white-space:pre-wrap;word-break:break-word;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.76rem;line-height:1.7;}
   .aimsg{color:hsl(var(--muted-fg));display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding-top:6px;}
   .aimsg.aiquiet{flex-direction:row;align-items:center;gap:8px;font-size:.78rem;}
   .aimsg.aiquiet .btn{padding:3px 9px;font-size:.75rem;}
@@ -260,6 +286,8 @@ ${TOAST_CSS}
 <div class="findbar" id="findbar" hidden><span class="fi" id="findIcon"></span><input id="findInput" type="search" placeholder="在本檔搜尋內文（含藥名同義詞）…"><span class="fcount" id="findCount"></span><button class="btn" id="findPrev" title="上一個"></button><button class="btn" id="findNext" title="下一個"></button><button class="btn" id="findClose" title="關閉">✕</button></div>
 <div class="body">
   <aside class="rail" id="rail"></aside>
+  <div class="seltb" id="seltb" hidden></div>
+  <div class="selout" id="selout" hidden></div>
   <div class="viewer" id="viewer"><div id="msg"><img id="preview" class="preview" src="/thumb/${encodeURIComponent(id)}" alt="" onerror="this.remove()"><div class="ldot" id="ldot" hidden>載入完整版 PDF…</div></div></div>
   <div class="panegrip" id="panegrip" hidden></div>
   <aside class="rightpane" id="rightpane" hidden>
@@ -353,6 +381,7 @@ var ICONS={
   archive:'<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
   bookmark:'<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
   bookmarks:'<path d="M7 3h10a2 2 0 0 1 2 2v16l-7-4-7 4V5a2 2 0 0 1 2-2z"/><path d="M21 17V7a2 2 0 0 0-2-2"/>',
+  close:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
   trash:'<path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>',
   printer:'<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect width="12" height="8" x="6" y="14" rx="1"/>',
   // 截圖標註工具列。pointer2/upleft/check/checkbig 的路徑跟 lib/annot.js 蓋在圖上
@@ -1213,6 +1242,118 @@ $('aiCopy').onclick=function(){var li=$('aibody').querySelectorAll('li');if(!li.
   var txt=GNAME+' p.'+aiPage+' — '+aiLabel(aiKind)+NL+out.join(NL);
   if(navigator.clipboard)navigator.clipboard.writeText(txt).catch(function(){});
   $('aiCopy').classList.add('on');setTimeout(function(){$('aiCopy').classList.remove('on');},900);};
+
+// ---------------------------------------------------------------- 選取工具列
+//
+// 框起 PDF 裡的一段字，上方浮出三顆：書籤、條列、中文解釋。
+//
+// 兩個位置上的決定：工具列是 position:fixed 掛在 body，不是掛進 .textLayer——
+// 選取可以跨頁，而每一頁是獨立的 .pg 容器，掛進去跨頁選取就會被裁掉。
+// 定位讀的是 Range 的 client rect，所以捲動時要跟著走；那個 listener 只在
+// 工具列可見時才做事，免得拖累本來就對捲動很敏感的 render 排程。
+var selTb=$('seltb'), selOut=$('selout'), selText='', selRange=null, selBusy=false;
+
+selTb.innerHTML=
+  '<button data-s="bk" title="把這段存成本頁書籤的備註">'+svg('bookmark')+'書籤</button>'
+ +'<button data-s="bullets" title="Workers AI：改寫成 markdown 條列">'+svg('spark')+'條列</button>'
+ +'<button data-s="zh" title="Workers AI：用中文解釋這一段">'+svg('spark')+'中文解釋</button>';
+
+function selHide(){selTb.hidden=true;selOut.hidden=true;selRange=null;selText='';}
+
+function selPlace(){
+  if(!selRange)return;
+  var r=selRange.getBoundingClientRect();
+  if(!r||(!r.width&&!r.height)){selHide();return;}
+  selTb.hidden=false;
+  var w=selTb.offsetWidth,h=selTb.offsetHeight;
+  var x=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2));
+  // 選取在畫面很上緣時，工具列改放到下面，不然它會被切掉。
+  var above=r.top-h-8;
+  selTb.style.left=x+'px';
+  selTb.style.top=(above>8?above:Math.min(innerHeight-h-8,r.bottom+8))+'px';
+  if(!selOut.hidden){
+    var ow=selOut.offsetWidth;
+    selOut.style.left=Math.max(8,Math.min(innerWidth-ow-8,r.left))+'px';
+    selOut.style.top=Math.min(innerHeight-40,r.bottom+8)+'px';
+  }
+}
+
+function selCheck(){
+  if(selBusy)return;
+  var sel=window.getSelection&&window.getSelection();
+  if(!sel||sel.isCollapsed||!sel.rangeCount){selHide();return;}
+  var txt=String(sel).replace(/\s+/g,' ').trim();
+  // 一兩個字多半是誤觸，不值得為它蓋掉畫面。
+  if(txt.length<3){selHide();return;}
+  var node=sel.anchorNode;
+  node=node&&node.nodeType===1?node:(node&&node.parentElement);
+  if(!node||!node.closest||!node.closest('.textLayer')){selHide();return;}
+  selText=txt;selRange=sel.getRangeAt(0);selOut.hidden=true;
+  selPlace();
+}
+
+document.addEventListener('mouseup',function(){setTimeout(selCheck,0);});
+document.addEventListener('keyup',function(e){
+  if(e.key&&e.key.indexOf('Arrow')===0)setTimeout(selCheck,0);});
+viewer.addEventListener('scroll',function(){if(!selTb.hidden)selPlace();},{passive:true});
+addEventListener('resize',function(){if(!selTb.hidden)selPlace();});
+document.addEventListener('mousedown',function(e){
+  if(selTb.contains(e.target)||selOut.contains(e.target))return;
+  selHide();});
+
+function selPanel(title,inner){
+  selOut.innerHTML='<div class="selouth"><b>'+esc(title)+'</b><span class="sp"></span>'
+    +'<button class="btn" id="selCopy" title="複製">'+svg('copy')+'</button>'
+    +'<button class="btn" id="selClose" title="關閉">'+svg('close')+'</button></div>'
+    +'<div class="seloutb">'+inner+'</div>';
+  selOut.hidden=false;selPlace();
+  $('selClose').onclick=function(){selOut.hidden=true;};
+  $('selCopy').onclick=function(){
+    var li=selOut.querySelectorAll('.seloutb li'),out=[];
+    for(var i=0;i<li.length;i++)out.push('- '+li[i].textContent);
+    var txt=out.length?out.join(NL):selOut.querySelector('.seloutb').textContent;
+    if(navigator.clipboard)navigator.clipboard.writeText(txt).catch(function(){});
+    $('selCopy').classList.add('on');setTimeout(function(){$('selCopy').classList.remove('on');},900);};
+}
+
+function selAsk(kind){
+  var label=kind==='bullets'?'條列':'中文解釋';
+  var body=selText;
+  selBusy=true;
+  selPanel(label+'（p.'+cur+'）','<div class="aimsg aiquiet">產生中…</div>');
+  fetch('/api/selection',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({id:GID,page:cur,kind:kind,text:body})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok)throw new Error(d.error||'產生失敗');
+      var h='<ul>';for(var i=0;i<d.bullets.length;i++)h+='<li>'+esc(d.bullets[i])+'</li>';
+      selPanel(label+'（p.'+cur+'）',h+'</ul>');})
+    .catch(function(e){
+      selPanel(label+'（p.'+cur+'）',
+        '<div class="aimsg aiquiet">'+esc(String(e&&e.message||e))+'</div>');})
+    .then(function(){selBusy=false;});
+}
+
+function selBookmark(btn){
+  var page=cur,prev=BK[page];
+  // 已經有備註就接在後面，不覆蓋——同一頁可以框好幾段，後框的不該把前面的洗掉。
+  var note=(prev&&prev.note?prev.note+NL:'')+selText;
+  BK[page]={gid:GID,page:page,label:(prev&&prev.label)||bkAutoLabel(page),note:note};
+  bkAllSync(GID,page,bkRec(page,BK[page]));
+  bkAfterChange();
+  btn.classList.add('on');
+  bkSave({id:GID,page:page,label:BK[page].label,note:note,on:true},function(){
+    if(prev)BK[page]=prev;else delete BK[page];
+    bkAllSync(GID,page,prev?bkRec(page,prev):null);
+    bkAfterChange();btn.classList.remove('on');});
+  showToast('已加入本頁書籤備註','p.'+page+'　'+selText.slice(0,60));
+}
+
+selTb.addEventListener('click',function(e){
+  var b=e.target.closest&&e.target.closest('button[data-s]');if(!b)return;
+  var s=b.getAttribute('data-s');
+  if(s==='bk'){selBookmark(b);return;}
+  selAsk(s);});
 })();
 </script>
 </body>

@@ -463,6 +463,92 @@ export async function generateAG(env, p, max, notes) {
  * 生成 + 記帳 + 寫快取。provider='ag' 會先走 Antigravity 的模型階梯，
  * 整條用完（或沒設金鑰）才掉回 Workers AI；Workers AI 也沒額度才丟 429。
  */
+// ---------------------------------------------------------------- 選取的文字
+//
+// 跟上面那一整套 page insight 不同：輸入是使用者當下框起來的一段字，不是整頁。
+// 所以它不進 insights 快取——快取的鍵是 (gid, page, kind)，而同一頁可以框出無數
+// 種選取，用那個鍵存等於互相覆蓋。它仍然計入同一份每日 neurons 預算，因為真正
+// 的限制是那個，不是快取。
+
+export const SEL_KINDS = ["bullets", "zh"];
+export const SEL_LABEL = { bullets: "條列", zh: "中文解釋" };
+
+const SEL_SYSTEM = {
+	// 這一支刻意不翻譯也不總結：它做的是排版，不是理解。多做一步就會開始丟東西，
+	// 而丟掉的通常是限定條件——那是這整個專案付過最多次代價的一種錯。
+	bullets: [
+		"你是排版工具。把使用者給的一段指引原文改寫成 markdown 條列。",
+		"規則（務必遵守）：",
+		"1. 保留原文語言與原本的用字，不要翻譯、不要改寫、不要摘要。",
+		"2. 每一點自成一行、以「- 」開頭；原文的從屬關係用四個空格縮排表達。",
+		"3. 不得新增原文沒有的內容，也不得省略任何限定條件",
+		"   （if / unless / except / consider / ± / category 等級 / 劑量 / 閾值）。",
+		"4. 只輸出條列本身。不要前言、不要結語、不要標題。",
+	].join("\n"),
+	zh: [
+		"你是台灣的血液腫瘤科主治醫師，正在向同事解釋 NCCN 指引裡的一段文字。",
+		"規則（務必遵守）：",
+		"1. 一律使用繁體中文、台灣醫界慣用語。",
+		"2. 只輸出條列，每一點自成一行、以「- 」開頭。不要前言、不要結語、不要標題。",
+		"3. 藥名、基因、生物標記、分期、檢驗名稱、NCCN category 等級一律保留英文原文",
+		"   （例如 trastuzumab、HER2、pT1a、pN0、category 1），不要翻譯成中文。",
+		"4. 只解釋我給的這段文字。這段沒寫的，不要自己補充或臆測。",
+	].join("\n"),
+};
+
+const SEL_ASK = {
+	bullets: "把下面這段改寫成 markdown 條列：",
+	zh: "請解釋下面這段的臨床意思，最多 6 點：",
+};
+
+export async function generateSelection(env, { text, kind, name, page }) {
+	const body = String(text || "").trim();
+	if (!body) throw new Error("沒有選取到文字");
+	if (SEL_KINDS.indexOf(kind) < 0) throw new Error("bad kind");
+
+	const usage = await readUsage(env);
+	if (usage.used >= usage.cap) {
+		const err = new Error(
+			`今日 Workers AI 額度用完了（${usage.used}/${usage.cap} neurons），UTC 00:00 重置`,
+		);
+		err.quota = usage;
+		err.status = 429;
+		throw err;
+	}
+
+	const res = await env.AI.run(MODEL, {
+		messages: [
+			{ role: "system", content: SEL_SYSTEM[kind] },
+			{
+				role: "user",
+				content:
+					`${SEL_ASK[kind]}\n\n` +
+					`（出處：${name || ""} 第 ${page || "?"} 頁）\n\n` +
+					body,
+			},
+		],
+		max_tokens: 800,
+		temperature: 0.2,
+	});
+
+	// 條列模式的上限放寬：原文可能本來就有十幾個分支，砍到 8 點就是在丟東西。
+	const bullets = toBullets(res?.response, kind === "bullets" ? 30 : 6);
+	if (!bullets.length) throw new Error("模型沒有回傳可用的內容");
+
+	const neurons = res?.usage?.neurons || 0;
+	await addUsage(env, usage.day, neurons);
+	return {
+		bullets,
+		model: MODEL,
+		provider: "cf",
+		quota: {
+			...usage,
+			used: Math.round(usage.used + neurons),
+			calls: usage.calls + 1,
+		},
+	};
+}
+
 export async function generateAndCache(env, opts) {
 	const max = opts.kind === "sdm" ? 7 : 8;
 	const p = { ...buildPrompt(opts), image: opts.image || null };
