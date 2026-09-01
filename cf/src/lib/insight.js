@@ -8,8 +8,16 @@
 //
 // 兩種輸入來源：
 //   text   — D1 `pages` 表裡 build_index.sh 用 pdftotext 抽好的該頁文字（散文頁夠用、最省）
-//   vision — 演算法流程圖頁抽字會散成碎片，改由前端把該頁 rasterize 成 JPEG，
-//            用同一個多模態模型直接讀圖（順便附上抽到的文字當藥名拼字的參考），比較穩
+//   vision — 演算法流程圖頁抽字會散成碎片，改由前端把該頁 rasterize 成 JPEG 讀圖
+//
+// vision 頁走兩階段（issue #9），不是四種格式各自讀一次圖：
+//   1. 讀圖只做一次，用 Gemini／CF 把整頁忠實轉寫成文字，存進 D1 `page_raw`
+//      （getOrCreateRaw）——這份轉寫是下游全部格式唯一的資料來源，不是摘要。
+//   2. 四種格式改成純文字 prompt，從 raw 轉出來，一次 Groq 呼叫拿回全部 4 份
+//      JSON（generateNotesFromRaw），比四次個別讀圖便宜很多。
+//   任一階段失敗（Groq 沒設金鑰、額度用完、回應解析不出來）就退回原本「直接讀
+//   圖產這一種格式」的舊路徑（generateDirectAndCache）——新路徑是優化，不是唯一
+//   活路，壞掉時使用者還是拿得到結果，只是貴一點。
 //
 // 結果寫進 D1 `insights` 永久快取，同一頁同一種格式只會生成一次。
 // neuron 用量逐次累加進 `ai_usage`，超過當日預算就擋下來（免費額度 UTC 00:00 重置）。
@@ -22,6 +30,7 @@ import {
 	pickModels,
 	toParts,
 } from "./gemini.js";
+import { GROQ_MODEL, callGroq, parseGroqJSON } from "./groq.js";
 
 export const MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
 
@@ -75,6 +84,31 @@ const ASK = {
 		"用病人聽得懂的白話中文，避免艱深術語；必要的藥名保留英文但要加一句白話說明。最多 7 點。",
 	].join("\n"),
 };
+
+// raw 轉寫（issue #9）：讀圖只做這一次，輸出是接下來 ASK[key]/ASK[hy]/ASK[phrase]/
+// ASK[sdm] 四種格式唯一的資料來源，所以規則比任何一個 ASK[] 都嚴——這裡漏掉的東
+// 西，下游四種格式會一起漏。這不是摘要，是忠實轉寫：寧可寫得囉唆也不要省略。
+const RAW_SYSTEM = [
+	"你是台灣的血液腫瘤科主治醫師，正在把 NCCN 治療指引某一頁的完整內容轉寫成文字。",
+	"這不是摘要，是逐項的忠實轉寫——你的輸出會是接下來四種不同格式（重點整理、",
+	"考試高頻考點、病歷片語、醫病共享決策）唯一的資料來源，你這裡漏掉的東西，",
+	"下游四種格式會一起漏掉，所以寧可寫得囉唆也不要省略。",
+	"輸出規則（務必遵守）：",
+	"1. 一律使用繁體中文轉寫敘述性文字，但表格／流程圖裡的每一個方框、選項、",
+	"   分支條件，逐一列出、不要合併、不要省略任何一條。",
+	"2. 決策流程圖的每個節點都要寫：節點內容是什麼、在什麼條件下走到這個節點、",
+	"   走完這個節點之後的下一步（或多個分支）是什麼。用「若…則…」清楚寫出條件。",
+	"3. 每一個數字都要保留：腫瘤大小、分期、週數、劑量、頻率、切點、category 等級。",
+	"4. 藥名、基因、生物標記、分期、檢驗名稱、NCCN category 等級一律保留英文原文",
+	"   （例如 trastuzumab、HER2、pT1a、pN0、category 1），不要翻譯成中文。",
+	"5. 頁面上如果有註腳標號（如上標的 a、b、1、2），連同註腳本身的文字一起列出，",
+	"   不要只列標號。",
+	"6. 只根據這一頁實際看到的內容作答，不要用你自己的醫學知識補充或修正頁面上沒有的東西。",
+	"7. 若這一頁只是封面、目錄、專家名單、版權聲明或參考文獻，就只回一行",
+	"   「（本頁無臨床內容）」。",
+].join("\n");
+
+const RAW_ASK = "請完整轉寫這一頁的全部內容，包含每一個決策節點、分支條件、數字與註腳。";
 
 // NCCN 每頁頁首／頁尾都會重複的樣板字，不清掉的話模型會拿去總結授權條款。
 const BOILER = [
@@ -154,6 +188,10 @@ export async function readUsage(env) {
 
 export function hasAntigravity(env) {
 	return !!(env && env.ANTIGRAVITY_API_KEY);
+}
+
+export function hasGroq(env) {
+	return !!(env && env.GROQ_API_KEY);
 }
 
 /**
@@ -301,6 +339,30 @@ export async function readCache(env, gid, page, kind) {
 	}
 }
 
+/** 這一頁的 raw 轉寫（issue #9）。gen_insights.sh 跟這裡的 getOrCreateRaw 共用同一張表。 */
+export async function readRaw(env, gid, page) {
+	try {
+		const row = await env.DB.prepare(
+			"SELECT body, model, created FROM page_raw WHERE gid = ? AND page = ?",
+		)
+			.bind(gid, page)
+			.first();
+		return row ? { body: row.body, model: row.model, created: row.created } : null;
+	} catch (e) {
+		return null;
+	}
+}
+
+async function writeRaw(env, gid, page, body, model) {
+	await env.DB.prepare(
+		"INSERT INTO page_raw(gid, page, body, model, created) VALUES(?,?,?,?,?) " +
+			"ON CONFLICT(gid, page) DO UPDATE SET body = excluded.body, model = excluded.model, " +
+			"created = excluded.created",
+	)
+		.bind(gid, page, body, model, new Date().toISOString())
+		.run();
+}
+
 /**
  * 列出已存的重點。gid 有值就只列該份 guideline，否則列全部（給「所有已存」用）。
  * 帶回完整內容，讓前端不用逐筆再打一次就能直接匯出 Markdown。
@@ -366,6 +428,20 @@ export function buildPrompt({ gid, page, kind, name, text, image }) {
 	}
 	if (!body) throw new Error("這一頁沒有可用的文字，請改用讀圖模式");
 	return { src: "text", body, head, label: "這一頁的內容：\n" + body };
+}
+
+/** raw 轉寫的 prompt（issue #9）：跟 buildPrompt 同一套抬頭／文字抽取對照，指令換成 RAW_ASK。 */
+export function buildRawPrompt({ gid, page, name, text, image }) {
+	const body = cleanPageText(text).slice(0, 4000);
+	const head = `資料來源：NCCN Guidelines《${name || gid}》第 ${page} 頁。\n\n` + RAW_ASK;
+	if (!image) throw new Error("raw 轉寫只在讀圖模式下需要");
+	return {
+		head:
+			head +
+			"\n\n以下附上這一頁的完整版面截圖，請以圖為準完整轉寫" +
+			(body ? "；另附文字抽取結果供藥名與拼字對照。" : "。"),
+		label: body ? "文字抽取結果：\n" + body : "",
+	};
 }
 
 /** Workers AI（llama-4-scout）。回傳 { bullets, src, neurons, model, provider }。 */
@@ -459,6 +535,157 @@ export async function generateAG(env, p, max, notes) {
 	return null;
 }
 
+// ---------------------------------------------------------------- raw 轉寫（issue #9）
+//
+// 跟 generateAG／generateCF 的差異只有兩點：system 換成 RAW_SYSTEM、成功判準
+// 從「toBullets 有東西」換成「有回傳文字就算數」——raw 轉寫是一段連續敘述加條
+// 列，不是固定 8 點的 bullets，用 toBullets 的收斂規則反而會把它砍壞。階梯／
+// 額度記帳（bumpGemini）完全共用同一套，跟平常的讀圖呼叫用同一份每日預算。
+
+/** 走 Antigravity 階梯做 raw 轉寫。回傳 { body, model, tokens } 或 null。 */
+export async function generateRawAG(env, p, notes) {
+	const key = env.ANTIGRAVITY_API_KEY;
+	if (!key) return null;
+	const usage = await readGeminiUsage(env);
+	const models = pickModels(usage.state, Date.now());
+	if (!models.length) {
+		notes.push("Antigravity 今日額度已用完");
+		return null;
+	}
+	const parts = toParts(p.head, p.label, p.image);
+	for (const m of models) {
+		const r = await callGemini(key, m.id, { system: RAW_SYSTEM, parts });
+		if (r.ok) {
+			await bumpGemini(env, usage.day, m.id, "used");
+			const body = String(r.text || "").trim();
+			if (body) return { body, tokens: r.tokens, model: m.id, provider: "ag" };
+			notes.push(`${m.id} 沒有回傳可用內容（${r.finish || "?"}）`);
+			continue;
+		}
+		if (r.kind === "auth") {
+			notes.push(`Antigravity 金鑰被拒：${r.message}`);
+			return null;
+		}
+		if (r.kind === "day" || r.kind === "gone") {
+			await bumpGemini(env, usage.day, m.id, "exhaust");
+			notes.push(r.kind === "day" ? `${m.id} 今日額度已滿` : `${m.id} 已下架`);
+			continue;
+		}
+		if (r.kind === "minute") {
+			await bumpGemini(
+				env,
+				usage.day,
+				m.id,
+				"used",
+				new Date(Date.now() + 60000).toISOString(),
+			);
+			notes.push(`${m.id} 每分鐘上限，冷卻 60 秒`);
+			continue;
+		}
+		notes.push(`${m.id} 失敗（${r.status}）：${r.message}`);
+	}
+	return null;
+}
+
+/** Workers AI 做 raw 轉寫（Gemini 全掛時的 fallback）。 */
+export async function generateRawCF(env, p) {
+	const content = p.image
+		? [
+				{ type: "text", text: p.head },
+				{
+					type: "image_url",
+					image_url: { url: "data:image/jpeg;base64," + p.image },
+				},
+				...(p.label ? [{ type: "text", text: p.label }] : []),
+			]
+		: p.head + "\n\n" + p.label;
+
+	const res = await env.AI.run(MODEL, {
+		messages: [
+			{ role: "system", content: RAW_SYSTEM },
+			{ role: "user", content },
+		],
+		max_tokens: 2000,
+		temperature: 0.2,
+	});
+	const body = String(res?.response || "").trim();
+	if (!body) throw new Error("模型沒有回傳可用的內容");
+	return { body, neurons: res?.usage?.neurons || 0, model: MODEL, provider: "cf" };
+}
+
+/**
+ * 這一頁的 raw 轉寫：快取命中就直接回傳，沒有就讀圖產一份存起來。
+ * Gemini 階梯用完（或沒設金鑰）就掉回 Workers AI；兩邊都不成就丟出去，
+ * 讓呼叫端（generateAndCache 的 vision 分支）接住並退回舊的直接讀圖路徑。
+ */
+export async function getOrCreateRaw(env, { gid, page, name, text, image }, notes) {
+	const hit = await readRaw(env, gid, page);
+	if (hit) return hit;
+
+	const p = buildRawPrompt({ gid, page, name, text, image });
+	let out = await generateRawAG(env, p, notes);
+	if (!out) {
+		const usage = await readUsage(env);
+		if (usage.used >= usage.cap) {
+			const err = new Error(
+				(notes.length ? notes.join("；") + "；" : "") +
+					`今日 Workers AI 額度也用完了（${usage.used}/${usage.cap} neurons），UTC 00:00 重置`,
+			);
+			err.quota = usage;
+			err.status = 429;
+			throw err;
+		}
+		const cf = await generateRawCF(env, p);
+		await addUsage(env, usage.day, cf.neurons);
+		out = cf;
+	}
+	await writeRaw(env, gid, page, out.body, out.model);
+	return { body: out.body, model: out.model, created: new Date().toISOString() };
+}
+
+// ---------------------------------------------------------------- Groq：raw → 四種格式（issue #9）
+//
+// system 沿用跟四個 ASK[] 一樣的 SYSTEM（語氣、用字規則不變），user 內容把 raw
+// 轉寫塞進去，再把 ASK[key]/ASK[hy]/ASK[phrase]/ASK[sdm] 四段指令合併成一份，
+// 要求一次回傳 {key:[...], hy:[...], phrase:[...], sdm:[...]}。Groq 只有一顆
+// 非推理模型，沒有像 Gemini 那種多階梯可以往下掉——失敗就直接丟出去，讓呼叫端
+// 接住並退回舊的直接讀圖路徑（每種格式各自重新讀一次圖，比較貴但穩）。
+export function buildGroqNotesPrompt(rawBody, name, page) {
+	const parts = KINDS.map((k) => `[${k}] ${ASK[k]}`).join("\n\n");
+	return (
+		`資料來源：NCCN Guidelines《${name}》第 ${page} 頁的完整轉寫內容：\n\n` +
+		rawBody +
+		"\n\n請根據上面這份轉寫內容（不要用你自己的醫學知識補充），同時輸出以下四種格式，" +
+		'回傳一個 JSON 物件，鍵是 "key"／"hy"／"phrase"／"sdm"，每個鍵的值是字串陣列' +
+		"（陣列裡每個字串是一點，不要自己加項目符號）。四種格式各自的規則：\n\n" +
+		parts
+	);
+}
+
+/** 呼叫一次 Groq，把 raw 轉寫轉成四種格式的 bullets。回傳 { bullets:{key,hy,phrase,sdm}, model, tokens }。 */
+export async function generateNotesFromRaw(env, rawBody, { gid, page, name }) {
+	const key = env.GROQ_API_KEY;
+	if (!key) throw new Error("GROQ_API_KEY 未設定");
+	const user = buildGroqNotesPrompt(rawBody, name || gid, page);
+	const r = await callGroq(key, SYSTEM, user);
+	if (!r.ok) {
+		const err = new Error(`Groq 失敗（${r.status}）：${r.message}`);
+		err.groqKind = r.kind;
+		throw err;
+	}
+	const obj = parseGroqJSON(r.text);
+	if (!obj) throw new Error("Groq 沒有回傳可解析的 JSON");
+	const bullets = {};
+	for (const k of KINDS) {
+		const v = obj[k];
+		const joined = Array.isArray(v) ? v.join("\n") : String(v || "");
+		bullets[k] = toBullets(joined, k === "sdm" ? 7 : 8);
+	}
+	if (!KINDS.some((k) => bullets[k].length))
+		throw new Error("Groq 回傳的四種格式都是空的");
+	return { bullets, model: GROQ_MODEL, tokens: r.tokens };
+}
+
 /**
  * 生成 + 記帳 + 寫快取。provider='ag' 會先走 Antigravity 的模型階梯，
  * 整條用完（或沒設金鑰）才掉回 Workers AI；Workers AI 也沒額度才丟 429。
@@ -549,7 +776,33 @@ export async function generateSelection(env, { text, kind, name, page }) {
 	};
 }
 
-export async function generateAndCache(env, opts) {
+/**
+ * vision 頁的新路徑（issue #9）：raw 轉寫只讀一次圖，四種格式一次 Groq 呼叫拿
+ * 齊，四筆一起寫進 insights 快取（使用者點開任何一個分頁，其他三個分頁也順便
+ * 快取好了）。GROQ_API_KEY 沒設，或任一階段失敗，都直接丟出去讓呼叫端接住、
+ * 退回 generateDirectAndCache——新路徑是省錢的優化，不是唯一活路。
+ */
+async function generateVisionViaRaw(env, opts) {
+	const notes = [];
+	const raw = await getOrCreateRaw(env, opts, notes);
+	const groq = await generateNotesFromRaw(env, raw.body, opts);
+	for (const k of KINDS) {
+		await writeCache(env, opts.gid, opts.page, k, groq.bullets[k], groq.model, "vision");
+	}
+	return {
+		bullets: groq.bullets[opts.kind],
+		src: "vision",
+		model: groq.model,
+		provider: "groq",
+		notes,
+		fell: false,
+		quota: await readUsage(env),
+		agquota: hasAntigravity(env) ? await readGeminiUsage(env) : null,
+	};
+}
+
+/** 舊路徑：這一種格式直接讀圖（或讀文字）產生，不經過 page_raw／Groq。 */
+async function generateDirectAndCache(env, opts) {
 	const max = opts.kind === "sdm" ? 7 : 8;
 	const p = { ...buildPrompt(opts), image: opts.image || null };
 	const notes = [];
@@ -594,4 +847,19 @@ export async function generateAndCache(env, opts) {
 		quota: usage,
 		agquota: hasAntigravity(env) ? await readGeminiUsage(env) : null,
 	};
+}
+
+export async function generateAndCache(env, opts) {
+	if (opts.image && hasGroq(env)) {
+		try {
+			return await generateVisionViaRaw(env, opts);
+		} catch (e) {
+			// raw 轉寫本身就是走 AG 再掉 CF，429 代表兩邊都已經試過、額度真的沒了——
+			// 舊路徑重試同一組 provider 只會拿到一樣的結果，直接把這個錯誤丟出去。
+			if (e.status === 429) throw e;
+			// 其他失敗（Groq 沒設好、回應解析不出來、網路問題）才退回舊路徑，
+			// 不要讓使用者兩頭空手。
+		}
+	}
+	return generateDirectAndCache(env, opts);
 }

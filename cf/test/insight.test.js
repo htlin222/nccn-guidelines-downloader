@@ -6,6 +6,9 @@ import {
 	todayKey,
 	budgetCap,
 	DEFAULT_BUDGET,
+	KINDS,
+	buildRawPrompt,
+	buildGroqNotesPrompt,
 } from "../src/lib/insight.js";
 
 const EULA =
@@ -75,6 +78,38 @@ describe("toBullets", () => {
 	it("returns an empty list for empty model output", () => {
 		expect(toBullets("")).toEqual([]);
 		expect(toBullets(null)).toEqual([]);
+	});
+});
+
+describe("buildRawPrompt (issue #9: read-once raw extraction)", () => {
+	const opts = { gid: "aml", page: 5, name: "AML", text: "recurrence score", image: "b64" };
+
+	it("refuses to build without an image — raw extraction only exists for vision pages", () => {
+		expect(() => buildRawPrompt({ ...opts, image: null })).toThrow();
+	});
+
+	it("asks for a full transcription, not a summary, and carries the text extract as a spelling aid", () => {
+		const p = buildRawPrompt(opts);
+		expect(p.head).toContain("完整轉寫");
+		expect(p.label).toContain("recurrence score");
+	});
+
+	it("still asks for a transcription when there is no extracted text to cross-reference", () => {
+		const p = buildRawPrompt({ ...opts, text: "" });
+		expect(p.label).toBe("");
+		expect(p.head).toContain("完整轉寫");
+	});
+});
+
+describe("buildGroqNotesPrompt (issue #9: one call, four formats)", () => {
+	it("carries the raw body and every kind's own instruction into one prompt", () => {
+		const p = buildGroqNotesPrompt("這一頁的完整轉寫內容", "AML", 5);
+		expect(p).toContain("這一頁的完整轉寫內容");
+		for (const k of KINDS) expect(p).toContain(`[${k}]`);
+	});
+
+	it("tells the model to answer only from the supplied raw text", () => {
+		expect(buildGroqNotesPrompt("x", "AML", 1)).toContain("不要用你自己的醫學知識補充");
 	});
 });
 

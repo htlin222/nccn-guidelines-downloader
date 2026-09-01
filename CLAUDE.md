@@ -21,7 +21,9 @@ Everything runs from `cf/`. `wrangler.jsonc` is the source of truth for bindings
 | Custom domain | `nccn.hsiehting.com` | `wrangler.jsonc` `routes` |
 | Cron trigger | `0 3 * * *` (daily 03:00 UTC) | `wrangler.jsonc` `triggers.crons` |
 | Worker secret | `ANTIGRAVITY_API_KEY` (optional) | `wrangler secret put` |
+| Worker secret | `GROQ_API_KEY` (optional, issue #9) | `wrangler secret put` |
 | Repo secret | `CLOUDFLARE_API_TOKEN` | GitHub → Settings → Secrets |
+| Repo secret | `ANTIGRAVITY_API_KEY`, `GROQ_API_KEY` (optional, issue #9 — feeds `gen_insights.sh` in the weekly workflow) | GitHub → Settings → Secrets |
 | Access application | gates the custom domain | Cloudflare Zero Trust |
 | Access application (bypass) | opens **only** `/api/v1` for the skill's token | Cloudflare Zero Trust |
 
@@ -84,15 +86,16 @@ wrangler kv key get cookie_meta --binding NCCN_KV --remote
 
 ## 2. One-time D1 migrations
 
-Five SQL files, deliberately separate. Run each **once**:
+Six SQL files, deliberately separate. Run each **once**:
 
 ```bash
 cd cf && set -a && . ../.env && set +a
-wrangler d1 execute nccn-search --remote --file=sql/schema.sql    # FTS5 `pages`
-wrangler d1 execute nccn-search --remote --file=sql/insights.sql  # AI cache + quota
-wrangler d1 execute nccn-search --remote --file=sql/marks.sql     # bookmarks + stars
-wrangler d1 execute nccn-search --remote --file=sql/notify.sql    # notification centre
-wrangler d1 execute nccn-search --remote --file=sql/api.sql       # API keys + page_text
+wrangler d1 execute nccn-search --remote --file=sql/schema.sql       # FTS5 `pages`
+wrangler d1 execute nccn-search --remote --file=sql/insights.sql     # AI cache + quota
+wrangler d1 execute nccn-search --remote --file=sql/insights_raw.sql # raw vision extraction + Groq quota (issue #9)
+wrangler d1 execute nccn-search --remote --file=sql/marks.sql        # bookmarks + stars
+wrangler d1 execute nccn-search --remote --file=sql/notify.sql       # notification centre
+wrangler d1 execute nccn-search --remote --file=sql/api.sql          # API keys + page_text
 ```
 
 `schema.sql` starts with `DROP TABLE IF EXISTS pages` — it is the search index's
@@ -216,6 +219,11 @@ Order matters; each step is a script in `cf/`:
 3. `gen_versions.sh` → `meta/versions.json` (the version badges)
 4. `gen_thumbs.sh` → `thumb/<id>.webp`
 5. `build_index.sh` → the D1 FTS5 index
+5.5. `gen_insights.sh` → AI page insights for `needsVision` pages of the ids that
+   genuinely changed this run (issue #9). Reads Gemini's per-model daily budget and
+   Groq's daily budget before each call and stops cleanly (not a failure) when
+   either is spent, picking up where it left off next run. `continue-on-error:
+   true` — a broken run here must never block TOC/updates/verify.
 6. `build_toc.sh` → `meta/toc/<id>.json`
 7. `build_updates.sh` → `meta/updates/<id>.json` (what changed in this version)
 8. **Verify the result** — index row count, `page_text` row count matching it, and

@@ -341,6 +341,37 @@ NCCN 的演算法頁是方框加箭頭，`pdftotext` 抽出來會散成沒有句
 門檻是對 breast v5.2026 全 279 頁校準的：演算法頁落在 0.007–0.057，Discussion 頁 0.12–0.20，兩邊都有很大餘裕。
 面板右上的 `讀圖` / `文字` 徽章會顯示這一頁實際走哪條路。
 
+### 讀圖只做一次，四種格式從那份轉出來（issue #9）
+
+vision 頁以前是四種格式各自把同一張截圖重新讀一次圖——4 種格式＝4 次讀圖，成本乘 4，
+四次獨立讀圖也可能讀出彼此不完全一致的內容。現在拆成兩階段：
+
+1. **讀圖只做一次**：Gemini（走上面同一條 LADDER）把整頁忠實轉寫成文字（不是摘要），
+   存進 D1 `page_raw`（`gid, page` 為主鍵）——這份轉寫是下游全部格式唯一的資料來源。
+2. **四種格式一次 Groq 呼叫轉出來**：非推理模型（`llama-3.1-8b-instant`），把 raw
+   轉寫餵進去，一次回傳 `{key, hy, phrase, sdm}` 四個陣列的 JSON，寫進既有的
+   `insights` 表——跟舊路徑寫的是同一張表、同樣的 shape，前端完全不用改。
+
+`cf/gen_insights.sh` 是批次跑這兩階段的腳本，每週隨 `update-versions.yml` 執行，
+只處理**這一輪真的變版**的 guideline（讀 `gen_clean.log` 的 `OK <id>`），不是每次全量
+重跑整個語料庫——全語料庫有 8,861 頁 vision 頁，真實一週只有 2–3 份 guideline 變版、
+約 325 頁，量級差兩個數量級（試算見 issue #9）。Worker 端使用者手動點開 AI 面板時的
+`POST /api/insight`（cache miss）也走同一組函式（`generateVisionViaRaw`），不是兩條
+邏輯：點開任何一個分頁，其他三個分頁也順便快取好了。
+
+**任一階段失敗就退回舊路徑**（`generateDirectAndCache`：這一種格式直接讀圖，不經過
+raw／Groq）——新路徑是省錢的優化，不是唯一活路，`GROQ_API_KEY` 沒設一樣能用，只是貴一點。
+
+額度用完不是失敗：Gemini 階梯（`ai_calls`）或 Groq（D1 `groq_usage`，粗抓 RPD/TPD 上限，
+數字未必跟帳號實際值一致，見 `gen_insights.sh` 開頭的註解）當日用盡就停手，已經寫進 D1
+的部分維持，下次 rebuild 接著做剩下的頁——比照 daily cron 的 park 機制。
+
+```bash
+cd cf
+DRY_RUN=1 CHANGED_IDS="breast" bash gen_insights.sh   # 走完整條管線但不呼叫 API，驗證 D1/R2/pdftoppm
+CHANGED_IDS="breast nscl" bash gen_insights.sh        # 手動指定要處理的 id
+```
+
 ### 兩個 AI 來源可切換
 
 面板底部有一組 **Antigravity / Workers AI** 切換鈕（選擇記在 localStorage），
