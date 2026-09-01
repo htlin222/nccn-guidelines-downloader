@@ -648,8 +648,13 @@ export async function getOrCreateRaw(env, { gid, page, name, text, image }, note
 // system 沿用跟四個 ASK[] 一樣的 SYSTEM（語氣、用字規則不變），user 內容把 raw
 // 轉寫塞進去，再把 ASK[key]/ASK[hy]/ASK[phrase]/ASK[sdm] 四段指令合併成一份，
 // 要求一次回傳 {key:[...], hy:[...], phrase:[...], sdm:[...]}。Groq 只有一顆
-// 非推理模型，沒有像 Gemini 那種多階梯可以往下掉——失敗就直接丟出去，讓呼叫端
-// 接住並退回舊的直接讀圖路徑（每種格式各自重新讀一次圖，比較貴但穩）。
+// 模型，沒有像 Gemini 那種多階梯可以往下掉——失敗就直接丟出去，讓呼叫端接住並
+// 退回舊的直接讀圖路徑（每種格式各自重新讀一次圖，比較貴但穩）。
+//
+// 「四種格式必須明顯不同」這句提醒是實測出來的，不是預防性寫作：一開始沒有這
+// 句，reasoning_effort=low 會四種格式全部照抄 raw 內容交差（key/hy/phrase/sdm
+// 逐字相同），完全沒照 ASK[] 的規則做轉換。加了這句 + 換成 medium effort 之後
+// phrase 才會真的變成英文病歷縮寫、sdm 才會真的變白話中文。
 export function buildGroqNotesPrompt(rawBody, name, page) {
 	const parts = KINDS.map((k) => `[${k}] ${ASK[k]}`).join("\n\n");
 	return (
@@ -657,17 +662,29 @@ export function buildGroqNotesPrompt(rawBody, name, page) {
 		rawBody +
 		"\n\n請根據上面這份轉寫內容（不要用你自己的醫學知識補充），同時輸出以下四種格式，" +
 		'回傳一個 JSON 物件，鍵是 "key"／"hy"／"phrase"／"sdm"，每個鍵的值是字串陣列' +
-		"（陣列裡每個字串是一點，不要自己加項目符號）。四種格式各自的規則：\n\n" +
+		"（陣列裡每個字串是一點，不要自己加項目符號）。四種格式各自的呈現方式必須明顯" +
+		"不同，不可以四種都寫成同一種樣子。四種格式各自的規則：\n\n" +
 		parts
 	);
 }
 
-/** 呼叫一次 Groq，把 raw 轉寫轉成四種格式的 bullets。回傳 { bullets:{key,hy,phrase,sdm}, model, tokens }。 */
+/**
+ * 呼叫 Groq，把 raw 轉寫轉成四種格式的 bullets。回傳 { bullets:{key,hy,phrase,sdm}, model, tokens }。
+ *
+ * 撞到 per-minute 的 429 會重試（等 8 秒，最多 2 次）：實測帳號的免費層是 TPM
+ * 制（每分鐘 8000 tokens 左右一個窗口），不是 Gemini 那種每日固定額度，短暫的
+ * 429 十之八九是這一分鐘的窗口還沒轉開，等一下通常就過了——不值得直接放棄整個
+ * 這一頁、更不該把它當成「今天額度用完」的訊號。
+ */
 export async function generateNotesFromRaw(env, rawBody, { gid, page, name }) {
 	const key = env.GROQ_API_KEY;
 	if (!key) throw new Error("GROQ_API_KEY 未設定");
 	const user = buildGroqNotesPrompt(rawBody, name || gid, page);
-	const r = await callGroq(key, SYSTEM, user);
+	let r = await callGroq(key, SYSTEM, user);
+	for (let attempt = 0; !r.ok && r.kind === "minute" && attempt < 2; attempt++) {
+		await new Promise((res) => setTimeout(res, 8000));
+		r = await callGroq(key, SYSTEM, user);
+	}
 	if (!r.ok) {
 		const err = new Error(`Groq 失敗（${r.status}）：${r.message}`);
 		err.groqKind = r.kind;

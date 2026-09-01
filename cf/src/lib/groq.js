@@ -1,14 +1,26 @@
-// Groq（非推理模型，oneshot）：把 gen_insights.sh／Worker 已經讀好圖存進 page_raw
-// 的那份「完整轉寫」，一次呼叫轉成四種格式（key/hy/phrase/sdm）的 JSON。不碰圖，
-// 純文字進、純文字出，所以比讀圖便宜很多——這正是 issue #9 要解的問題：讀圖只做
-// 一次（Gemini），格式化才是四次，而格式化本來就不需要多模態模型。
+// Groq：把 gen_insights.sh／Worker 已經讀好圖存進 page_raw 的那份「完整轉寫」，
+// 一次呼叫轉成四種格式（key/hy/phrase/sdm）的 JSON。不碰圖，純文字進、純文字
+// 出，所以比讀圖便宜很多——這正是 issue #9 要解的問題：讀圖只做一次（Gemini），
+// 格式化才是四次，而格式化本來就不需要多模態模型。
 //
-// 免費層是 RPD／TPD（次數／token 每日上限），不是 Gemini 那種逐模型計量，一顆
-// 模型就夠：llama-3.1-8b-instant，非推理、oneshot、response_format 用
-// json_object 讓四種格式一次回來，不必分開問四次。
-
+// 模型：原本選的 llama-3.1-8b-instant 在 2026-06-17 被 Groq 下架（連 free/dev
+// tier 一起），2026-09-01 實測帳號上已經 404。改用 openai/gpt-oss-20b——Groq
+// 官方推薦的替代模型，帶 reasoning_effort 參數。**這不是嚴格的「非推理模型」**
+// （GPT-OSS 架構本身會 reasoning），但目前 Groq 免費層已經沒有純 instruct、
+// 不帶推理的選項了。
+//
+// reasoning_effort 務必用 "medium"，不能用 "low"：實測 low 會四種格式全部
+// 抄同一份內容交差（key/hy/phrase/sdm 逐字相同），medium 才會真的照 4 種
+// 指令分別轉寫（phrase 變英文病歷縮寫、sdm 變白話中文）。high 在 max_tokens
+// 給到 3000 還是會把整段 token 燒在 reasoning 上、生不出合法 JSON。
+//
+// 免費層額度：實測帳號的 header 顯示 x-ratelimit-limit-tokens=8000（每分鐘一
+// 次窗口，26 秒左右重置），不是嘗試用的 llama 那個 TPD 數字——Groq 的免費層在
+// gpt-oss 系列上看起來是 TPM 制，不是 RPD/TPD 制。gen_insights.sh 自己在 D1
+// 記的 groq_usage 是額外的、獨立於 Groq 真實限制的保守剎車，不是唯一防線。
 export const GROQ_BASE = "https://api.groq.com/openai/v1/chat/completions";
-export const GROQ_MODEL = "llama-3.1-8b-instant";
+export const GROQ_MODEL = "openai/gpt-oss-20b";
+export const GROQ_REASONING_EFFORT = "medium";
 
 /**
  * 把 Groq 的錯誤分類，跟 gemini.js classifyError 同一套詞彙（day/minute/auth/
@@ -38,7 +50,11 @@ export function buildGroqBody(system, userText) {
 			{ role: "user", content: userText },
 		],
 		temperature: 0.2,
-		max_tokens: 1600,
+		// medium effort 實測一次四格式合併呼叫吃到 ~1,300 reasoning tokens，
+		// 4000 留了安全邊界；1600 會在完整 raw 轉寫（比測試用的短範例長很多）
+		// 時被 reasoning 吃光，還沒吐出 JSON 就撞到上限。
+		max_tokens: 4000,
+		reasoning_effort: GROQ_REASONING_EFFORT,
 		response_format: { type: "json_object" },
 	};
 }

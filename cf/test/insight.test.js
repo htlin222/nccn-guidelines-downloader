@@ -111,6 +111,12 @@ describe("buildGroqNotesPrompt (issue #9: one call, four formats)", () => {
 	it("tells the model to answer only from the supplied raw text", () => {
 		expect(buildGroqNotesPrompt("x", "AML", 1)).toContain("不要用你自己的醫學知識補充");
 	});
+
+	// 實測發現的行為，不是預防性寫作：沒有這句提醒時 gpt-oss-20b 會四種格式全部
+	// 照抄同一份內容交差，完全不理會下面各自的 ASK[] 規則。
+	it("insists the four formats must look visibly different from each other", () => {
+		expect(buildGroqNotesPrompt("x", "AML", 1)).toContain("必須明顯不同");
+	});
 });
 
 describe("quota helpers", () => {

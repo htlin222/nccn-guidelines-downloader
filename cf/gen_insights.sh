@@ -74,10 +74,19 @@ LADDER = [
 ]
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/"
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_MODEL = "llama-3.1-8b-instant"
-# third-party 整理的免費層數字，不是從帳號 limits 頁確認的——上線前先核對
-# https://console.groq.com/settings/limits。抓保守一點，留餘裕給 Worker 端
-# on-demand 那條路徑（cache miss 時使用者手動點開 AI 面板也會打 Groq）。
+# llama-3.1-8b-instant 在 2026-06-17 被 Groq 下架（連 free/dev tier 一起），
+# 2026-09-01 實測帳號上已經 404。openai/gpt-oss-20b 是 Groq 官方推薦的替代——
+# 不是嚴格的「非推理模型」（GPT-OSS 架構本身會 reasoning），但目前 Groq 免費層
+# 已經沒有純 instruct、不帶推理的選項了。reasoning_effort 務必用 "medium"：
+# 實測 "low" 會四種格式全部照抄同一份內容交差，"high" 在 max_tokens=3000 還是
+# 會把 token 燒光在 reasoning 上生不出合法 JSON，medium 是唯一真的可用的一階。
+GROQ_MODEL = "openai/gpt-oss-20b"
+GROQ_REASONING_EFFORT = "medium"
+# 這兩個是腳本自己在 D1 記的保守剎車，獨立於 Groq 真實的限制——實測帳號的
+# header 顯示 x-ratelimit-limit-tokens=8000（每分鐘一次窗口，~26 秒重置），
+# 是 TPM 制不是 RPD/TPD 制，所以下面兩個數字不是在模擬 Groq 的真實上限，只是
+# 「這支腳本一天最多花多少」的獨立上限，留餘裕給 Worker 端 on-demand 那條路徑
+# （cache miss 時使用者手動點開 AI 面板也會打 Groq）。
 GROQ_TPD_BUDGET = 400000
 GROQ_RPD_BUDGET = 12000
 
@@ -338,25 +347,17 @@ def to_bullets(text, max_n):
             break
     return out
 
-def generate_notes(gid, page, name, raw_body, day):
-    reqs, tokens = groq_usage(day)
-    if reqs >= GROQ_RPD_BUDGET or tokens >= GROQ_TPD_BUDGET:
-        return False  # 今日 Groq 額度用完——訊號給呼叫端停手
-
-    parts = "\n\n".join(f"[{k}] {v}" for k, v in ASK.items())
-    user = (
-        f"資料來源：NCCN Guidelines《{name or gid}》第 {page} 頁的完整轉寫內容：\n\n" +
-        raw_body +
-        "\n\n請根據上面這份轉寫內容（不要用你自己的醫學知識補充），同時輸出以下四種格式，"
-        '回傳一個 JSON 物件，鍵是 "key"／"hy"／"phrase"／"sdm"，每個鍵的值是字串陣列'
-        "（陣列裡每個字串是一點，不要自己加項目符號）。四種格式各自的規則：\n\n" + parts
-    )
+def call_groq_once(user):
     import urllib.request, urllib.error
     body = json.dumps({
         "model": GROQ_MODEL,
         "messages": [{"role": "system", "content": NOTES_SYSTEM}, {"role": "user", "content": user}],
         "temperature": 0.2,
-        "max_tokens": 1600,
+        # medium effort 實測一次四格式合併呼叫吃到 ~1,300 reasoning tokens，
+        # 4000 留了安全邊界；1600 會在完整 raw 轉寫（比測試短範例長很多）時被
+        # reasoning 吃光，還沒吐出 JSON 就撞到上限。
+        "max_tokens": 4000,
+        "reasoning_effort": GROQ_REASONING_EFFORT,
         "response_format": {"type": "json_object"},
     }).encode()
     req = urllib.request.Request(
@@ -373,13 +374,42 @@ def generate_notes(gid, page, name, raw_body, day):
     )
     try:
         with urllib.request.urlopen(req, timeout=60) as res:
-            d = json.loads(res.read())
+            return {"ok": True, "body": json.loads(res.read())}
     except urllib.error.HTTPError as e:
-        print(f"  Groq 失敗（{e.code}）: {e.read()[:200]}")
-        return None if e.code == 429 else False
+        msg = e.read()[:300]
+        return {"ok": False, "status": e.code, "message": msg}
     except Exception as e:
-        print("  Groq 失敗:", str(e)[:200])
-        return False
+        return {"ok": False, "status": 0, "message": str(e)[:300]}
+
+def generate_notes(gid, page, name, raw_body, day):
+    reqs, tokens = groq_usage(day)
+    if reqs >= GROQ_RPD_BUDGET or tokens >= GROQ_TPD_BUDGET:
+        return False  # 今日 Groq 額度用完——訊號給呼叫端停手
+
+    parts = "\n\n".join(f"[{k}] {v}" for k, v in ASK.items())
+    user = (
+        f"資料來源：NCCN Guidelines《{name or gid}》第 {page} 頁的完整轉寫內容：\n\n" +
+        raw_body +
+        "\n\n請根據上面這份轉寫內容（不要用你自己的醫學知識補充），同時輸出以下四種格式，"
+        '回傳一個 JSON 物件，鍵是 "key"／"hy"／"phrase"／"sdm"，每個鍵的值是字串陣列'
+        "（陣列裡每個字串是一點，不要自己加項目符號）。四種格式各自的呈現方式必須明顯"
+        "不同，不可以四種都寫成同一種樣子。四種格式各自的規則：\n\n" + parts
+    )
+
+    # 撞到 per-minute 的 429 就等 8 秒重試（最多 2 次）：實測帳號的免費層是 TPM
+    # 制（每分鐘 ~8000 tokens 一個窗口），短暫的 429 十之八九是這一分鐘的窗口
+    # 還沒轉開，不值得直接放棄這一頁。
+    r = call_groq_once(user)
+    for _ in range(2):
+        if r["ok"] or r.get("status") != 429:
+            break
+        time.sleep(8)
+        r = call_groq_once(user)
+
+    if not r["ok"]:
+        print(f"  Groq 失敗（{r['status']}）: {r['message']}")
+        return None if r["status"] == 429 else False
+    d = r["body"]
 
     text = ((d.get("choices") or [{}])[0].get("message") or {}).get("content", "")
     usage_tokens = (d.get("usage") or {}).get("total_tokens", 0)

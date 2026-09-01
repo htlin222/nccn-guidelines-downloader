@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	GROQ_MODEL,
+	GROQ_REASONING_EFFORT,
 	buildGroqBody,
 	classifyGroqError,
 	parseGroqJSON,
@@ -33,6 +34,16 @@ describe("buildGroqBody", () => {
 			{ role: "system", content: "sys" },
 			{ role: "user", content: "user" },
 		]);
+	});
+	// medium 是實測出來唯一真的可用的一階：low 會四種格式全部照抄同一份內容
+	// 交差，high 在合理的 max_tokens 內會把 token 燒光在 reasoning 上生不出
+	// 合法 JSON。這個斷言是防呆——之後有人手滑改成 low/high 測試會立刻紅燈。
+	it("uses medium reasoning effort — low silently collapses all four formats into one", () => {
+		expect(buildGroqBody("sys", "user").reasoning_effort).toBe("medium");
+		expect(GROQ_REASONING_EFFORT).toBe("medium");
+	});
+	it("gives reasoning enough room that a full raw transcription doesn't starve the JSON output", () => {
+		expect(buildGroqBody("sys", "user").max_tokens).toBeGreaterThanOrEqual(4000);
 	});
 });
 
