@@ -361,7 +361,14 @@ def generate_notes(gid, page, name, raw_body, day):
     }).encode()
     req = urllib.request.Request(
         GROQ_URL, data=body,
-        headers={"Authorization": "Bearer " + groq_key, "content-type": "application/json"},
+        # Groq 前面有 Cloudflare，實測 Python urllib 的預設 User-Agent（"Python-urllib/x.x"）
+        # 會被 bot-fight 判成非瀏覽器流量、直接 403（error code 1010），Gemini 那邊沒這問題。
+        # 補一個看起來像瀏覽器的 UA 就過了——2026-09-01 用 GitHub Actions runner 實測過。
+        headers={
+            "Authorization": "Bearer " + groq_key,
+            "content-type": "application/json",
+            "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+        },
         method="POST",
     )
     try:

@@ -74,6 +74,11 @@ export async function callGroq(key, system, userText) {
 			headers: {
 				Authorization: "Bearer " + key,
 				"content-type": "application/json",
+				// gen_insights.sh 實測過：Groq 前面的 Cloudflare bot-fight 會把沒有瀏覽器
+				// User-Agent 的請求擋成 403（error code 1010）。這裡沒實測過同樣的問題，
+				// 但成本是零，先補上避免同一個坑在 Worker 這條路徑重現一次。
+				"user-agent":
+					"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
 			},
 			body: JSON.stringify(buildGroqBody(system, userText)),
 			signal: AbortSignal.timeout(60000),
