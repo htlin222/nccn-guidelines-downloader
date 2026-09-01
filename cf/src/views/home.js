@@ -77,15 +77,6 @@ document.documentElement.dataset.inv=(d&&localStorage.getItem('nccninv')!=='0')?
     background:hsl(var(--background)/.8);border-bottom:1px solid hsl(var(--border));}
   .wrap{max-width:1180px;margin:0 auto;padding:0 20px;}
   .htop{display:flex;align-items:center;gap:14px;padding:14px 0 12px;}
-  .navlink{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 13px;border-radius:10px;
-    text-decoration:none;font-size:.84rem;font-weight:600;white-space:nowrap;
-    background:transparent;border:1px solid hsl(var(--border));color:hsl(var(--foreground));}
-  .navlink:hover{background:hsl(var(--accent));}
-  .navlink .ni{display:grid;place-items:center;}
-  .navlink .ni svg{width:16px;height:16px;}
-  /* 窄螢幕只留圖示。選擇器要指定文字那一個 span，寫成 .navlink span 會把
-     圖示的 .ni 也一起藏掉，整顆按鈕變空白。 */
-  @media(max-width:560px){.navlink span:not(.ni){display:none;}.navlink{padding:0 10px;}}
   .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.12rem;letter-spacing:-.01em;}
   .brand .logo{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;
     background:hsl(var(--primary));color:hsl(var(--primary-foreground));font-size:16px;}
@@ -101,6 +92,9 @@ document.documentElement.dataset.inv=(d&&localStorage.getItem('nccninv')!=='0')?
   .srctab.act::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;
     border-radius:2px;background:hsl(var(--primary));}
   .srctab b{font-weight:600;margin-left:5px;color:hsl(var(--muted-foreground));font-size:.76rem;}
+  .srctab.tnav{display:inline-flex;align-items:center;gap:6px;text-decoration:none;}
+  .srctab.tnav .ni{display:grid;place-items:center;}
+  .srctab.tnav .ni svg{width:15px;height:15px;}
   .iconbtn{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;cursor:pointer;flex:0 0 auto;
     border:1px solid hsl(var(--border));background:hsl(var(--card));color:hsl(var(--foreground));font-size:18px;}
   .iconbtn:hover{background:hsl(var(--accent));}
@@ -234,7 +228,6 @@ ${TOAST_CSS}
     <div class="htop">
       <div class="brand"><span class="logo" id="logo"></span><span><span id="brandName">NCCN Guidelines</span><small id="sub">${GUIDELINES.length} 份 · R2 · PWA</small></span></div>
       <div class="spacer"></div>
-      <a class="navlink" href="/notes" title="門診核對清單"><span class="ni" id="notesicon"></span><span>臨床筆記</span></a>
       <button class="iconbtn" id="bell" title="通知"></button>
       <button class="iconbtn" id="settings" title="設定"></button>
       <button class="iconbtn" id="theme" title="切換主題"></button>
@@ -262,7 +255,10 @@ ${TOAST_CSS}
 <script>
 const SRCS = ${srcs};
 // 上次看的是哪一邊。回站時停在原地，而不是每次都被丟回 NCCN。
+// ?src= 優先於記住的值：/notes 那一列的「NCCN」「MD Anderson」是連結，點下去
+// 要真的落在那個來源上，而不是落在你上次看的那個。
 var SRC='nccn';try{var _s=localStorage.getItem('nccnsrc');if(_s&&SRCS[_s])SRC=_s;}catch(e){}
+try{var _u=new URLSearchParams(location.search).get('src');if(_u&&SRCS[_u]){SRC=_u;localStorage.setItem('nccnsrc',_u);}}catch(e){}
 var DATA=SRCS[SRC].data, CATS=SRCS[SRC].cats;
 const ICONS = {
   droplet:'<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>',
@@ -317,7 +313,6 @@ function starIds(){return Object.keys(STARS).sort();}
 function saveStars(){try{localStorage.setItem('nccnstars',JSON.stringify(starIds()));}catch(e){}}
 document.getElementById('logo').innerHTML=svg('cross');
 document.getElementById('searchicon').innerHTML=svg('search');document.getElementById('settings').innerHTML=svg('settings');
-document.getElementById('notesicon').innerHTML=svg('notebookpen');
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 function card(g){
   const c=R2[g.id];
@@ -507,6 +502,14 @@ filtersEl.addEventListener('click',function(e){var b=e.target.closest&&e.target.
 
 // ---------------------------------------------------------------- 來源分頁
 var srcTabsEl=document.getElementById('srctabs');
+// 臨床筆記的份數是 D1 的動態狀態，不像另外兩顆是編譯進來的常數。載入後補上，
+// 不讓首頁的 render 依賴 D1——首頁掛掉的成本遠高於一個數字晚半秒出現。
+var NOTES_N=0;try{NOTES_N=+localStorage.getItem('notesN')||0;}catch(e){}
+fetch('/api/notes-count').then(function(r){return r.json();}).then(function(d){
+  if(!(d&&d.n))return;
+  NOTES_N=d.n;try{localStorage.setItem('notesN',d.n);}catch(e){}
+  var el=document.getElementById('notesCount');if(el)el.textContent=d.n;
+}).catch(function(){});
 function cachedIn(list){var n=0;for(var i=0;i<list.length;i++)if(R2[list[i].id])n++;return n;}
 function buildTabs(){
   var h='';
@@ -514,7 +517,13 @@ function buildTabs(){
     h+='<button class="srctab'+(k===SRC?' act':'')+'" data-src="'+k+'">'+esc(SRCS[k].label)
       +'<b>'+SRCS[k].data.length+'</b></button>';
   });
+  // 第三顆跟前兩顆不是同一種東西：切來源只是換指標，這顆是換頁。所以它是 <a>
+  // 不是 <button>，在首頁上也永遠不會 .act——當前分頁不是它。
+  h+='<a class="srctab tnav" href="/notes" title="門診核對清單">'
+    +'<span class="ni" id="notesicon"></span>臨床筆記<b id="notesCount"></b></a>';
   srcTabsEl.innerHTML=h;
+  document.getElementById('notesicon').innerHTML=svg('notebookpen');
+  if(NOTES_N) document.getElementById('notesCount').textContent=NOTES_N;
   var nm=document.getElementById('brandName');if(nm)nm.textContent=SRCS[SRC].title;
   var sub=document.getElementById('sub');
   if(sub)sub.textContent=cachedIn(DATA)+' / '+DATA.length+' 份 · R2 · PWA';

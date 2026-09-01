@@ -86,6 +86,25 @@ export default {
 		// 路徑留在 Cloudflare Access 後面——它是給人用的頁面，不是給 token 用的。
 		if (pathname === "/notes") return html(renderNotes(request));
 
+		// 首頁那一列分頁要顯示份數。另外兩顆的數字是編譯進去的常數，這顆是 D1 的
+		// 動態狀態，所以獨立成一個端點在載入後補——不讓首頁的 render 依賴 D1。
+		// 路徑刻意不是 /api/notes/count：那會被下面的 /api/notes/:gid/:ref 吃掉。
+		if (pathname === "/api/notes-count") {
+			try {
+				const body = await remember(env, ctx, "count", "", async () => {
+					const r = await env.DB.prepare(
+						"SELECT COUNT(*) AS n FROM snippets",
+					).first();
+					return { n: (r && r.n) || 0 };
+				}, "notes");
+				return new Response(body, {
+					headers: { "content-type": "application/json; charset=utf-8" },
+				});
+			} catch (e) {
+				return json({ n: 0, error: String(e && e.message) }, 500);
+			}
+		}
+
 		if (pathname === "/api/notes") {
 			const q = url.searchParams.get("q") || "";
 			try {

@@ -8,8 +8,21 @@
 // 沒有建置步驟，抽出來的東西得用字串拼接組回去，那比重複更難讀也更容易壞。
 // 共用的只有 :root 的顏色變數值，改配色時兩邊要一起改。
 
+import { GUIDELINES } from "../data/guidelines.js";
+import { ALGORITHMS } from "../data/algorithms.js";
+
+const NOTEBOOK_SVG =
+	'<svg viewBox="0 0 24 24" aria-hidden="true">' +
+	'<path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/>' +
+	'<path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/>' +
+	'<path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87' +
+	'a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/></svg>';
+
 export function renderNotes(request) {
 	const user = request.headers.get("cf-access-authenticated-user-email") || "";
+	// 兩個來源的份數。這一列要跟首頁長一樣，而首頁的數字就是這兩個常數。
+	const nccnN = GUIDELINES.length;
+	const mdaN = ALGORITHMS.length;
 	return `<!doctype html>
 <html lang="zh-Hant"><head>
 <meta charset="utf-8">
@@ -54,11 +67,19 @@ export function renderNotes(request) {
   .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.12rem;}
   .brand small{display:block;font-weight:400;font-size:.72rem;color:hsl(var(--muted-foreground));}
   .spacer{flex:1;}
-  .tabs{display:flex;gap:6px;padding-bottom:10px;}
-  .tabs a{padding:7px 14px;border-radius:999px;text-decoration:none;font-size:.86rem;font-weight:600;
-    color:hsl(var(--muted-foreground));border:1px solid transparent;}
-  .tabs a.act{background:hsl(var(--primary));color:hsl(var(--primary-foreground));}
-  .tabs a:not(.act):hover{border-color:hsl(var(--border));color:hsl(var(--foreground));}
+  /* 刻意抄首頁 .srctabs 的樣子而不是自成一格：兩頁的這一列是同一列，換頁時
+     它不該變形。首頁那邊是 button（切來源），這邊是 a（換頁），視覺得一致。 */
+  .tabs{display:flex;gap:2px;border-bottom:1px solid hsl(var(--border));margin-bottom:10px;}
+  .tabs a{position:relative;display:inline-flex;align-items:center;gap:6px;
+    padding:8px 14px 10px;text-decoration:none;font-size:.86rem;font-weight:600;
+    color:hsl(var(--muted-foreground));}
+  .tabs a:hover{color:hsl(var(--foreground));}
+  .tabs a.act{color:hsl(var(--foreground));}
+  .tabs a.act::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;
+    border-radius:2px;background:hsl(var(--primary));}
+  .tabs b{font-weight:600;margin-left:5px;color:hsl(var(--muted-foreground));font-size:.76rem;}
+  .tabs .ni{display:grid;place-items:center;}
+  .tabs .ni svg{width:15px;height:15px;}
   .iconbtn{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;cursor:pointer;
     background:transparent;border:1px solid hsl(var(--border));color:hsl(var(--foreground));font-size:16px;}
   .back{display:inline-flex;align-items:center;gap:6px;padding:7px 12px 7px 10px;border-radius:10px;
@@ -168,13 +189,14 @@ export function renderNotes(request) {
       <a class="back" href="/" title="回首頁">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg><span>回首頁</span>
       </a>
-      <div class="brand"><span class="bicon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/></svg></span><span>臨床筆記<small id="sub">NCCN 決策節點核對清單</small></span></div>
+      <div class="brand"><span class="bicon">${NOTEBOOK_SVG}</span><span>臨床筆記<small id="sub">NCCN 決策節點核對清單</small></span></div>
       <div class="spacer"></div>
       <button class="iconbtn" id="theme" title="切換主題"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path fill="currentColor" stroke="none" d="M12 18a6 6 0 0 1 0-12z"/></svg></button>
     </div>
     <div class="tabs">
-      <a href="/">指引</a>
-      <a href="/notes" class="act">臨床筆記</a>
+      <a href="/?src=nccn">NCCN<b>${nccnN}</b></a>
+      <a href="/?src=mda">MD Anderson<b>${mdaN}</b></a>
+      <a href="/notes" class="act"><span class="ni">${NOTEBOOK_SVG}</span>臨床筆記<b id="tabN"></b></a>
     </div>
     <div class="searchrow">
       <span class="si"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
@@ -436,6 +458,11 @@ document.getElementById('theme').addEventListener('click',function(){
   document.documentElement.dataset.theme=next;
   try{localStorage.setItem('theme',next);}catch(e){}
 });
+// 自己那顆分頁的份數。跟首頁走同一個端點，數字才不會兩頁對不起來。
+fetch('/api/notes-count').then(function(r){return r.json();}).then(function(d){
+  var el=document.getElementById('tabN'); if(el&&d&&d.n) el.textContent=d.n;
+}).catch(function(){});
+
 paintChips(); run();
 </script>
 </body></html>`;
