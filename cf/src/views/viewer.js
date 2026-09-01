@@ -170,8 +170,13 @@ document.documentElement.dataset.inv=(d&&localStorage.getItem('nccninv')!=='0')?
   .thumb canvas{position:absolute;inset:0;width:100%;height:100%;background:#fff;}
   .thumb .pn{position:absolute;bottom:3px;right:4px;font-size:.62rem;background:#000a;color:#fff;padding:0 5px;border-radius:6px;line-height:1.5;}
   .thumb.cur{border-color:#3b82f6;}
-  .viewer{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;align-items:center;gap:16px;position:relative;}
-  .page{position:relative;background:#fff;box-shadow:0 4px 22px -6px rgba(0,0,0,.4);border-radius:3px;flex-shrink:0;}
+  /* align-items:center 在頁面比 .viewer 寬時是「不安全置中」——溢出的一半直接被
+     擋在捲動範圍外，scrollLeft 連 0 都動不了，實測放大 6 次寬度多了 713px，
+     scrollWidth 卻只多了一半。改用 margin:0 auto 讓 .page 自己置中，溢出時兩邊
+     都在捲動範圍內，瀏覽器才拿得出正確的 offsetLeft／scrollWidth 給下面的錨點
+     邏輯用。 */
+  .viewer{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;align-items:flex-start;gap:16px;position:relative;}
+  .page{position:relative;background:#fff;box-shadow:0 4px 22px -6px rgba(0,0,0,.4);border-radius:3px;flex-shrink:0;margin:0 auto;}
   .page canvas{display:block;border-radius:3px;}
   /* 重畫好的 canvas 是疊上去淡入、舊的那張留到淡完才拿掉，中間沒有一幀是白的。
      縮放與開關側欄都走這條路：先把舊 canvas 用 CSS 撐到新尺寸頂著（模糊但立刻
@@ -546,16 +551,25 @@ function paintPage(i){ var p=pages[i]; if(!p||!p.pg||p.done)return Promise.resol
 // 位——連按縮放鍵、或恰好在這段空檔滾動一下，updateCur() 讀到的就是這個對不上
 // 的位置，算出錯的頁碼，relayout() 再把這個錯頁碼當成錨點寫回去，等於把跳掉的
 // 頁碼焊死。所以錨點要在「每一次真的改了版位」時立刻重新貼齊，不能等防抖。
+// 水平方向是同一個問題的另一半：頁面變寬變窄時 offsetLeft 也會跟著平移
+// （見上面 .page 的 margin:0 auto 註解），沒人補 scrollLeft 的話，畫面就會隨著
+// 每次縮放整個往左或往右挪一段，看起來像「左右晃」。
+// 水平錨點刻意跟垂直錨點不同算法：垂直讀者關心的是「目前讀到哪裡」（視窗最上緣對
+// 齊那一行），但橫向沒有「讀到哪裡」這回事——讀者要的是縮放時眼睛盯著的那個定點
+// 別動，也就是使用者說的「以一個中心點縮放」。所以錨點抓的是視窗水平中心點，而不
+// 是視窗左緣。
 function previewScale(){ var sc=activeScale();
-  var ap=pages[cur-1], anchor=null;
-  if(ap&&ap.el&&ap.el.offsetHeight) anchor=Math.max(0,Math.min(1,(viewer.scrollTop-ap.el.offsetTop)/ap.el.offsetHeight));
+  var ap=pages[cur-1], anchorY=null, anchorX=null, halfW=viewer.clientWidth/2;
+  if(ap&&ap.el&&ap.el.offsetHeight) anchorY=Math.max(0,Math.min(1,(viewer.scrollTop-ap.el.offsetTop)/ap.el.offsetHeight));
+  if(ap&&ap.el&&ap.el.offsetWidth) anchorX=Math.max(0,Math.min(1,(viewer.scrollLeft+halfW-ap.el.offsetLeft)/ap.el.offsetWidth));
   for(var k=0;k<pages.length;k++){ var p=pages[k];
     p.el.style.width=(p.w*sc)+'px'; p.el.style.height=(p.h*sc)+'px';
     var cv=p.el.querySelector('canvas');
     if(cv&&p.sc){ cv.style.transformOrigin='0 0'; cv.style.transform='scale('+(sc/p.sc)+')'; }
     var tl=p.el.querySelector('.textLayer'); if(tl)tl.style.visibility='hidden';
     var al=p.el.querySelector('.annotationLayer'); if(al)al.style.visibility='hidden'; }
-  if(anchor!==null) viewer.scrollTop=Math.max(0,ap.el.offsetTop+anchor*ap.el.offsetHeight);
+  if(anchorY!==null) viewer.scrollTop=Math.max(0,ap.el.offsetTop+anchorY*ap.el.offsetHeight);
+  if(anchorX!==null) viewer.scrollLeft=Math.max(0,ap.el.offsetLeft+anchorX*ap.el.offsetWidth-halfW);
   setZpct(); invalidate(); }
 function relayout(){
   rq.length=0;
