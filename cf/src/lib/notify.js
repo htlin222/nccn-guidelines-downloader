@@ -35,12 +35,19 @@ export function cronEvents(health, now) {
 	const errors = Array.isArray(h.errors) ? h.errors : [];
 	const out = [];
 
+	// same = 抓回來跟 R2 裡那份一模一樣，所以沒有重寫。多數日子三份都是這樣
+	// （NCCN 一份指引大概半年才改一次版），標題如果只寫「3/3 完成」，看的人會
+	// 以為每天都抓到三份新的。有幾份真的換了新版是值得注意的事，得看得出來。
+	const same = Number(h.same) || 0;
 	if (fail === 0)
 		out.push({
 			kind: "cron",
 			level: "info",
-			title: `每日更新 ${ok}/${total} 完成`,
-			body: { ids },
+			title:
+				same === ok
+					? `每日更新 ${ok}/${total} 完成（都沒改版）`
+					: `每日更新 ${ok}/${total} 完成（${ok - same} 份有新版）`,
+			body: { ids, same },
 			created: at,
 		});
 	else if (ok > 0)

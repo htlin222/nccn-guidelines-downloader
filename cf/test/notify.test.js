@@ -17,10 +17,23 @@ describe("cronEvents", () => {
 		expect(evs[0]).toMatchObject({
 			kind: "cron",
 			level: "info",
-			title: "每日更新 3/3 完成",
+			title: "每日更新 3/3 完成（3 份有新版）",
 			created: AT,
 		});
 		expect(evs[0].body.ids).toEqual(["aml", "cll", "nscl"]);
+	});
+
+	// 多數日子的實況：三份都抓到了，但都跟 R2 裡那份一樣。標題如果還寫
+	// 「3/3 完成」，看的人會以為每天都抓到三份新的。
+	it("says so when nothing actually changed", () => {
+		const evs = cronEvents({ at: AT, ok: 3, same: 3, fail: 0, ids: ["aml"] });
+		expect(evs[0].title).toBe("每日更新 3/3 完成（都沒改版）");
+		expect(evs[0].body.same).toBe(3);
+	});
+
+	it("counts only the ones that really got a new version", () => {
+		const evs = cronEvents({ at: AT, ok: 3, same: 2, fail: 0, ids: ["aml"] });
+		expect(evs[0].title).toBe("每日更新 3/3 完成（1 份有新版）");
 	});
 
 	it("warns on a partial failure without crying cookie", () => {

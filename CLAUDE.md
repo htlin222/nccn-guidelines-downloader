@@ -168,17 +168,38 @@ is dirty afterwards; that is expected and not committed back.
 
 ### Daily — the Worker's own cron (`0 3 * * *`)
 
-Re-pulls the **3 stalest** PDFs from NCCN into `raw/`. Not a round-robin cursor:
-it ranks by the `uploaded` time of what is actually in R2, so a fetch that fails
-is still the stalest tomorrow and gets retried until it lands, and a missing
-object is picked first. An id that fails 3 runs in a row is parked for a cycle so
-it cannot starve the queue (`nextCronState`).
+Re-pulls the **3 stalest** PDFs from NCCN and writes them to `raw/` **only if the
+bytes actually changed**. Not a round-robin cursor: it ranks by when we last
+successfully reached upstream for that id, so a fetch that fails is still the
+stalest tomorrow and gets retried until it lands, and a missing object is picked
+first. An id that fails 3 runs in a row is parked for a cycle so it cannot starve
+the queue (`nextCronState`).
+
+**The unchanged check and the ranking are one mechanism, not two.** `refreshOne`
+compares a sha256 it stores in the object's own `customMetadata`, and skips the
+`put` when it matches — most days all three are unchanged, because a guideline
+ships a new version roughly twice a year. But the ranking used to read the R2
+`uploaded` time, and skipping the write means `uploaded` never advances: those
+three ids would stay the stalest forever and the other 88 would never come round
+— silently, with every run reporting 3/3 success. So `nextCronState` records a
+`checked` timestamp on **every** successful fetch, changed or not, and
+`pickStalest` takes the max of `uploaded`, `deferred` and `checked`. The question
+the ranking answers is therefore "how long since we last confirmed this id
+against upstream", which is what the cron was always really asking.
+
+Objects written before this landed carry no `sha256`, so the first pass over each
+rewrites it once and records the hash. Self-healing; no backfill script.
+
+`cron_health` gained a `same` count, and both the bell and the home-page chip say
+"對過 3 份，都沒改版" rather than "更新 3 份" — the old wording read as if three
+new PDFs arrived every single day.
 
 Check it:
 
 ```bash
 cd cf && set -a && . ../.env && set +a
-wrangler kv key get cron_health --binding NCCN_KV --remote   # {at, ok, fail, ids, errors}
+wrangler kv key get cron_health --binding NCCN_KV --remote   # {at, ok, same, fail, ids, errors}
+wrangler kv key get cron_state  --binding NCCN_KV --remote   # {fails, deferred, checked}
 wrangler tail nccn-download                                  # watch live
 ```
 

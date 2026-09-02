@@ -80,6 +80,36 @@ export function refreshKey(id) {
 	return sourceOf(id) === "mda" ? `${id}.pdf` : `raw/${id}.pdf`;
 }
 
+export async function sha256Hex(buf) {
+	const d = await crypto.subtle.digest("SHA-256", buf);
+	let out = "";
+	for (const b of new Uint8Array(d)) out += b.toString(16).padStart(2, "0");
+	return out;
+}
+
+// 抓回來的跟 R2 裡那份是不是同一份。
+//
+// 比的是我們自己寫進 customMetadata 的 sha256，不是 R2 的 etag：etag 只有在
+// 單段上傳時才等於 MD5，而且 Workers 的 crypto.subtle 根本沒有 MD5。先比 size
+// 是因為它免費——大小不同就一定不同，連 head 回來的 hash 都不必看。
+//
+// 舊物件沒有這段 metadata（這個功能之前寫進去的都沒有），那時候一律當成「不同」
+// 而照常寫一次。第一輪把 hash 補齊，之後就準了——自我修復，不需要回填腳本。
+export async function isUnchanged(env, key, buf) {
+	try {
+		const head = await env.PDFS.head(key);
+		if (!head) return false;
+		if (head.size !== buf.byteLength) return false;
+		const prev = head.customMetadata && head.customMetadata.sha256;
+		if (!prev) return false;
+		return prev === (await sha256Hex(buf));
+	} catch (e) {
+		// 讀不到就當成不同：多寫一次的代價，遠低於因為一次 R2 抖動而跳過一份真的
+		// 更新了的指引。
+		return false;
+	}
+}
+
 // One transient hiccup upstream used to cost a guideline a whole cycle, so try
 // twice. A missing cookie is not transient — retrying it just wastes a request.
 export async function refreshOne(env, id, tries = 2) {
@@ -87,10 +117,30 @@ export async function refreshOne(env, id, tries = 2) {
 	for (let k = 0; k < tries; k++) {
 		const r = await fetchLive(env, id);
 		if (r.ok) {
-			await env.PDFS.put(refreshKey(id), r.buf, {
+			const key = refreshKey(id);
+			// 內容沒變就不寫。NCCN 一份指引大概半年才改一次版，所以絕大多數日子
+			// 這三份抓回來的就是 R2 裡那份，重寫一次只是把同樣的 bytes 再存一遍。
+			if (await isUnchanged(env, key, r.buf))
+				return {
+					id,
+					ok: true,
+					same: true,
+					size: r.buf.byteLength,
+					tries: k + 1,
+				};
+			await env.PDFS.put(key, r.buf, {
 				httpMetadata: { contentType: "application/pdf" },
+				// 下一次比對要用的指紋。寫在物件自己身上而不是另開一份 manifest，
+				// 這樣它不可能跟物件不同步。
+				customMetadata: { sha256: await sha256Hex(r.buf) },
 			});
-			return { id, ok: true, size: r.buf.byteLength, tries: k + 1 };
+			return {
+				id,
+				ok: true,
+				same: false,
+				size: r.buf.byteLength,
+				tries: k + 1,
+			};
 		}
 		last = r;
 		if (r.error === "no-cookie" || r.error === "unknown-id") break;
@@ -110,7 +160,14 @@ export async function refreshOne(env, id, tries = 2) {
 // would otherwise stay top of the queue forever and starve everything behind it.
 // refreshBatch parks such an id with a timestamp, which counts here as if it had
 // just been refreshed — so it drops to the back and comes round again in a cycle.
-export function pickStalest(guidelines, cached, n, deferred) {
+//
+// `checked` 是同一個道理的另一半，而且是「內容沒變就不寫」這件事的必要配套。
+// 排序看的是 R2 的 uploaded，不寫就不會前進，於是那個 id 明天還是最舊的——
+// 三份沒改版的指引會把佇列卡死，後面 88 份永遠輪不到，而且完全不會報錯。
+// 所以只要成功跟上游對過一次，就記下時間，這裡跟 uploaded 取大的那個。
+// 排序的語意因此從「R2 這份多久沒換過」變成「我們多久沒跟上游確認過它」——
+// 那本來就是這個 cron 真正想問的問題。
+export function pickStalest(guidelines, cached, n, deferred, checked) {
 	const at = (s) => {
 		const t = Date.parse(s || "");
 		return Number.isFinite(t) ? t : -Infinity;
@@ -118,7 +175,8 @@ export function pickStalest(guidelines, cached, n, deferred) {
 	const rank = guidelines.map((g, i) => {
 		const u = at(cached && cached[g.id] && cached[g.id].uploaded);
 		const d = at(deferred && deferred[g.id]);
-		return { id: g.id, i, t: d > u ? d : u };
+		const c = at(checked && checked[g.id]);
+		return { id: g.id, i, t: Math.max(u, d, c) };
 	});
 	// Ties (two never-cached ids are both -Infinity) fall back to catalogue order
 	// so the pick is deterministic; `a.t - b.t` alone would be NaN there.
@@ -132,10 +190,14 @@ export const MAX_FAILS = 3;
 export function nextCronState(state, results, now) {
 	const fails = { ...((state && state.fails) || {}) };
 	const deferred = { ...((state && state.deferred) || {}) };
+	const checked = { ...((state && state.checked) || {}) };
 	for (const r of results) {
 		if (r.ok) {
 			delete fails[r.id];
 			delete deferred[r.id];
+			// 成功對過上游就記時間，不分內容有沒有變。有變的那些 R2 的 uploaded
+			// 也會前進，兩個取大的結果一樣；沒變的則全靠這一筆才輪得下去。
+			checked[r.id] = now;
 			continue;
 		}
 		const n = (fails[r.id] || 0) + 1;
@@ -144,7 +206,7 @@ export function nextCronState(state, results, now) {
 			deferred[r.id] = now;
 		} else fails[r.id] = n;
 	}
-	return { fails, deferred };
+	return { fails, deferred, checked };
 }
 
 async function readJson(env, key, fallback) {
@@ -167,8 +229,9 @@ export async function refreshBatch(env, n) {
 	const state = await readJson(env, CRON_STATE_KEY, {
 		fails: {},
 		deferred: {},
+		checked: {},
 	});
-	const ids = pickStalest(GUIDELINES, cached, n, state.deferred);
+	const ids = pickStalest(GUIDELINES, cached, n, state.deferred, state.checked);
 	const results = [];
 	for (const id of ids) results.push(await refreshOne(env, id));
 
@@ -178,9 +241,14 @@ export async function refreshBatch(env, n) {
 		JSON.stringify(nextCronState(state, results, now)),
 	);
 	const ok = results.filter((r) => r.ok).length;
+	// same 分開記，不然「3/3 完成」看起來像抓了三份新的，實際上多數日子是三份
+	// 都沒改版。這個數字也是判斷 cookie 是不是還活著的線索：same 一直是 0 而
+	// ok 也是 0，跟 same 一直是 3，是兩種完全不同的狀況。
+	const same = results.filter((r) => r.ok && r.same).length;
 	const health = {
 		at: now,
 		ok,
+		same,
 		fail: results.length - ok,
 		ids,
 		errors: results.filter((r) => !r.ok).map((r) => `${r.id}: ${r.error}`),

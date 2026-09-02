@@ -116,7 +116,74 @@ describe("nextCronState (failure bookkeeping)", () => {
 		expect(nextCronState(null, [fail("a")], NOW)).toEqual({
 			fails: { a: 1 },
 			deferred: {},
+			checked: {},
 		});
+	});
+
+	// 「內容沒變就不寫」的必要配套。排序看的是 R2 的 uploaded，不寫就不會前進，
+	// 所以沒有這一筆的話三份沒改版的指引會把佇列卡死，而且完全不會報錯。
+	it("records a check timestamp on success, changed or not", () => {
+		const s = nextCronState(
+			null,
+			[
+				{ id: "a", ok: true, same: true },
+				{ id: "b", ok: true, same: false },
+			],
+			NOW,
+		);
+		expect(s.checked).toEqual({ a: NOW, b: NOW });
+	});
+
+	it("a failure leaves the previous check timestamp alone", () => {
+		const s = nextCronState({ checked: { a: "2026-01-01T00:00:00Z" } }, [fail("a")], NOW);
+		expect(s.checked.a).toBe("2026-01-01T00:00:00Z");
+	});
+});
+
+describe("pickStalest × checked (unchanged ids must still rotate)", () => {
+	// 這是這個功能最容易壞的地方：R2 的 uploaded 停在原地，光看它的話同一份會被
+	// 一直挑中。checked 一寫上去，它就該退到隊尾。
+	it("an id verified today drops behind one whose copy is older", () => {
+		const cached = up({
+			a: "2026-01-01T00:00:00Z",
+			b: "2026-02-01T00:00:00Z",
+			c: "2026-03-01T00:00:00Z",
+			d: "2026-04-01T00:00:00Z",
+		});
+		expect(pickStalest(G, cached, 1)).toEqual(["a"]);
+		expect(
+			pickStalest(G, cached, 1, null, { a: "2026-09-01T00:00:00Z" }),
+		).toEqual(["b"]);
+	});
+
+	it("three unchanged days in a row keep rotating instead of jamming", () => {
+		const cached = up({
+			a: "2026-01-01T00:00:00Z",
+			b: "2026-01-02T00:00:00Z",
+			c: "2026-01-03T00:00:00Z",
+			d: "2026-01-04T00:00:00Z",
+		});
+		let st = null;
+		const seen = [];
+		for (let day = 1; day <= 4; day++) {
+			const id = pickStalest(G, cached, 1, st && st.deferred, st && st.checked)[0];
+			seen.push(id);
+			st = nextCronState(st, [{ id, ok: true, same: true }], `2026-09-0${day}T00:00:00Z`);
+		}
+		expect(seen).toEqual(["a", "b", "c", "d"]);
+	});
+
+	it("checked never pulls an id forward — only ever pushes it back", () => {
+		const cached = up({
+			a: "2026-05-01T00:00:00Z",
+			b: "2026-01-01T00:00:00Z",
+			c: "2026-06-01T00:00:00Z",
+			d: "2026-07-01T00:00:00Z",
+		});
+		// a 的 checked 比它自己的 uploaded 還舊。取大的之後 a 不該因此變得比 b 更急。
+		expect(
+			pickStalest(G, cached, 1, null, { a: "2026-01-01T00:00:00Z" }),
+		).toEqual(["b"]);
 	});
 });
 
