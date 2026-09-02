@@ -6,6 +6,11 @@ import {
 	todayKey,
 	budgetCap,
 	DEFAULT_BUDGET,
+	KINDS,
+	NO_CONTENT_MARKER,
+	buildRawPrompt,
+	buildGroqNotesPrompt,
+	generateNotesFromRaw,
 } from "../src/lib/insight.js";
 
 const EULA =
@@ -75,6 +80,61 @@ describe("toBullets", () => {
 	it("returns an empty list for empty model output", () => {
 		expect(toBullets("")).toEqual([]);
 		expect(toBullets(null)).toEqual([]);
+	});
+});
+
+describe("buildRawPrompt (issue #9: read-once raw extraction)", () => {
+	const opts = { gid: "aml", page: 5, name: "AML", text: "recurrence score", image: "b64" };
+
+	it("refuses to build without an image — raw extraction only exists for vision pages", () => {
+		expect(() => buildRawPrompt({ ...opts, image: null })).toThrow();
+	});
+
+	it("asks for a full transcription, not a summary, and carries the text extract as a spelling aid", () => {
+		const p = buildRawPrompt(opts);
+		expect(p.head).toContain("完整轉寫");
+		expect(p.label).toContain("recurrence score");
+	});
+
+	it("still asks for a transcription when there is no extracted text to cross-reference", () => {
+		const p = buildRawPrompt({ ...opts, text: "" });
+		expect(p.label).toBe("");
+		expect(p.head).toContain("完整轉寫");
+	});
+});
+
+describe("buildGroqNotesPrompt (issue #9: one call, four formats)", () => {
+	it("carries the raw body and every kind's own instruction into one prompt", () => {
+		const p = buildGroqNotesPrompt("這一頁的完整轉寫內容", "AML", 5);
+		expect(p).toContain("這一頁的完整轉寫內容");
+		for (const k of KINDS) expect(p).toContain(`[${k}]`);
+	});
+
+	it("tells the model to answer only from the supplied raw text", () => {
+		expect(buildGroqNotesPrompt("x", "AML", 1)).toContain("不要用你自己的醫學知識補充");
+	});
+
+	// 實測發現的行為，不是預防性寫作：沒有這句提醒時 gpt-oss-20b 會四種格式全部
+	// 照抄同一份內容交差，完全不理會下面各自的 ASK[] 規則。
+	it("insists the four formats must look visibly different from each other", () => {
+		expect(buildGroqNotesPrompt("x", "AML", 1)).toContain("必須明顯不同");
+	});
+});
+
+describe("generateNotesFromRaw — no-content short-circuit (issue #9)", () => {
+	// 實測發現的邊界：raw 轉寫是「（本頁無臨床內容）」時，硬塞進
+	// buildGroqNotesPrompt 送出去，Groq 會照 SYSTEM 規則老實吐純文字的
+	// 「- （本頁無臨床內容）」，但 response_format=json_object 要求輸出必須是
+	// 合法 JSON，兩者互斥，回 400 json_validate_failed。短路掉這個呼叫，不叫
+	// Groq，用同一句話填四個格式——連 env 都不需要碰，這也是這裡不用 mock
+	// D1／fetch 就能測的原因。
+	it("skips the Groq call entirely and fills all four kinds with the marker", async () => {
+		const out = await generateNotesFromRaw(
+			{},
+			`- ${NO_CONTENT_MARKER}`,
+			{ gid: "aml", page: 1, name: "AML" },
+		);
+		for (const k of KINDS) expect(out.bullets[k]).toEqual([NO_CONTENT_MARKER]);
 	});
 });
 

@@ -10,7 +10,16 @@ name: Update versions & search index
 on:
   schedule:
     - cron: "17 4 * * 1" # Mondays 04:17 UTC (after the daily PDF cron cycles)
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      insights_test_ids:
+        description: "gen_insights.sh: space-separated ids to force-process (skips gen_clean.log), for a small manual test"
+        required: false
+        type: string
+      insights_limit:
+        description: "gen_insights.sh: LIMIT (max vision pages per id), for a small manual test"
+        required: false
+        type: string
 
 jobs:
   versions:
@@ -106,6 +115,23 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
           CLEAN_DIR: ${{ runner.temp }}/clean
         run: bash build_index.sh
+
+      # AI 逐頁重點的批次讀圖（issue #9）：讀圖只做一次（Gemini），存進 page_raw；
+      # 四種格式一次 Groq 呼叫從 raw 轉出。只處理這一輪 gen_clean.sh 真的標記
+      # OK（sha 變了）的 id——見 gen_insights.sh 開頭的註解與 issue #9 的額度試算。
+      # 額度用完是正常結束（exit 0），不是失敗，所以這步不擋後面任何一步。
+      - name: "AI page insights: read once, format via Groq → D1"
+        working-directory: cf
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: "3a77813251d473c40d8873a59f6c0e80"
+          CLEAN_DIR: ${{ runner.temp }}/clean
+          ANTIGRAVITY_API_KEY: ${{ secrets.ANTIGRAVITY_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          CHANGED_IDS: ${{ github.event.inputs.insights_test_ids }}
+          LIMIT: ${{ github.event.inputs.insights_limit }}
+        run: bash gen_insights.sh
 
       - name: Extract Discussion TOC → R2
         working-directory: cf
@@ -226,3 +252,4 @@ jobs:
           tail -3 gen_versions.log || true
           tail -5 build_index.log || true
           tail -3 gen_clean.log || true
+          tail -5 gen_insights.log || true
