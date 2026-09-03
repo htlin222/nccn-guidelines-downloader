@@ -197,6 +197,30 @@ Workflow({ scriptPath: "<repo>/cf/snippets/_workflow-backfill-facets.js",
 - `SELLAR-1` 把「無法手術處理的殘留腫瘤，考慮放療或觀察」寫成「轉介放療」
 
 
+## 一個假的 ref：`survivorship/PH-3A`（已排除，2026-09-03）
+
+不是真的節點。`dump_snippet_src.sh` 在 TOC 沒有條目時會退回頁尾 ref 表
+（掃 `page_text` 每頁最後 260 字找 `[A-Z]{2,}-\d+[A-Z]?` 樣式的字串）。
+survivorship 第 10 頁的原文是「(Also for SPA-4, SPA-A, SPA-C, **SLYMPH-3A**,
+SLYMPH-B)」，但 pdftotext 因為雙欄版面把 `SLYMPH-3A` 從中間切開，變成
+`SLYM` 留在上一段、`PH-3A` 落單在頁尾——regex 抓到的最後一個 match 正是
+這個殘片，於是把它當成一個獨立節點加進待辦。
+
+那一頁本身是「Updates in Version 1.2026」的年度改版清單，不是決策節點，
+就算 ref 是真的也不該生成核對清單——這個專案已經有專門的機制處理「這個版本
+改了什麼」（`build_updates.sh` → `meta/updates/<gid>.json`，viewer 另外
+顯示），重複做一份只是多一套要維護的東西。
+
+處理方式：`rip snippets/_src/survivorship/PH-3A.txt`。todo 是
+`_src 有 - snippets 有`算出來的，刪掉素材檔它就從待辦消失，不需要動
+`snippets_status.sh`。
+
+**這是同一個 bug 家族，不是最後一次。** `SLYMPH-3A` 這種名字裡帶著另一個
+真實 ref 前綴的（`-3A` 前面正好是另一個節點常用的縮寫）都有機會被切錯。
+下次撞到「明明沒有這個節點卻冒出一個 todo」，先查 `page_text` 那一頁的
+頁尾原文，不要急著生成——生成 agent 面對這種素材通常會硬湊出一份看起來
+正常的清單，而 verify 的四關完全擋不住「這一頁根本不該存在」這件事。
+
 ## 還沒做的事
 
 - **人工審閱。** D1 現在 957 份全是 `review=NULL`——都跑過完整流程（生成 + 對抗性
