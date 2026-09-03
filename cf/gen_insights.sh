@@ -53,7 +53,7 @@ fi
 
 export CLEAN_DIR BUCKET DRY_RUN
 python3 - "$DB" "${LIMIT:-0}" <<'PY' 2>&1 | tee -a "$LOG"
-import base64, glob, json, os, re, subprocess, sys, time
+import base64, glob, hashlib, json, os, re, subprocess, sys, time
 db, limit = sys.argv[1], int(sys.argv[2])
 changed_ids = os.environ.get('CHANGED_IDS', '').split()
 gemini_key = os.environ.get('ANTIGRAVITY_API_KEY', '') or os.environ.get('GEMINI_API_KEY', '')
@@ -263,16 +263,46 @@ def classify_gemini_error(status, body):
         return "server"
     return "bad"
 
-def get_or_create_raw(gid, page, name, text_extract, image_b64, day):
-    hit = d1_query(f"SELECT body FROM page_raw WHERE gid = '{esc(gid)}' AND page = {int(page)}")
-    if hit:
-        return hit[0]["body"]
+def page_sha(raw_body):
+    """這一頁的內容指紋，決定既有的 raw 轉寫還算不算數。沒有文字可算就回 None。
+
+    兩個「不是」，兩個都是量出來的：
+
+    不是算在 PDF 位元組上。NCCN 每次下載都即時重產 PDF（新的 /CreationDate、隨機
+    字型 subset 標籤），同一份連抓三次得到三個 sha256——gen_clean.sh 為此把來源
+    sha 那條路整條拔掉了。抽取後的文字不帶這些隨機性（實測：subset 標籤、
+    CreationDate、時間戳都不出現在 pages.body 裡）。
+
+    不是算在 pages.body 上。那一欄是 FTS 用的，build_index.sh 截在 2000 字——
+    651 個讀圖頁裡有 566 頁（86%）撞到上限，第 2000 字之後的改動會完全看不見，
+    等於把要修的 bug 換個位置重演。page_text 是同一輪建出來的未截斷版本（上限
+    12000，實測最長 10181，零頁撞頂），所以指紋算在它上面。
+
+    clean_page_text 已經拿掉「Printed by … <日期>」，所以每週重建不會整表失效。
+    """
+    cleaned = clean_page_text(raw_body)
+    return hashlib.sha256(cleaned.encode()).hexdigest() if cleaned else None
+
+
+def get_or_create_raw(gid, page, name, text_extract, image_b64, day, sha):
+    """回傳 (body, reused)。reused=True 代表這一頁的內容沒變、沿用既有轉寫。
+
+    比對 sha 而不是「有列就算數」：原本只查 (gid, page)，對版本毫無感知，改版後
+    會拿描述舊 PDF 的轉寫去生新 PDF 的筆記，而且靜默成功。sha 是 NULL 的舊列
+    （雜湊機制上線前寫的）一律當成失效重讀——寧可多花一次讀圖，也不要讓一份
+    來歷不明的轉寫繼續當四種格式的唯一資料來源。
+    """
+    hit = d1_query(
+        f"SELECT body, sha FROM page_raw WHERE gid = '{esc(gid)}' AND page = {int(page)}"
+    )
+    if sha and hit and hit[0].get("sha") and hit[0]["sha"] == sha:
+        return hit[0]["body"], True
 
     state = gemini_state(day)
     now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     models = pick_models(state, now_iso)
     if not models:
-        return None  # 今日 Gemini 額度整條用完——訊號給呼叫端停手
+        return None, False  # 今日 Gemini 額度整條用完——訊號給呼叫端停手
 
     head = (
         f"資料來源：NCCN Guidelines《{name or gid}》第 {page} 頁。\n\n" + RAW_ASK +
@@ -287,17 +317,18 @@ def get_or_create_raw(gid, page, name, text_extract, image_b64, day):
             body = (r["text"] or "").strip()
             if body:
                 d1_exec(
-                    f"INSERT INTO page_raw(gid, page, body, model, created) VALUES("
-                    f"'{esc(gid)}',{int(page)},'{esc(body)}','{esc(m['id'])}','{esc(time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()))}') "
-                    f"ON CONFLICT(gid, page) DO UPDATE SET body=excluded.body, model=excluded.model, created=excluded.created"
+                    f"INSERT INTO page_raw(gid, page, body, model, created, sha) VALUES("
+                    f"'{esc(gid)}',{int(page)},'{esc(body)}','{esc(m['id'])}','{esc(time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()))}',{sql_str_or_null(sha)}) "
+                    f"ON CONFLICT(gid, page) DO UPDATE SET body=excluded.body, model=excluded.model, "
+                    f"created=excluded.created, sha=excluded.sha"
                 )
-                return body
+                return body, False
             print(f"  {m['id']} 沒有回傳可用內容（{r['finish']}）")
             continue
         kind = classify_gemini_error(r["status"], r["body"])
         if kind == "auth":
             print("  Antigravity 金鑰被拒:", r["body"])
-            return None
+            return None, False
         if kind in ("day", "gone"):
             bump_gemini(day, m["id"], "exhaust")
             continue
@@ -306,7 +337,7 @@ def get_or_create_raw(gid, page, name, text_extract, image_b64, day):
             bump_gemini(day, m["id"], "used", cool)
             continue
         print(f"  {m['id']} 失敗（{r['status']}）")
-    return None
+    return None, False
 
 # ---- Groq：raw → 四種格式 ----
 ASK = {
@@ -401,6 +432,14 @@ def write_notes(gid, page, model, notes_by_kind):
         wrote += 1
     return wrote > 0
 
+def has_all_notes(gid, page):
+    rows = d1_query(
+        f"SELECT COUNT(*) n FROM insights WHERE gid = '{esc(gid)}' AND page = {int(page)} "
+        f"AND kind IN ('key','hy','phrase','sdm')"
+    )
+    return bool(rows) and rows[0].get("n", 0) >= len(KINDS)
+
+
 def generate_notes(gid, page, name, raw_body, day):
     # raw 轉寫本身就說「這頁沒有臨床內容」——直接用同一句話填四個格式，不叫
     # Groq。實測發現的邊界：這種頁面送進去，Groq 會照 NOTES_SYSTEM 的規則老實
@@ -478,6 +517,7 @@ dry_run = os.environ.get("DRY_RUN") == "1"
 ok = 0
 raw_done = 0
 notes_done = 0
+reused_notes = 0
 skipped_quota = False
 
 for gi, gid in enumerate(changed_ids, 1):
@@ -492,6 +532,12 @@ for gi, gid in enumerate(changed_ids, 1):
 
     rows = d1_query(f"SELECT page, body FROM pages WHERE gid = '{esc(gid)}' ORDER BY page")
     vision_pages = [r for r in rows if needs_vision(r.get("body", ""))]
+    # 指紋算在 page_text（未截斷）上，needs_vision 與提示詞照舊用 pages（截斷版）。
+    # 拿不到 page_text 的頁指紋為 None，一律當失效重讀——見 page_sha() 的說明。
+    full_text = {
+        r["page"]: r.get("body", "")
+        for r in d1_query(f"SELECT page, body FROM page_text WHERE gid = '{esc(gid)}'")
+    }
     if limit > 0:
         vision_pages = vision_pages[:limit]
     print(f"[{gi}/{len(changed_ids)}] {gid}: {len(vision_pages)} vision pages")
@@ -501,6 +547,7 @@ for gi, gid in enumerate(changed_ids, 1):
 
     for r in vision_pages:
         page = r["page"]
+        sha = page_sha(full_text.get(page, ""))
         text_extract = clean_page_text(r.get("body", ""))[:4000]
 
         # pdftoppm 產出的檔名會依「整份文件總頁數」的位數 zero-pad（例如 34 頁的
@@ -527,12 +574,20 @@ for gi, gid in enumerate(changed_ids, 1):
             ok += 1
             continue
 
-        raw = get_or_create_raw(gid, page, name, text_extract, image_b64, day)
+        raw, reused = get_or_create_raw(gid, page, name, text_extract, image_b64, day, sha)
         if raw is None:
             print(f"  {gid} p{page}: Gemini 今日額度用完，停手（下次接著做）")
             skipped_quota = True
             break
         raw_done += 1
+
+        # 內容沒變、四種格式也都在了，就不重跑 Groq。一份 guideline 改版時通常只有
+        # 少數幾頁真的動到，其餘整份重生成除了燒額度，還會把既有的筆記換成新的一版
+        # ——包括人工產生、品質比 Groq 好的那些。
+        if reused and has_all_notes(gid, page):
+            reused_notes += 1
+            ok += 1
+            continue
 
         wrote = generate_notes(gid, page, name, raw, day)
         if wrote is None:
@@ -544,5 +599,5 @@ for gi, gid in enumerate(changed_ids, 1):
             ok += 1
     os.remove(pdf) if os.path.exists(pdf) else None
 
-print(f"DONE raw={raw_done} notes={notes_done} ok={ok} paused_on_quota={skipped_quota}")
+print(f"DONE raw={raw_done} notes={notes_done} unchanged={reused_notes} ok={ok} paused_on_quota={skipped_quota}")
 PY

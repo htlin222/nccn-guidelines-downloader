@@ -1,0 +1,27 @@
+-- page_raw 加上內容雜湊，讓 raw 轉寫能在頁面改版時失效。
+--
+-- 為什麼要分成獨立一支：insights_raw.sql 是 CREATE TABLE IF NOT EXISTS，對已經
+-- 建好的資料庫不會再跑，所以欄位異動必須另外送。這支只能跑一次（D1 沒有
+-- ADD COLUMN IF NOT EXISTS，重跑會以 duplicate column name 失敗——那是預期的，
+-- 不是出事）。
+--
+-- 修的是什麼：get_or_create_raw() 原本只查 (gid, page)，有列就直接回傳，對版本
+-- 毫無感知。這張表長期幾乎是空的，所以缺陷一直沒浮現；2026-09-03 手動灌進 922 頁
+-- 之後，任何一份 guideline 改版都會讓下一次 weekly rebuild 拿「描述舊 PDF 的
+-- 轉寫」去生新 PDF 的筆記，而且靜默成功。
+--
+-- sha 存的是 sha256(cleanPageText(page_text.body))。兩個刻意的「不是」：
+--
+--   不是頁面圖片的雜湊。批次用 pdftoppm -scale-to-x 1100 產圖，Worker 用瀏覽器的
+--   pdf.js 產圖，同一頁的 bytes 不同——兩邊共用這張表，會互相把對方寫的 raw 判成
+--   失效、無限來回重讀。（也不是 PDF 位元組：NCCN 每次下載都即時重產，同一份連抓
+--   三次三個 sha256，gen_clean.sh 為此把來源 sha 那條路整條拔掉了。）
+--
+--   不是 pages.body。那一欄是 FTS 用的，build_index.sh 截在 2000 字——651 個讀圖頁
+--   有 566 頁（86%）撞到上限，第 2000 字之後的改動會完全看不見，等於把這支要修的
+--   bug 換個位置重演。page_text 是同一輪建出來的未截斷版本（上限 12000，實測最長
+--   10181，零頁撞頂）。
+--
+-- cleanPageText 已經把「Printed by … <日期>」去掉，所以每週重建不會因為列印日期
+-- 改變而全表失效。
+ALTER TABLE page_raw ADD COLUMN sha TEXT;

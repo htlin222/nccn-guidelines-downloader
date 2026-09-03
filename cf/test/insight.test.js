@@ -11,6 +11,7 @@ import {
 	buildRawPrompt,
 	buildGroqNotesPrompt,
 	generateNotesFromRaw,
+	pageSha,
 } from "../src/lib/insight.js";
 
 const EULA =
@@ -84,7 +85,13 @@ describe("toBullets", () => {
 });
 
 describe("buildRawPrompt (issue #9: read-once raw extraction)", () => {
-	const opts = { gid: "aml", page: 5, name: "AML", text: "recurrence score", image: "b64" };
+	const opts = {
+		gid: "aml",
+		page: 5,
+		name: "AML",
+		text: "recurrence score",
+		image: "b64",
+	};
 
 	it("refuses to build without an image — raw extraction only exists for vision pages", () => {
 		expect(() => buildRawPrompt({ ...opts, image: null })).toThrow();
@@ -111,7 +118,9 @@ describe("buildGroqNotesPrompt (issue #9: one call, four formats)", () => {
 	});
 
 	it("tells the model to answer only from the supplied raw text", () => {
-		expect(buildGroqNotesPrompt("x", "AML", 1)).toContain("不要用你自己的醫學知識補充");
+		expect(buildGroqNotesPrompt("x", "AML", 1)).toContain(
+			"不要用你自己的醫學知識補充",
+		);
 	});
 
 	// 實測發現的行為，不是預防性寫作：沒有這句提醒時 gpt-oss-20b 會四種格式全部
@@ -129,11 +138,11 @@ describe("generateNotesFromRaw — no-content short-circuit (issue #9)", () => {
 	// Groq，用同一句話填四個格式——連 env 都不需要碰，這也是這裡不用 mock
 	// D1／fetch 就能測的原因。
 	it("skips the Groq call entirely and fills all four kinds with the marker", async () => {
-		const out = await generateNotesFromRaw(
-			{},
-			`- ${NO_CONTENT_MARKER}`,
-			{ gid: "aml", page: 1, name: "AML" },
-		);
+		const out = await generateNotesFromRaw({}, `- ${NO_CONTENT_MARKER}`, {
+			gid: "aml",
+			page: 1,
+			name: "AML",
+		});
 		for (const k of KINDS) expect(out.bullets[k]).toEqual([NO_CONTENT_MARKER]);
 	});
 });
@@ -147,5 +156,53 @@ describe("quota helpers", () => {
 		expect(budgetCap({ AI_DAILY_NEURONS: "500" })).toBe(500);
 		expect(budgetCap({})).toBe(DEFAULT_BUDGET);
 		expect(budgetCap({ AI_DAILY_NEURONS: "nope" })).toBe(DEFAULT_BUDGET);
+	});
+});
+
+// page_raw 的失效判準。這組測試守的是「兩個實作不能漂移」：gen_insights.sh 的
+// page_sha() 用 Python hashlib 算同一個值，任何一邊改了演算法，改版偵測就會全表
+// 誤判——而且是靜默的（不是 raw 全部失效重讀燒光額度，就是舊轉寫繼續被當成有效）。
+describe("pageSha", () => {
+	it("matches sha256 of the cleaned text (契約：與 gen_insights.sh 的 Python 實作同值)", async () => {
+		// 期望值由規格導出——「cleanPageText 之後的 UTF-8 位元組的 sha256」——
+		// 用 Python hashlib 這個獨立實作算出來的，不是把這裡的輸出抄回來。
+		await expect(
+			pageSha("Adjuvant chemotherapy with trastuzumab (category 1)."),
+		).resolves.toBe(
+			"7274d1737c5be5d64c2078d61568faa913559d3f8490d5b55e47eaebc98f154b",
+		);
+	});
+
+	it("ignores the printed-by date, so a weekly rebuild does not invalidate every page", async () => {
+		const monday = "Printed by Hsiehting Lin on 7/23/2026 2:01:13 PM. ";
+		const nextWeek = "Printed by Hsiehting Lin on 7/30/2026 9:14:02 AM. ";
+		const body = "Adjuvant endocrine therapy ± ovarian suppression/ablation.";
+		expect(await pageSha(monday + body)).toBe(await pageSha(nextWeek + body));
+	});
+
+	it("ignores the EULA / copyright boilerplate", async () => {
+		const body =
+			"pT1c–pT3 (>1 cm): adjuvant chemotherapy with trastuzumab (category 1).";
+		expect(await pageSha(EULA + body)).toBe(await pageSha(body));
+	});
+
+	it("changes when the page's clinical content changes", async () => {
+		const before = await pageSha(ALGO);
+		const after = await pageSha(
+			ALGO + " Footnote qq added: consider ribociclib.",
+		);
+		expect(after).not.toBe(before);
+	});
+
+	it("is stable across calls", async () => {
+		expect(await pageSha(PROSE)).toBe(await pageSha(PROSE));
+	});
+
+	// 沒有文字可算時回 null，呼叫端據此把該頁判成失效重讀。回一個「空字串的
+	// sha256」會更糟：所有抽不到字的頁共用同一個指紋，於是彼此看起來都「沒變」。
+	it("returns null when there is no text to fingerprint", async () => {
+		expect(await pageSha("")).toBeNull();
+		expect(await pageSha(null)).toBeNull();
+		expect(await pageSha(EULA)).toBeNull(); // 只剩樣板 → 等於沒內容
 	});
 });

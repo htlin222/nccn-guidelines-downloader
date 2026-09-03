@@ -86,7 +86,7 @@ wrangler kv key get cookie_meta --binding NCCN_KV --remote
 
 ## 2. One-time D1 migrations
 
-Six SQL files, deliberately separate. Run each **once**:
+Seven SQL files, deliberately separate. Run each **once**:
 
 ```bash
 cd cf && set -a && . ../.env && set +a
@@ -96,7 +96,15 @@ wrangler d1 execute nccn-search --remote --file=sql/insights_raw.sql # raw visio
 wrangler d1 execute nccn-search --remote --file=sql/marks.sql        # bookmarks + stars
 wrangler d1 execute nccn-search --remote --file=sql/notify.sql       # notification centre
 wrangler d1 execute nccn-search --remote --file=sql/api.sql          # API keys + page_text
+wrangler d1 execute nccn-search --remote --file=sql/insights_raw_sha.sql  # page_raw.sha — only on a DB created before 2026-09
 ```
+
+`insights_raw_sha.sql` is the odd one out: an `ALTER TABLE`, not a
+`CREATE TABLE IF NOT EXISTS`. `insights_raw.sql` already declares `sha` for a
+fresh database, so this file exists **only** to add the column to a database that
+predates it — and it is not idempotent (D1 has no `ADD COLUMN IF NOT EXISTS`;
+re-running fails with `duplicate column name`, which is the expected outcome, not
+a breakage).
 
 `schema.sql` starts with `DROP TABLE IF EXISTS pages` — it is the search index's
 own schema and gets re-derived on every rebuild. The other four are
@@ -245,6 +253,42 @@ Order matters; each step is a script in `cf/`:
    Groq's daily budget before each call and stops cleanly (not a failure) when
    either is spent, picking up where it left off next run. `continue-on-error:
    true` — a broken run here must never block TOC/updates/verify.
+
+   **`page_raw` is keyed on content, not just `(gid, page)`.** Each row stores
+   `sha = sha256(cleanPageText(page_text.body))`, and a cached transcription is
+   reused only when that hash still matches; a `NULL` or unobtainable sha counts as
+   stale. Without it, `get_or_create_raw` had no version awareness at all — after a
+   guideline shipped a new version it would hand the *previous* version's
+   transcription to Groq and silently succeed, since that transcription is the sole
+   source for all four formats. The table sat nearly empty for a year, so the defect
+   never surfaced until 922 pages were loaded into it in September 2026.
+
+   Two deliberate negatives, both measured:
+
+   - **Not the PDF bytes, and not the page image.** NCCN regenerates the PDF on
+     every download, so byte hashes never match (§the `gen_clean.sh` note below).
+     A *page image* hash fails differently: the batch rasterizes with
+     `pdftoppm -scale-to-x 1100`, the Worker with the browser's pdf.js, so the same
+     page yields different bytes on each side — and both write to this one table,
+     so they would endlessly invalidate each other's work. Extracted text carries
+     none of that per-download randomness (checked: no font subset tags, no
+     `CreationDate`, no timestamps reach `pages.body`).
+   - **Not `pages.body`.** That column is the FTS body, truncated to 2000 chars by
+     `build_index.sh` — **566 of 651 vision pages (86%) sit at that cap**, so any
+     edit past character 2000 would be invisible and this fix would just relocate
+     the bug. `page_text` is the untruncated body built in the same pass (cap
+     12000; longest observed 10181, nothing at the cap).
+
+   `cleanPageText` already strips the `Printed by … <date>` line, so a weekly
+   rebuild does not invalidate everything. `test/insight.test.js` pins the JS hash
+   to a known answer derived from the spec — computed with an independent
+   implementation, not copied from this one — so the two cannot drift apart.
+
+   A page whose hash still matches **and** that already has all four `insights`
+   rows skips the Groq call entirely (reported as `unchanged=N`). A version bump
+   usually touches only a few pages; regenerating the rest would burn the daily
+   budget and overwrite existing notes — including hand-made ones — with a fresh
+   `gpt-oss-20b` pass.
 6. `build_toc.sh` → `meta/toc/<id>.json`
 7. `build_updates.sh` → `meta/updates/<id>.json` (what changed in this version)
 8. **Verify the result** — index row count, `page_text` row count matching it, and

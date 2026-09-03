@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS page_raw (
   body    TEXT    NOT NULL,   -- 這一頁的完整轉寫（不是摘要），下游四種格式的唯一資料來源
   model   TEXT,               -- 產生這份轉寫的模型（Gemini ladder 的某一階，或 CF 掉線時的 fallback）
   created TEXT,
+  sha     TEXT,               -- sha256(cleanPageText(page_text.body))：頁面改版時讓這份轉寫失效，見 insights_raw_sha.sql
   PRIMARY KEY (gid, page)
 );
 

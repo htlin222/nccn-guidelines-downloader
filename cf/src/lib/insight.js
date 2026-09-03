@@ -343,27 +343,61 @@ export async function readCache(env, gid, page, kind) {
 	}
 }
 
+/**
+ * 這一頁的內容指紋，決定既有的 raw 轉寫還算不算數。沒有文字可算就回 null。
+ * gen_insights.sh 的 page_sha() 必須算出同一個值（test/insight.test.js 用一個由
+ * 規格導出的已知答案釘住兩邊）。
+ *
+ * 兩個「不是」，兩個都是量出來的：不是算在 PDF 位元組上（NCCN 每次下載都即時重產，
+ * 同一份連抓三次三個 sha256——gen_clean.sh 為此把來源 sha 那條路整條拔掉了），
+ * 也不是算在 `pages.body` 上（那是 FTS 用的截斷版，651 個讀圖頁有 566 頁撞到
+ * 2000 字上限，之後的改動會完全看不見）。指紋算在 `page_text` 的未截斷文字上。
+ * cleanPageText 已經拿掉「Printed by … <日期>」，所以每週重建不會整表失效。
+ */
+export async function pageSha(text) {
+	const cleaned = cleanPageText(text);
+	if (!cleaned) return null;
+	const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(cleaned));
+	return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** 指紋用的未截斷全文（`page_text`）。`pageText` 讀的是 FTS 那份截斷版，用途不同。 */
+export async function pageFullText(env, gid, page) {
+	try {
+		const row = await env.DB.prepare(
+			"SELECT body FROM page_text WHERE gid = ? AND page = ? LIMIT 1",
+		)
+			.bind(gid, page)
+			.first();
+		return row?.body || "";
+	} catch (e) {
+		return "";
+	}
+}
+
 /** 這一頁的 raw 轉寫（issue #9）。gen_insights.sh 跟這裡的 getOrCreateRaw 共用同一張表。 */
 export async function readRaw(env, gid, page) {
 	try {
 		const row = await env.DB.prepare(
-			"SELECT body, model, created FROM page_raw WHERE gid = ? AND page = ?",
+			"SELECT body, model, created, sha FROM page_raw WHERE gid = ? AND page = ?",
 		)
 			.bind(gid, page)
 			.first();
-		return row ? { body: row.body, model: row.model, created: row.created } : null;
+		return row
+			? { body: row.body, model: row.model, created: row.created, sha: row.sha }
+			: null;
 	} catch (e) {
 		return null;
 	}
 }
 
-async function writeRaw(env, gid, page, body, model) {
+async function writeRaw(env, gid, page, body, model, sha) {
 	await env.DB.prepare(
-		"INSERT INTO page_raw(gid, page, body, model, created) VALUES(?,?,?,?,?) " +
+		"INSERT INTO page_raw(gid, page, body, model, created, sha) VALUES(?,?,?,?,?,?) " +
 			"ON CONFLICT(gid, page) DO UPDATE SET body = excluded.body, model = excluded.model, " +
-			"created = excluded.created",
+			"created = excluded.created, sha = excluded.sha",
 	)
-		.bind(gid, page, body, model, new Date().toISOString())
+		.bind(gid, page, body, model, new Date().toISOString(), sha)
 		.run();
 }
 
@@ -621,10 +655,16 @@ export async function generateRawCF(env, p) {
  * 這一頁的 raw 轉寫：快取命中就直接回傳，沒有就讀圖產一份存起來。
  * Gemini 階梯用完（或沒設金鑰）就掉回 Workers AI；兩邊都不成就丟出去，
  * 讓呼叫端（generateAndCache 的 vision 分支）接住並退回舊的直接讀圖路徑。
+ *
+ * 命中的條件是 sha 相符，不是「有列就算數」。原本只查 (gid, page)、對版本毫無
+ * 感知，改版後會拿描述舊 PDF 的轉寫去生新 PDF 的筆記，而且靜默成功。sha 是 NULL
+ * 的舊列一律當失效重讀——寧可多讀一次圖，也不要讓來歷不明的轉寫繼續當四種格式
+ * 唯一的資料來源。
  */
 export async function getOrCreateRaw(env, { gid, page, name, text, image }, notes) {
+	const sha = await pageSha(await pageFullText(env, gid, page));
 	const hit = await readRaw(env, gid, page);
-	if (hit) return hit;
+	if (sha && hit && hit.sha && hit.sha === sha) return hit;
 
 	const p = buildRawPrompt({ gid, page, name, text, image });
 	let out = await generateRawAG(env, p, notes);
@@ -643,8 +683,8 @@ export async function getOrCreateRaw(env, { gid, page, name, text, image }, note
 		await addUsage(env, usage.day, cf.neurons);
 		out = cf;
 	}
-	await writeRaw(env, gid, page, out.body, out.model);
-	return { body: out.body, model: out.model, created: new Date().toISOString() };
+	await writeRaw(env, gid, page, out.body, out.model, sha);
+	return { body: out.body, model: out.model, created: new Date().toISOString(), sha };
 }
 
 // ---------------------------------------------------------------- Groq：raw → 四種格式（issue #9）
