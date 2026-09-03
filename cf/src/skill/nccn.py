@@ -11,6 +11,7 @@
     python3 nccn.py pdf <id>     下載（或沿用快取）並印出本地路徑
     python3 nccn.py ls           列出目前快取了哪些
     python3 nccn.py clean [id]   清掉快取（不給 id 就全清）
+    python3 nccn.py whoami       印出這份 skill 綁的 email 與遮蔽過的金鑰
 """
 
 import json
@@ -37,9 +38,12 @@ def env():
                 conf[k.strip()] = v.strip().strip("'\"")
     key = os.environ.get("NCCN_API_KEY") or conf.get("NCCN_API_KEY")
     base = os.environ.get("NCCN_API_BASE") or conf.get("NCCN_API_BASE")
+    # 綁 email 的金鑰要配上它自己的 email 才驗得過（伺服器端把 email 綁進 HMAC）。
+    # 舊的隨機金鑰沒有這一行，那時候多送一個標頭也無妨，所以不分兩條路。
+    email = os.environ.get("NCCN_USER_EMAIL") or conf.get("NCCN_USER_EMAIL") or ""
     if not key or not base:
         die("找不到 NCCN_API_KEY / NCCN_API_BASE，請確認 skill 目錄下有 .env")
-    return key, base.rstrip("/")
+    return key, base.rstrip("/"), email
 
 
 def die(msg, code=1):
@@ -54,10 +58,11 @@ def die(msg, code=1):
 UA = "nccn-skill/1.0 (+https://nccn.hsiehting.com)"
 
 
-def fetch(url, key, binary=False):
-    req = urllib.request.Request(
-        url, headers={"Authorization": "Bearer " + key, "User-Agent": UA}
-    )
+def fetch(url, key, binary=False, email=""):
+    headers = {"Authorization": "Bearer " + key, "User-Agent": UA}
+    if email:
+        headers["X-User-Email"] = email
+    req = urllib.request.Request(url, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=120) as res:
             return res.read() if binary else json.load(res)
@@ -72,28 +77,36 @@ def fetch(url, key, binary=False):
         die("連不上 %s：%s" % (url, e.reason))
 
 
-def version_of(gid, key, base):
+def version_of(gid, key, base, email):
     """回傳這份指引目前的版本字串；查不到就回空字串（當成 always-stale）。"""
-    for g in fetch(base + "/catalogue", key).get("guidelines", []):
+    for g in fetch(base + "/catalogue", key, email=email).get("guidelines", []):
         if g.get("id") == gid:
             return g.get("version") or ""
     die("不認得的 guideline id：%s（先打 /catalogue 看有哪些）" % gid)
 
 
+def cmd_whoami():
+    key, base, email = env()
+    # 金鑰只印前後各幾碼。這支的輸出會進 Claude 的 context，完整金鑰不該出現在那裡。
+    print("email : %s" % (email or "（這份是舊格式的隨機金鑰，沒有綁 email）"))
+    print("key   : %s…%s" % (key[:12], key[-4:]))
+    print("base  : %s" % base)
+
+
 def cmd_pdf(gid):
-    key, base = env()
+    key, base, email = env()
     os.makedirs(CACHE, exist_ok=True)
     pdf = os.path.join(CACHE, gid + ".pdf")
     stamp = os.path.join(CACHE, gid + ".version")
 
-    want = version_of(gid, key, base)
+    want = version_of(gid, key, base, email)
     have = ""
     if os.path.exists(stamp):
         with open(stamp, encoding="utf-8") as fh:
             have = fh.read().strip()
 
     if not (os.path.exists(pdf) and have == want and want):
-        data = fetch(base + "/pdf/" + gid, key, binary=True)
+        data = fetch(base + "/pdf/" + gid, key, binary=True, email=email)
         # 先寫暫存再改名：中途斷線不會留下半份 PDF 被下次當成有效快取。
         with open(pdf + ".part", "wb") as fh:
             fh.write(data)
@@ -141,6 +154,8 @@ def main():
         cmd_ls()
     elif cmd == "clean":
         cmd_clean(rest[0] if rest else None)
+    elif cmd == "whoami":
+        cmd_whoami()
     else:
         die(__doc__)
 

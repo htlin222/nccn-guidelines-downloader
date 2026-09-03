@@ -46,17 +46,33 @@ import {
 	markRead,
 } from "./lib/notify.js";
 import { API_PREFIX, handleApi } from "./lib/api.js";
-import { listKeys, mintKey, revokeKey } from "./lib/apikey.js";
+import {
+	listKeys,
+	mintKey,
+	revokeKey,
+	rotateUserKey,
+	userKey,
+} from "./lib/apikey.js";
 import { SKILL_FILENAME, buildSkillZip } from "./lib/skillpack.js";
 import { renderPage } from "./views/home.js";
 import { renderNotes } from "./views/notes.js";
-import { buildSearch, parseQuery, rankRows } from "./lib/notes.js";
+import { readSnippet, searchSnippets } from "./lib/notes.js";
 import { remember } from "./lib/cache.js";
 // hashKey 就是 sha256 十六進位，名字是金鑰用途留下的。這裡借它算生成內容的
 // 指紋，不值得為了名字再抄一份同樣的 crypto.subtle.digest。
 import { hashKey as sha256 } from "./lib/apikey.js";
 import { renderViewer } from "./views/viewer.js";
 import { faviconResponse, manifestResponse, SW_JS } from "./views/static.js";
+
+// Cloudflare Access 驗過的身分。只有在 Access 後面的路徑讀得到——/api/v1 走 Bypass，
+// 那邊這個標頭一定是空的，身分改由金鑰本身承載（見 lib/apikey.js 的衍生金鑰）。
+function accessEmail(request) {
+	return String(
+		request.headers.get("cf-access-authenticated-user-email") || "",
+	)
+		.trim()
+		.toLowerCase();
+}
 
 export default {
 	async scheduled(event, env, ctx) {
@@ -112,60 +128,7 @@ export default {
 		if (pathname === "/api/notes") {
 			const q = url.searchParams.get("q") || "";
 			try {
-				// 別名表原本每次現讀 D1，理由是「改了字典卻沒反應」比省一次查詢重要。
-				// 現在改成走 KV，而那個理由沒有被犧牲：key 帶 notes:gen 世代號，
-				// load_snippets.sh 每次載完就改寫它，所以改字典仍然一跑就生效。
-				// 省下來的是每一次搜尋都要付的一趟 D1 往返。
-				const alias = JSON.parse(
-					await remember(
-						env,
-						ctx,
-						"alias",
-						"",
-						async () => {
-							const al = await env.DB.prepare(
-								"SELECT axis, alias, value FROM facet_alias",
-							).all();
-							const m = {};
-							for (const r of al.results || []) {
-								(m[r.axis] = m[r.axis] || {})[r.alias] = r.value;
-							}
-							return m;
-						},
-						"notes",
-					),
-				);
-				const parsed = parseQuery(q, alias);
-				// 查詢結果也進 KV，key 用解析後的 facet + 文字而不是原始字串：
-				// 「乳癌 三期」與「三期 乳癌」是同一個查詢，不該各佔一份。
-				const ckey =
-					parsed.facets
-						.map((f) => f.axis + "=" + f.value)
-						.sort()
-						.join("&") +
-					"|" +
-					[...parsed.text].sort().join(" ");
-				const body = await remember(
-					env,
-					ctx,
-					"q",
-					ckey,
-					async () => {
-						const { sql, binds } = buildSearch(parsed, 80);
-						const res = await env.DB.prepare(sql)
-							.bind(...binds)
-							.all();
-						// 空結果照樣快取——那是個正當答案。只有下面 catch 到的錯誤不快取。
-						return { rows: rankRows(res.results || []) };
-					},
-					"notes",
-				);
-				const out = JSON.parse(body);
-				return json({
-					rows: out.rows,
-					facets: parsed.facets,
-					text: parsed.text,
-				});
+				return json(await searchSnippets(env, ctx, q, 80));
 			} catch (e) {
 				return json({ rows: [], error: String(e && e.message) }, 500);
 			}
@@ -183,8 +146,7 @@ export default {
 			const r = decodeURIComponent(ref);
 
 			if (request.method === "PUT" || request.method === "DELETE") {
-				const who =
-					request.headers.get("cf-access-authenticated-user-email") || "";
+				const who = accessEmail(request);
 				try {
 					const row = await env.DB.prepare(
 						"SELECT body FROM snippets WHERE gid=? AND ref=?",
@@ -235,51 +197,8 @@ export default {
 			}
 
 			try {
-				// 只有生成內容進 KV，使用者的修改每次從 D1 讀。
-				//
-				// 這是踩過才改的：原本整包（含修改）一起快取，PUT 之後再刪那個 KV
-				// key。看起來嚴密，實際上存完馬上重讀還是拿到舊的——remember() 用
-				// cacheTtl 3600 讀 KV，而 KV 有自己的邊緣快取又是最終一致，
-				// 「這個 key 刪掉了」是照 KV 的時程生效，不是照我的。
-				// §5.6 的撤銷金鑰是同一個坑的另一個版本。
-				//
-				// 所以分法是：生成內容一週才變一次，快取它；修改是使用者剛剛按下
-				// 儲存的東西，必須讀得到自己寫的。多的那一趟 D1 是主鍵查詢
-				// （rows_read=1），而且一次點擊才一趟，不像搜尋是每次打字都跑。
-				const base = await remember(
-					env,
-					ctx,
-					"s",
-					g + "/" + r,
-					async () => {
-						// loader 回 null 代表這份不存在，remember 就不會把 404 釘住 30 天。
-						const row = await env.DB.prepare(
-							"SELECT gid, ref, title, body, page, version, review FROM snippets WHERE gid=? AND ref=?",
-						)
-							.bind(g, r)
-							.first();
-						return row || null;
-					},
-					"notes",
-				);
-				if (!base) return json({ error: "not found" }, 404);
-
-				const row = JSON.parse(base);
-				const ed = await env.DB.prepare(
-					"SELECT body, base_hash, editor, updated FROM snippet_edits WHERE gid=? AND ref=?",
-				)
-					.bind(g, r)
-					.first();
-				if (ed) {
-					row.generated = row.body;
-					row.body = ed.body;
-					row.edited = { editor: ed.editor, updated: ed.updated };
-					// base 對不上代表這份修改是針對舊版寫的——之後重新生成過了。
-					// 讀的人該知道，不然一份舊修改會安靜地擋住新版內容。
-					row.stale = ed.base_hash
-						? ed.base_hash !== (await sha256(row.generated))
-						: false;
-				}
+				const row = await readSnippet(env, ctx, g, r);
+				if (!row) return json({ error: "not found" }, 404);
 				return json(row);
 			} catch (e) {
 				return json({ error: String(e && e.message) }, 500);
@@ -353,7 +272,32 @@ export default {
 			return json(out, out.ok ? 200 : 404);
 		}
 
-		// 鑄一把新金鑰、當場烤進 zip 回傳。瀏覽器會直接存成 nccn.skill。
+		// 綁 email 的那把金鑰（issue #11）。email 來自 Access 驗過的標頭，不是使用者
+		// 自報的——這條路徑在 Access 後面，所以那個標頭可信。
+		//
+		// 一個人只有一把：它是 HMAC(secret, email:version) 的產物，不是一列資料。
+		// 所以沒有「列出我的金鑰」這回事，只有「現在是哪一把」與「換一把」。
+		if (pathname === "/api/keys/me") {
+			const who = accessEmail(request);
+			if (!who) return json({ ok: false, error: "沒有 Access 身分" }, 403);
+			if (!env.API_KEY_SECRET)
+				return json({ ok: false, error: "API_KEY_SECRET 沒設" }, 503);
+			try {
+				if (request.method === "POST")
+					// 輪替。之前發出去的每一份 .skill 立刻失效。
+					return json({ ok: true, ...(await rotateUserKey(env, who)) });
+				if (request.method === "GET")
+					return json({ ok: true, ...(await userKey(env, who)) });
+				return json({ ok: false, error: "只接受 GET / POST" }, 405);
+			} catch (e) {
+				return json({ ok: false, error: String(e.message || e) }, 500);
+			}
+		}
+
+		// 打包 skill。有 Access 身分且 API_KEY_SECRET 設好，就烤那個人的衍生金鑰
+		// （不新增任何一列，重複下載拿到的是同一把）；否則退回舊的「每次鑄一把新的
+		// 隨機金鑰」。退路留著是因為金鑰模型是這次才換的：設定漏了一步時該退化成舊
+		// 行為，而不是讓下載按鈕整個壞掉。
 		if (pathname === "/api/skill.zip" && request.method === "GET") {
 			const label =
 				(url.searchParams.get("label") || "").trim() || "Claude Code";
@@ -361,6 +305,7 @@ export default {
 				const { bytes, prefix } = await buildSkillZip(env, {
 					label,
 					origin: url.origin,
+					email: accessEmail(request),
 				});
 				return new Response(bytes, {
 					headers: {

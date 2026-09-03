@@ -14,7 +14,9 @@ import { CATALOG, NAME_BY_ID, SOURCES, VALID_IDS } from "../data/catalog.js";
 import { remember } from "./cache.js";
 import { parseBearer, verifyKey } from "./apikey.js";
 import { servePdf } from "./pdf.js";
-import { listInsights } from "./insight.js";
+import { KINDS, listInsights } from "./insight.js";
+import { listBookmarks, listStars } from "./marks.js";
+import { readSnippet, searchSnippets } from "./notes.js";
 import { buildMatch, queryTerms } from "./search.js";
 
 export const API_PREFIX = "/api/v1/";
@@ -109,7 +111,11 @@ export async function handleApi(request, env, ctx, url) {
 
 	const key = parseBearer(request.headers.get("authorization"));
 	if (!key) return fail(401, "缺少 Authorization: Bearer <key>");
-	const auth = await verifyKey(env, key, ctx);
+	// 綁 email 的金鑰要配 X-User-Email 才驗得過（issue #11）。這個 email 是呼叫端
+	// 自報的，但它被綁進 HMAC，所以報別人的只會算出對不上的雜湊。舊的隨機金鑰不看
+	// 這個標頭。
+	const email = request.headers.get("x-user-email");
+	const auth = await verifyKey(env, key, ctx, email);
 	if (!auth.ok) return fail(401, "金鑰無效或已撤銷，請到站上重新產生 skill");
 
 	// 驗過才輪到快取。cache key 不帶 token，所有金鑰共用同一份。
@@ -129,7 +135,7 @@ async function route(request, env, ctx, url) {
 	const rest = url.pathname.slice(API_PREFIX.length);
 	const [head, tail] = [rest.split("/")[0], rest.split("/").slice(1).join("/")];
 	const gid = decodeURIComponent(tail || url.searchParams.get("id") || "");
-	const needsId = ["toc", "updates", "page", "section", "pdf", "insights"];
+	const needsId = ["toc", "updates", "page", "section", "pdf", "insights", "raw"];
 	if (needsId.includes(head) && !VALID_IDS.has(gid))
 		return fail(404, "不認得的 guideline id：" + gid);
 
@@ -178,12 +184,104 @@ async function route(request, env, ctx, url) {
 	if (head === "pdf")
 		return servePdf(env, gid, { download: true, request, raw: false });
 
+	// 流程圖那幾頁的逐頁轉錄（issue #9 產生，issue #11 開放）。
+	//
+	// 這是整條 API 最省 token 的端點，也是它存在的理由：algorithm 區抽出來的純文字
+	// 會散掉、看不出箭頭指向，所以 skill 原本只能叫使用者把 5–80 MB 的 PDF 拉下來、
+	// 再把整頁圖丟進 context。轉錄早就在 D1 裡躺著，只是沒有路徑拿得到。
+	if (head === "raw") {
+		const span = parsePages(url.searchParams.get("p"));
+		if (!span) return fail(400, "p 要是頁碼或範圍，例如 p=12 或 p=12-18");
+		return rawBody(env, ctx, gid, span[0], span[1]);
+	}
+
 	if (head === "insights") {
-		const rows = await listInsights(env, gid);
+		// p / kind 是可選的篩選。沒帶就是舊行為（整份倒出來），已經裝好的 skill
+		// 讀到的東西不變。
+		const span = url.searchParams.get("p")
+			? parsePages(url.searchParams.get("p"))
+			: null;
+		if (url.searchParams.get("p") && !span)
+			return fail(400, "p 要是頁碼或範圍，例如 p=12 或 p=12-18");
+		const kind = url.searchParams.get("kind") || null;
+		if (kind && !KINDS.includes(kind))
+			return fail(400, "kind 只能是 " + KINDS.join(" / "));
+		const rows = await listInsights(env, gid, span ? { from: span[0], to: span[1], kind } : { kind });
 		return ok({ ok: true, id: gid, count: rows.length, rows });
 	}
 
+	// 門診核對清單（issue #4）。站上最濃縮的內容，之前只有瀏覽器讀得到。
+	// 讀取路徑跟 /api/notes 共用 lib/notes.js 的同一支——各寫一份的話，API 讀到的
+	// 遲早跟頁面上看到的不一樣，而那種不一致沒有任何錯誤訊息會提醒你。
+	if (head === "notes") {
+		if (!tail) {
+			const q = (url.searchParams.get("q") || "").trim();
+			if (!q) return fail(400, "notes 要帶 q，例如 q=乳癌%20三期");
+			const out = await searchSnippets(env, ctx, q, 60);
+			return ok({ ok: true, q, count: out.rows.length, ...out });
+		}
+		const [g, ref] = tail.split("/").map((s) => decodeURIComponent(s || ""));
+		if (!g || !ref) return fail(400, "路徑要是 /notes/<gid>/<ref>");
+		const row = await readSnippet(env, ctx, g, ref);
+		if (!row) return fail(404, "沒有這份清單：" + g + "/" + ref);
+		return ok({ ok: true, ...row });
+	}
+
+	// 書籤與星號。這兩張表目前沒有 email 欄位——這是單人站，事實上是全域的。
+	// 加上 per-user 欄位是 expand/contract 的 schema 遷移，跟這次的金鑰改動混在
+	// 一起會讓兩件事都難 review，所以刻意分開。
+	if (head === "marks") {
+		const only = url.searchParams.get("id");
+		if (only && !VALID_IDS.has(only))
+			return fail(404, "不認得的 guideline id：" + only);
+		const [bookmarks, stars] = await Promise.all([
+			listBookmarks(env, only || null),
+			listStars(env),
+		]);
+		return ok({
+			ok: true,
+			count: bookmarks.length,
+			bookmarks: bookmarks.map((b) => ({
+				...b,
+				name: NAME_BY_ID[b.gid] || b.gid,
+			})),
+			stars: stars.map((id) => ({ id, name: NAME_BY_ID[id] || id })),
+		});
+	}
+
 	return fail(404, "沒有這個端點");
+}
+
+async function rawBody(env, ctx, gid, a, b) {
+	const body = await remember(env, ctx, "raw", gid + ":" + a + "-" + b, async () => {
+		const { results } = await env.DB.prepare(
+			"SELECT page, body, model, created FROM page_raw WHERE gid = ? AND page BETWEEN ? AND ? ORDER BY page",
+		)
+			.bind(gid, a, b)
+			.all();
+		if (!(results || []).length) return null;
+		return {
+			ok: true,
+			id: gid,
+			name: NAME_BY_ID[gid] || gid,
+			from: a,
+			to: b,
+			pages: (results || []).map((r) => ({
+				page: r.page,
+				text: r.body,
+				model: r.model,
+				created: r.created,
+			})),
+		};
+	});
+	// 沒有轉錄不代表壞掉：只有 needsVision 判定為流程圖的頁面才會被讀圖，而讀圖受
+	// 每日額度限制、分好幾週補完。訊息要說得夠清楚，讓 skill 知道該退回 /page。
+	if (!body)
+		return fail(
+			404,
+			"這個頁碼範圍沒有轉錄——可能不是流程圖頁，或還沒輪到它。改用 /page 取純文字",
+		);
+	return raw(body);
 }
 
 async function catalogue(env, ctx) {
