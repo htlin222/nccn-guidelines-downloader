@@ -266,6 +266,38 @@ Steps 3–5 (`gen_versions.sh`, `gen_thumbs.sh`, `build_index.sh`) cover **both*
 catalogues. Steps 2, 6 and 7 (`gen_clean.sh`, `build_toc.sh`, `build_updates.sh`)
 are NCCN-only by design — see §5.7.
 
+**`gen_clean.sh` skips on the version string, not on a hash.** It used to compare
+the source PDF's sha256 against `meta/clean.json`. That comparison is dead against
+NCCN and had been all along: NCCN regenerates the PDF on every download — a fresh
+`/CreationDate` plus a random font-subset tag (`/FontName/ZNQMIA+Arial`, six
+letters that change every time) — so three downloads of one guideline give three
+different sha256. Measured on `gtn`: 8.2% of the bytes differ every time, and the
+first difference lands exactly at the info dictionary. NCCN also sends no `ETag`
+and no `Last-Modified`, so the HTTP layer cannot answer it either.
+
+The visible cost was the ~21 ids the daily cron touched each week: their `raw/`
+object was rewritten with fresh randomised bytes, so every one of them was
+re-stripped, re-thumbnailed, re-indexed and re-parsed although nothing had
+changed. The skip only ever worked for ids the cron happened not to touch.
+
+So the test is now the first page's `Version X.YYYY` — the same regex
+`gen_versions.sh` uses, deliberately, so the two can never disagree about what
+version a file is. Two guards around it:
+
+- **Page count** (via `pdfinfo`) must also match. This is what catches a silent
+  republish that does not bump the version. If `pdfinfo` is missing the check is
+  skipped rather than failing the run.
+- **No version string, no skip.** A retired guideline's one-page notice has no
+  `Version` footer, and text extraction can fail; both re-do the work. Wasting a
+  pass costs minutes, missing a version change costs a wrong PDF for a week.
+
+`src_sha` is still written to the manifest. Its job now is forensic — it is how
+you tell whether upstream actually swapped the file — not deciding the skip.
+
+The manifest gained `src_ver` as a fourth column. The writer accepts the old
+three-column rows, so the first run after this lands processes everything once
+and records the version; no forced full rebuild.
+
 **`gen_clean.sh` runs first, and that ordering is load-bearing.** It is the step
 that writes the root object `<id>.pdf`; every step after it derives from that
 object. It used to run *last*, which meant each week's badges, thumbnails, search
@@ -600,7 +632,7 @@ mda-<id>.pdf        MD Anderson: the untouched original (there is no banner to s
 raw/<id>.pdf        untouched original from NCCN — what the daily cron writes
 thumb/<id>.webp     first-page thumbnail (both sources)
 meta/versions.json  {id: {v, d}} (both sources)
-meta/clean.json     sha256 of each source, so gen_clean.sh can skip unchanged ids (NCCN only)
+meta/clean.json     {src_ver, pages, src_sha} per id — gen_clean.sh skips on src_ver (NCCN only)
 meta/toc/<id>.json  Discussion table of contents (NCCN only)
 meta/updates/<id>.json  "Summary of the Guidelines Updates", parsed into items (NCCN only)
 meta/notify/*.jsonl notifications older than 90 days, one month per object

@@ -35,18 +35,24 @@ export function cronEvents(health, now) {
 	const errors = Array.isArray(h.errors) ? h.errors : [];
 	const out = [];
 
-	// same = 抓回來跟 R2 裡那份一模一樣，所以沒有重寫。多數日子三份都是這樣
-	// （NCCN 一份指引大概半年才改一次版），標題如果只寫「3/3 完成」，看的人會
-	// 以為每天都抓到三份新的。有幾份真的換了新版是值得注意的事，得看得出來。
+	// same = 抓回來跟 R2 裡那份位元組完全相同，所以沒有重寫。
+	//
+	// same === 0 時**不能**反推「這幾份都有新版」。NCCN 每次下載都即時重產 PDF
+	// （新的 /CreationDate、隨機的字型 subset 標籤），所以同一份指引連抓三次會
+	// 得到三個不同的 sha256——位元組比對在那一側永遠說「不同」，那個 0 是量不到，
+	// 不是沒變。真正可靠的改版訊號是 Version X.YYYY，那要 pdftotext，只有每週的
+	// gen_clean.sh 抽得到。所以這裡只在確實比出相同時才多說一句。
 	const same = Number(h.same) || 0;
 	if (fail === 0)
 		out.push({
 			kind: "cron",
 			level: "info",
 			title:
-				same === ok
-					? `每日更新 ${ok}/${total} 完成（都沒改版）`
-					: `每日更新 ${ok}/${total} 完成（${ok - same} 份有新版）`,
+				same === 0
+					? `每日更新 ${ok}/${total} 完成`
+					: same === ok
+						? `每日更新 ${ok}/${total} 完成（都沒改版）`
+						: `每日更新 ${ok}/${total} 完成（${same} 份沒改版）`,
 			body: { ids, same },
 			created: at,
 		});

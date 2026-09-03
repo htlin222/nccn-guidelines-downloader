@@ -17,7 +17,7 @@ describe("cronEvents", () => {
 		expect(evs[0]).toMatchObject({
 			kind: "cron",
 			level: "info",
-			title: "每日更新 3/3 完成（3 份有新版）",
+			title: "每日更新 3/3 完成",
 			created: AT,
 		});
 		expect(evs[0].body.ids).toEqual(["aml", "cll", "nscl"]);
@@ -31,9 +31,16 @@ describe("cronEvents", () => {
 		expect(evs[0].body.same).toBe(3);
 	});
 
-	it("counts only the ones that really got a new version", () => {
+	it("counts the ones that compared equal", () => {
 		const evs = cronEvents({ at: AT, ok: 3, same: 2, fail: 0, ids: ["aml"] });
-		expect(evs[0].title).toBe("每日更新 3/3 完成（1 份有新版）");
+		expect(evs[0].title).toBe("每日更新 3/3 完成（2 份沒改版）");
+	});
+
+	// same=0 不代表三份都出了新版。NCCN 每次下載都重產 PDF，位元組比對在那一側
+	// 永遠說「不同」——那個 0 是量不到，不是沒變。標題不該替它下結論。
+	it("says nothing about versions when the comparison could not tell", () => {
+		const evs = cronEvents({ at: AT, ok: 3, same: 0, fail: 0, ids: ["aml"] });
+		expect(evs[0].title).toBe("每日更新 3/3 完成");
 	});
 
 	it("warns on a partial failure without crying cookie", () => {

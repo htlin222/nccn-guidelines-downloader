@@ -607,11 +607,12 @@ function paintCron(h){
     el.textContent='⚠ 每日更新已 '+days+' 天沒跑（上次 '+when.toLocaleDateString()+'）';
     WARN.cron=true;}
   else{el.className='chip';
-    // 「更新 N 份」會誤導：多數日子抓回來的跟 R2 裡那份一樣，一份都沒重寫。
-    // 講「對過幾份」才是這個 cron 真正做的事。
-    var chg=h.ok-(h.same||0);
+    // 「更新 N 份」會誤導：cron 做的是「跟上游對一次」，不是「拿到 N 份新的」。
+    // 而 same=0 也不能反推成「都有新版」——NCCN 每次下載都重產 PDF，位元組比對
+    // 在那一側永遠說不同。所以只在真的比出相同時才多講一句。
+    var same=h.same||0;
     el.textContent='⏱ 每日更新正常：'+when.toLocaleDateString()+' 對過 '+h.ok+' 份'
-      +(chg>0?('，'+chg+' 份有新版'):'，都沒改版')+'（'+(h.ids||[]).join('、')+'）';
+      +(same?('，'+same+' 份沒改版'):'')+'（'+(h.ids||[]).join('、')+'）';
     WARN.cron=false;}
   paintWarn();
 }
