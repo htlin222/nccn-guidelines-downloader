@@ -6,6 +6,13 @@
 //
 // parseQuery 是純函式（吃別名表，不碰 D1），因為它決定了「打什麼字找得到什麼」，
 // 那是這套東西好不好用的全部，值得單獨測。
+//
+// 檔案末尾那幾支會碰 D1：它們是瀏覽器的 /api/notes 與 skill 的 /api/v1/notes 共用的
+// 讀取路徑。共用是重點——兩邊各寫一份的話，API 讀到的內容遲早跟頁面上看到的不一樣，
+// 而那種不一致沒有任何錯誤訊息會提醒你。
+
+import { hashKey as sha256 } from "./apikey.js";
+import { remember } from "./cache.js";
 
 // 把使用者輸入切成詞。中英混雜，所以不能只靠空白：中文之間沒有空白，而
 // 「乳癌三期」應該要能拆開。做法是先按空白與標點切，再對每個詞查別名表；
@@ -123,4 +130,108 @@ export function buildSearch(parsed, limit) {
 	const n = Number(limit);
 	binds.push(Math.min(Number.isFinite(n) && n > 0 ? n : 60, 200));
 	return { sql, binds };
+}
+
+// 別名表。走 KV，key 帶 notes:gen 世代號——load_snippets.sh 每次載完就改寫它，
+// 所以改字典仍然一跑就生效，沒有犧牲「改了字典卻沒反應」那個顧慮。
+export async function loadAlias(env, ctx) {
+	return JSON.parse(
+		await remember(
+			env,
+			ctx,
+			"alias",
+			"",
+			async () => {
+				const al = await env.DB.prepare(
+					"SELECT axis, alias, value FROM facet_alias",
+				).all();
+				const m = {};
+				for (const r of al.results || []) {
+					(m[r.axis] = m[r.axis] || {})[r.alias] = r.value;
+				}
+				return m;
+			},
+			"notes",
+		),
+	);
+}
+
+// 檢索。回 { rows, facets, text }。
+// 快取 key 用解析後的 facet + 文字而不是原始字串：「乳癌 三期」與「三期 乳癌」是
+// 同一個查詢，不該各佔一份。
+export async function searchSnippets(env, ctx, q, limit) {
+	const alias = await loadAlias(env, ctx);
+	const parsed = parseQuery(q, alias);
+	const ckey =
+		parsed.facets
+			.map((f) => f.axis + "=" + f.value)
+			.sort()
+			.join("&") +
+		"|" +
+		[...parsed.text].sort().join(" ") +
+		"|" +
+		(limit || "");
+	const body = await remember(
+		env,
+		ctx,
+		"q",
+		ckey,
+		async () => {
+			const { sql, binds } = buildSearch(parsed, limit);
+			const res = await env.DB.prepare(sql)
+				.bind(...binds)
+				.all();
+			// 空結果照樣快取——那是個正當答案。只有呼叫端 catch 到的錯誤不快取。
+			return { rows: rankRows(res.results || []) };
+		},
+		"notes",
+	);
+	return { rows: JSON.parse(body).rows, facets: parsed.facets, text: parsed.text };
+}
+
+// 單一份清單。查無此份回 null。
+//
+// 只有生成內容進 KV，使用者的修改每次從 D1 讀。這是踩過才改的：原本整包（含修改）
+// 一起快取，PUT 之後再刪那個 KV key，看起來嚴密，實際上存完馬上重讀還是拿到舊的
+// ——remember() 用 cacheTtl 3600 讀 KV，而 KV 有自己的邊緣快取又是最終一致，
+// 「這個 key 刪掉了」是照 KV 的時程生效，不是照我的。§5.6 的撤銷金鑰是同一個坑。
+//
+// 所以分法是：生成內容一週才變一次，快取它；修改是使用者剛剛按下儲存的東西，必須
+// 讀得到自己寫的。多的那一趟 D1 是主鍵查詢（rows_read=1）。
+export async function readSnippet(env, ctx, gid, ref) {
+	const base = await remember(
+		env,
+		ctx,
+		"s",
+		gid + "/" + ref,
+		async () => {
+			// loader 回 null 代表這份不存在，remember 就不會把 404 釘住 30 天。
+			const row = await env.DB.prepare(
+				"SELECT gid, ref, title, body, page, version, review FROM snippets WHERE gid=? AND ref=?",
+			)
+				.bind(gid, ref)
+				.first();
+			return row || null;
+		},
+		"notes",
+	);
+	if (!base) return null;
+
+	const row = JSON.parse(base);
+	const ed = await env.DB.prepare(
+		"SELECT body, base_hash, editor, updated FROM snippet_edits WHERE gid=? AND ref=?",
+	)
+		.bind(gid, ref)
+		.first();
+	if (ed) {
+		row.generated = row.body;
+		row.body = ed.body;
+		row.edited = { editor: ed.editor, updated: ed.updated };
+		// base 對不上代表這份修改是針對舊版寫的——之後重新生成過了。讀的人該知道，
+		// 不然一份舊修改會安靜地擋住新版內容。
+		row.stale = ed.base_hash
+			? ed.base_hash !== (await sha256(row.generated))
+			: false;
+	}
+	return row;
 }

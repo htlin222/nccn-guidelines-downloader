@@ -245,7 +245,7 @@ ${TOAST_CSS}
   <div id="list"></div>
 </main>
 <div id="notifModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>通知</b><span style="flex:1"></span><button class="btn" id="notifAll">全部已讀</button><button class="xbtn" id="notifClose">✕</button></div><span class="chip" id="notifAlive">⏱ 讀取中…</span><div class="nlist" id="notifList"></div></div></div>
-<div id="setModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>設定</b><button class="xbtn" id="setClose">✕</button></div><span class="chip" id="cookieStatus">🔑 檢查 cookie…</span><span class="chip" id="cronStatus">⏱ 檢查每日更新…</span><div class="setlabel">更新 NCCN cookie（過期時使用）</div><p class="sethint">登入 <a href="https://www.nccn.org/login" target="_blank" rel="noopener">nccn.org</a>，用 cookie-cook 擴充功能複製 <b>Http Header value</b> 貼在下方存檔。</p><textarea id="cookieInput" placeholder="ASP.NET_SessionId=…; …"></textarea><div><button class="btn" id="saveCookie">儲存 cookie</button> <span id="saveMsg" style="font-size:.8rem;margin-left:6px"></span></div><div class="setlabel">Claude Code skill</div><p class="sethint">產生一個內嵌金鑰的 <code>nccn.skill</code>，解壓到 <code>~/.claude/skills/nccn/</code> 後，Claude Code 就能直接讀目錄、章節全文、本版更新與 PDF，<b>不需要再登入</b>。每次產生都是一把獨立的金鑰——換裝置就再產一把，弄丟了就撤銷那一把。</p><div><input class="kin" id="skillLabel" placeholder="這把要給誰用？例如 MacBook" maxlength="40"> <button class="btn" id="makeSkill">產生並下載</button> <span id="skillMsg" style="font-size:.8rem;margin-left:6px"></span></div><div id="keyList"></div></div></div>
+<div id="setModal" class="modal" hidden><div class="sheet"><div class="sheethead"><b>設定</b><button class="xbtn" id="setClose">✕</button></div><span class="chip" id="cookieStatus">🔑 檢查 cookie…</span><span class="chip" id="cronStatus">⏱ 檢查每日更新…</span><div class="setlabel">更新 NCCN cookie（過期時使用）</div><p class="sethint">登入 <a href="https://www.nccn.org/login" target="_blank" rel="noopener">nccn.org</a>，用 cookie-cook 擴充功能複製 <b>Http Header value</b> 貼在下方存檔。</p><textarea id="cookieInput" placeholder="ASP.NET_SessionId=…; …"></textarea><div><button class="btn" id="saveCookie">儲存 cookie</button> <span id="saveMsg" style="font-size:.8rem;margin-left:6px"></span></div><div class="setlabel">Claude Code skill</div><p class="sethint">產生一個內嵌金鑰的 <code>nccn.skill</code>，解壓到 <code>~/.claude/skills/nccn/</code> 後，Claude Code 就能直接讀目錄、章節全文、流程圖轉錄、門診清單、書籤與 PDF，<b>不需要再登入</b>。金鑰綁在你的登入 email 上，<b>一個人只有一把</b>——重複下載拿到的是同一把，要換就按輪替。</p><div id="myKey" class="krow"></div><div><button class="btn" id="makeSkill">產生並下載</button> <button class="xbtn" id="rotKey">輪替金鑰</button> <span id="skillMsg" style="font-size:.8rem;margin-left:6px"></span></div><p class="sethint">下面是舊制的獨立金鑰（每產生一次就多一把）。新的下載不再增加它們，留在這裡只為了讓已經發出去的還能用；不再需要就撤銷。</p><div id="keyList"></div></div></div>
 <footer>
   透過你的 NCCN 登入 cookie 代理下載官方 PDF；MD Anderson 的 clinical management
   algorithms 為公開文件，不需登入。${user ? "登入身分：" + escapeHtml(user) + " · " : ""}
@@ -573,7 +573,7 @@ themeBtn.onclick=()=>{const next=curTheme()==='dark'?'light':'dark';document.doc
 try{matchMedia('(prefers-color-scheme:dark)').addEventListener('change',paintThemeBtn);}catch(e){}
 paintThemeBtn();
 // 設定面板的接線以前縮在 themeBtn.onclick 的大括號裡，等於「先切一次主題，齒輪才會動」。
-document.getElementById('settings').onclick=function(){document.getElementById('setModal').hidden=false;loadKeys();};
+document.getElementById('settings').onclick=function(){document.getElementById('setModal').hidden=false;loadKeys();loadMyKey();};
 document.getElementById('setClose').onclick=function(){document.getElementById('setModal').hidden=true;};
 document.getElementById('setModal').addEventListener('click',function(e){if(e.target===this)this.hidden=true;});
 
@@ -637,6 +637,30 @@ async function loadKeys(){
   try{const r=await(await fetch('/api/keys')).json();paintKeys(r.rows);}
   catch(e){}
 }
+// 綁 email 的那把。只顯示前 12 碼——完整金鑰在 .skill 的 .env 裡，畫在頁面上等於
+// 讓任何一張截圖都變成外洩。
+function paintMyKey(k){
+  var box=document.getElementById('myKey');if(!box)return;
+  if(!k||!k.key){box.innerHTML='<span class="kmeta">尚未啟用（伺服器還沒設 API_KEY_SECRET）</span>';
+    document.getElementById('rotKey').disabled=true;return;}
+  var used=k.lastUsed?('最後用過 '+new Date(k.lastUsed).toLocaleDateString()):'還沒用過';
+  box.innerHTML='<code>'+kesc(k.key.slice(0,12))+'…</code><span>'+kesc(k.email)+'</span>'
+    +'<span class="kmeta">第 '+(k.version||1)+' 版 · '+used+' · '+(k.calls||0)+' 次</span>';
+}
+async function loadMyKey(){
+  try{const r=await(await fetch('/api/keys/me')).json();paintMyKey(r.ok?r:null);}
+  catch(e){paintMyKey(null);}
+}
+document.getElementById('rotKey').onclick=async function(){
+  // 輪替沒有「只作廢某一台裝置」這種選項：一個人只有一把，換掉就是全部裝置都要
+  // 重新下載。講清楚，不然按下去才發現另一台筆電也斷了。
+  if(!confirm('輪替之後，你已經下載的每一份 skill 都會立刻收到 401，每台裝置都要重新下載一次。確定？'))return;
+  this.disabled=true;
+  try{const r=await(await fetch('/api/keys/me',{method:'POST'})).json();paintMyKey(r.ok?r:null);
+    document.getElementById('skillMsg').textContent='已輪替，請重新下載';}
+  catch(e){}
+  this.disabled=false;
+};
 document.getElementById('keyList').addEventListener('click',async function(e){
   var id=e.target&&e.target.getAttribute&&e.target.getAttribute('data-revoke');
   if(!id)return;
@@ -649,11 +673,10 @@ document.getElementById('keyList').addEventListener('click',async function(e){
   loadKeys();
 });
 document.getElementById('makeSkill').onclick=async function(){
-  var btn=this,msg=document.getElementById('skillMsg'),inp=document.getElementById('skillLabel');
-  var label=(inp.value||'').trim()||'Claude Code';
+  var btn=this,msg=document.getElementById('skillMsg');
   btn.disabled=true;msg.textContent='產生中…';
   try{
-    const r=await fetch('/api/skill.zip?label='+encodeURIComponent(label));
+    const r=await fetch('/api/skill.zip?label='+encodeURIComponent('Claude Code'));
     if(!r.ok)throw new Error('HTTP '+r.status);
     // 走 blob 而不是直接把 <a href> 指過去：這條路徑在 Access 後面，用 fetch 才
     // 確定帶得到登入 cookie，也才拿得到回應標頭裡的金鑰前綴。
@@ -661,7 +684,7 @@ document.getElementById('makeSkill').onclick=async function(){
     a.href=url;a.download='nccn.skill';document.body.appendChild(a);a.click();a.remove();
     setTimeout(function(){URL.revokeObjectURL(url);},10000);
     msg.textContent='已下載（'+(r.headers.get('x-key-prefix')||'')+'…）';
-    inp.value='';loadKeys();
+    loadKeys();loadMyKey();
   }catch(e){msg.textContent='失敗：'+e.message;}
   btn.disabled=false;
 };

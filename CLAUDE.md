@@ -20,6 +20,7 @@ Everything runs from `cf/`. `wrangler.jsonc` is the source of truth for bindings
 | Workers AI | binding `AI` | `wrangler.jsonc` `ai` |
 | Custom domain | `nccn.hsiehting.com` | `wrangler.jsonc` `routes` |
 | Cron trigger | `0 3 * * *` (daily 03:00 UTC) | `wrangler.jsonc` `triggers.crons` |
+| Worker secret | `API_KEY_SECRET` (issue #11 — every per-email API key derives from it) | `wrangler secret put` |
 | Worker secret | `ANTIGRAVITY_API_KEY` (optional) | `wrangler secret put` |
 | Worker secret | `GROQ_API_KEY` (optional, issue #9) | `wrangler secret put` |
 | Repo secret | `CLOUDFLARE_API_TOKEN` | GitHub → Settings → Secrets |
@@ -86,7 +87,7 @@ wrangler kv key get cookie_meta --binding NCCN_KV --remote
 
 ## 2. One-time D1 migrations
 
-Seven SQL files, deliberately separate. Run each **once**:
+Ten SQL files, deliberately separate. Run each **once**:
 
 ```bash
 cd cf && set -a && . ../.env && set +a
@@ -96,6 +97,9 @@ wrangler d1 execute nccn-search --remote --file=sql/insights_raw.sql # raw visio
 wrangler d1 execute nccn-search --remote --file=sql/marks.sql        # bookmarks + stars
 wrangler d1 execute nccn-search --remote --file=sql/notify.sql       # notification centre
 wrangler d1 execute nccn-search --remote --file=sql/api.sql          # API keys + page_text
+wrangler d1 execute nccn-search --remote --file=sql/apiuser.sql      # per-email API key versions (issue #11)
+wrangler d1 execute nccn-search --remote --file=sql/snippets.sql     # clinic checklists (issue #4)
+wrangler d1 execute nccn-search --remote --file=sql/edits.sql        # edits made to those checklists
 wrangler d1 execute nccn-search --remote --file=sql/insights_raw_sha.sql  # page_raw.sha — only on a DB created before 2026-09
 ```
 
@@ -107,7 +111,7 @@ re-running fails with `duplicate column name`, which is the expected outcome, no
 a breakage).
 
 `schema.sql` starts with `DROP TABLE IF EXISTS pages` — it is the search index's
-own schema and gets re-derived on every rebuild. The other four are
+own schema and gets re-derived on every rebuild. The others are
 `CREATE TABLE IF NOT EXISTS` on purpose: **an index rebuild must never wipe the
 AI cache, anything the user saved, an unread alert, or an issued API key.** Never
 merge them into `schema.sql`.
@@ -154,7 +158,7 @@ everything else still demands a login. Two things to keep straight:
 
 ```bash
 cd cf && pnpm install
-pnpm test            # 289 tests — pure helpers, plus an end-to-end pass over /api/v1
+pnpm test            # 375 tests — pure helpers, plus an end-to-end pass over /api/v1
 pnpm run deploy      # = bash deploy.sh
 ```
 
@@ -456,31 +460,71 @@ reading different versions of a guideline is worse than not rebuilding.
 ## 5.6 The Claude Code skill (`/api/v1`)
 
 A read-only, token-authenticated API, plus a `.skill` package that the settings
-sheet mints on demand. Install it in Claude Code and Claude can read the
-catalogue, a TOC, what changed in this version, page or section text, search the
-whole corpus, and pull a PDF — **without logging in**.
+sheet mints on demand. Install it in Claude Code and Claude can read everything
+this site derives from the PDFs — catalogue, TOC, what changed in this version,
+page or section text, the transcribed flowchart pages, the clinic checklists,
+saved bookmarks, cached AI notes, full-text search, and the PDFs themselves —
+**without logging in**.
 
-### The three decisions that shape it
+### The four decisions that shape it
 
 - **The token API is the only path Access lets through** (§3). Everything else,
-  including the endpoints that issue and revoke tokens, stays behind SSO. The
+  including the endpoints that issue and rotate tokens, stays behind SSO. The
   split is exactly the `/api/v1` prefix — see the warning in §3 before touching it.
 - **The `.skill` is minted, not published.** It is a zip with the key baked into
   its `.env`, so it can never go to a GitHub release. `/api/skill.zip` builds one
   on the fly (`lib/zip.js` writes store-mode zip by hand — Workers has no zip
-  writer, and a compression library is not worth 40 KB of text). Every download is
-  a fresh, separately revocable key.
-- **Plaintext keys never land anywhere.** D1 holds `sha256(key)` plus a 12-char
-  prefix for identification. The plaintext exists once, in the response body.
+  writer, and a compression library is not worth 40 KB of text).
+- **Keys are derived, not stored** (issue #11). `key = "nccn_" +
+  b64url(HMAC-SHA256(API_KEY_SECRET, "<email>:<version>"))`. `api_users` holds the
+  email and an integer and **no key column**: the minter and the validator each
+  recompute it, so there is nothing to store and nothing to leak. Revoking is
+  `key_version + 1` — one write, scoped to one person. Changing `API_KEY_SECRET`
+  revokes everyone at once.
+- **The email is bound into the key, so it can be self-asserted.** The caller
+  sends `X-User-Email`; that header selects the row *and* goes into the HMAC, so
+  claiming somebody else's address just produces a hash that does not match.
+
+  **Unknown email and wrong key must be indistinguishable.** `/api/v1` is Access-
+  bypassed, so a different response for "no such user" would let the open internet
+  enumerate who has access. A missing row therefore runs the full HMAC with
+  version 0 (versions start at 1, so it never matches) and returns the identical
+  401. `test/derivedkey.test.js` asserts the two results are `toEqual`.
+
+The older random keys (`api_keys`, `sha256(key)` + a 12-char prefix) still
+validate. They are deprecated, not removed: they are already installed on other
+machines, and this change should not kill them silently. The settings sheet lists
+them under their own heading and new downloads no longer add to them.
 
 ### Endpoints
 
-`GET /api/v1/{catalogue, toc/:id, updates/:id, page/:id?p=N|A-B, section/:id?ref=,
-search?q=, pdf/:id, insights/:id}`, all with `Authorization: Bearer nccn_…`.
+`GET /api/v1/{catalogue, toc/:id, updates/:id, page/:id?p=N|A-B, raw/:id?p=N|A-B,
+section/:id?ref=, search?q=, notes?q=, notes/:gid/:ref, marks, pdf/:id,
+insights/:id?p=&kind=}`, all with `Authorization: Bearer nccn_…` plus
+`X-User-Email:` for a derived key.
 
 `page` reads `page_text` (primary key, `rows_read=1`) rather than the FTS5 `pages`
 table — `gid`/`page` are UNINDEXED there, so a single-page lookup would scan all
 10,670 rows and burn the daily D1 quota in ~500 calls.
+
+**`raw` is the one that pays for this whole section.** It serves `page_raw` —
+Gemini's per-page transcription of the algorithm pages (issue #9). Before it, a
+flowchart page cost the skill a 5–80 MB PDF download plus a full page image in
+context, because `/page`'s extracted text loses the arrows. The transcription had
+been sitting in D1 for a year with no path to reach it. A 404 there is normal, not
+a fault: only `needsVision` pages get transcribed, and the daily budget spreads
+that over weeks — the error message names `/page` as the fallback so the skill
+does not conclude the API is down.
+
+`notes` and `notes/:gid/:ref` share `lib/notes.js` with the browser's `/api/notes`
+rather than reimplementing the query. That matters for the single-checklist read:
+it overlays `snippet_edits` on the generated body, and a second implementation
+would eventually serve the API something different from what the page shows —
+with nothing to signal the divergence.
+
+`marks` is read-only and, like the `bookmarks`/`stars` tables behind it, is not
+per-user: this is a single-person site and those tables have no email column.
+Adding one is an expand/contract migration and deliberately not part of issue #11.
 
 ### Caching
 
@@ -498,12 +542,18 @@ once every nine days.
 
 ```bash
 cd cf && set -a && . ../.env && set +a
+openssl rand -hex 32 | wrangler secret put API_KEY_SECRET   # once; changing it revokes everyone
+
 wrangler d1 execute nccn-search --remote \
-  --command "SELECT id, prefix, label, last_used, calls, revoked FROM api_keys ORDER BY id DESC"
+  --command "SELECT email, key_version, last_used, calls FROM api_users ORDER BY email"
+wrangler d1 execute nccn-search --remote \
+  --command "UPDATE api_users SET key_version = key_version + 1 WHERE email = 'a@b.com'"  # revoke one person
+wrangler d1 execute nccn-search --remote \
+  --command "SELECT id, prefix, label, last_used, calls, revoked FROM api_keys ORDER BY id DESC"  # legacy keys
 wrangler kv key get api:gen --binding NCCN_KV --remote     # current cache generation
 ```
 
-Revoking marks D1 and takes effect within ~10 seconds (measured: 8). D1 is the
+Revoking (either kind) takes effect within ~10 seconds (measured: 8). D1 is the
 only source of truth for whether a key is live — **key validation deliberately
 does not use KV**, unlike everything else here.
 
@@ -519,7 +569,10 @@ written to KV.
 | Symptom | Cause | Fix |
 |---|---|---|
 | Skill gets the Access login page as HTML | The bypass application is missing or its path is wrong | §3 — path must be `api/v1` |
-| Every call 401s right after issuing a key | `sql/api.sql` was never run | §2 |
+| Every call 401s right after issuing a key | `sql/api.sql` / `sql/apiuser.sql` was never run | §2 |
+| Every call 401s but the key looks right | The `.env` has `NCCN_USER_EMAIL` and the request did not send `X-User-Email` — a derived key only validates against its own address | send the header; `nccn.py whoami` shows which kind of key this is |
+| The settings sheet says "尚未啟用" | `API_KEY_SECRET` is not set, so downloads fall back to the legacy random key | `openssl rand -hex 32 \| wrangler secret put API_KEY_SECRET` |
+| `/raw/:id` 404s | That page has no transcription — it is not a flowchart page, or the vision budget has not reached it yet | expected; use `/page`, and only then the PDF |
 | `/page` and `/section` 404 on everything | `page_text` is empty — the index has not been rebuilt since this feature landed | run `build_index.sh`, or wait for Monday |
 | Stale data after a rebuild | `api:gen` was not bumped (that CI step failed) | `wrangler kv key put api:gen "$(date +%s)" --binding NCCN_KV --remote` |
 | `/updates/:id` 404s for one guideline | It ships no update pages, or uses an older heading | normal; `build_updates.log` says `no-updates` |

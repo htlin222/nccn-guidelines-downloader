@@ -404,17 +404,35 @@ async function writeRaw(env, gid, page, body, model, sha) {
 /**
  * 列出已存的重點。gid 有值就只列該份 guideline，否則列全部（給「所有已存」用）。
  * 帶回完整內容，讓前端不用逐筆再打一次就能直接匯出 Markdown。
+ *
+ * opt = { from, to, kind }，全部可選，都是在 SQL 裡篩而不是取回 2000 列再過濾——
+ * /api/v1/insights 支援 ?p= 與 ?kind= 就是為了不要為了一頁付整份的 rows_read。
+ * 不帶 opt 就是原本的行為。
  */
-export async function listInsights(env, gid) {
+export async function listInsights(env, gid, opt) {
 	const cols = "gid, page, kind, src, model, created, md";
+	const { from, to, kind } = opt || {};
 	try {
-		const stmt = gid
-			? env.DB.prepare(
-					`SELECT ${cols} FROM insights WHERE gid = ? ORDER BY page, kind LIMIT 2000`,
-				).bind(gid)
-			: env.DB.prepare(
-					`SELECT ${cols} FROM insights ORDER BY gid, page, kind LIMIT 2000`,
-				);
+		let sql = `SELECT ${cols} FROM insights WHERE 1=1`;
+		const binds = [];
+		if (gid) {
+			sql += " AND gid = ?";
+			binds.push(gid);
+		}
+		if (from > 0 && to >= from) {
+			sql += " AND page BETWEEN ? AND ?";
+			binds.push(from, to);
+		}
+		if (kind) {
+			sql += " AND kind = ?";
+			binds.push(kind);
+		}
+		sql += gid
+			? " ORDER BY page, kind LIMIT 2000"
+			: " ORDER BY gid, page, kind LIMIT 2000";
+		const stmt = binds.length
+			? env.DB.prepare(sql).bind(...binds)
+			: env.DB.prepare(sql);
 		const { results } = await stmt.all();
 		return (results || []).map((r) => ({
 			gid: r.gid,

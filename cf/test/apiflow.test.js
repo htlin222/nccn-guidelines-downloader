@@ -1,6 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { handleApi } from "../src/lib/api.js";
-import { listKeys, mintKey, revokeKey } from "../src/lib/apikey.js";
+import {
+	listKeys,
+	mintKey,
+	resetKeyCache,
+	revokeKey,
+	rotateUserKey,
+	userKey,
+} from "../src/lib/apikey.js";
 import { buildSkillZip } from "../src/lib/skillpack.js";
 
 // 端到端走一次 /api/v1：鑄金鑰 → 認證 → 取資料 → 撤銷 → 打不通。
@@ -11,6 +18,30 @@ import { buildSkillZip } from "../src/lib/skillpack.js";
 function fakeEnv() {
 	const kv = new Map();
 	const keys = []; // api_keys 的列
+	const users = []; // api_users 的列（綁 email 的衍生金鑰）
+	const raws = [
+		{ gid: "aml", page: 8, body: "flowchart p8", model: "gemini", created: "2026-09-01" },
+		{ gid: "aml", page: 9, body: "flowchart p9", model: "gemini", created: "2026-09-01" },
+	];
+	const snippets = [
+		{
+			gid: "breast",
+			ref: "BINV-12",
+			page: 12,
+			title: "術後輔助治療",
+			kind: "decision",
+			body: "生成的清單",
+			version: "6.2026",
+			review: null,
+			axes: 2,
+		},
+	];
+	const edits = [];
+	const aliases = [{ axis: "stage", alias: "三期", value: "III" }];
+	const bookmarks = [
+		{ gid: "aml", page: 12, label: "Workup", note: "門診常用", created: "2026-08-01" },
+	];
+	const stars = ["breast"];
 	const pages = [
 		{ gid: "aml", page: 10, body: "page ten" },
 		{ gid: "aml", page: 11, body: "page eleven" },
@@ -78,12 +109,54 @@ function fakeEnv() {
 		if (/SELECT MAX\(page\)/.test(sql))
 			return { first: { n: Math.max(...pages.filter((p) => p.gid === binds[0]).map((p) => p.page)) } };
 		if (/FROM insights/.test(sql)) return { results: [] };
+
+		// --- issue #11 新增的表 ---
+		if (/INSERT INTO api_users/.test(sql)) {
+			const found = users.find((u) => u.email === binds[0]);
+			if (!found)
+				users.push({
+					email: binds[0],
+					key_version: /DO UPDATE/.test(sql) ? 2 : 1,
+					created: binds[1],
+					updated: binds[2],
+					calls: 0,
+				});
+			else if (/DO UPDATE/.test(sql)) found.key_version += 1;
+			return { results: [] };
+		}
+		if (/FROM api_users WHERE email/.test(sql))
+			return { first: users.find((u) => u.email === binds[0]) || null };
+		if (/UPDATE api_users SET last_used/.test(sql)) return { results: [] };
+
+		if (/FROM page_raw/.test(sql))
+			return {
+				results: raws.filter(
+					(r) => r.gid === binds[0] && r.page >= binds[1] && r.page <= binds[2],
+				),
+			};
+		if (/FROM facet_alias/.test(sql)) return { results: aliases };
+		if (/FROM snippets s/.test(sql)) return { results: snippets };
+		if (/FROM snippets WHERE gid/.test(sql))
+			return {
+				first: snippets.find((s) => s.gid === binds[0] && s.ref === binds[1]) || null,
+			};
+		if (/FROM snippet_edits/.test(sql))
+			return {
+				first: edits.find((e) => e.gid === binds[0] && e.ref === binds[1]) || null,
+			};
+		if (/FROM bookmarks/.test(sql))
+			return { results: binds.length ? bookmarks.filter((b) => b.gid === binds[0]) : bookmarks };
+		if (/FROM stars/.test(sql)) return { results: stars.map((gid) => ({ gid })) };
+
 		throw new Error("假 D1 沒有處理這句 SQL：" + sql);
 	};
 
 	return {
 		_keys: keys,
+		_users: users,
+		_edits: edits,
 		_kv: kv,
+		API_KEY_SECRET: "test-secret",
 		DB: {
 			prepare(sql) {
 				const stmt = {
@@ -128,15 +201,17 @@ function fakeEnv() {
 }
 
 const ctx = { waitUntil: (p) => p };
-const call = (env, path, key) =>
-	handleApi(
-		new Request("https://n.example" + path, {
-			headers: key ? { authorization: "Bearer " + key } : {},
-		}),
+const call = (env, path, key, email) => {
+	const headers = {};
+	if (key) headers.authorization = "Bearer " + key;
+	if (email) headers["x-user-email"] = email;
+	return handleApi(
+		new Request("https://n.example" + path, { headers }),
 		env,
 		ctx,
 		new URL("https://n.example" + path),
 	);
+};
 
 let savedCaches;
 beforeAll(() => {
@@ -151,6 +226,7 @@ afterAll(() => {
 
 let env, key;
 beforeEach(async () => {
+	resetKeyCache();
 	env = fakeEnv();
 	key = (await mintKey(env, "測試")).key;
 });
@@ -254,6 +330,128 @@ describe("端點", () => {
 	});
 });
 
+// issue #11：把 /api/v1 打開到整個站。
+describe("新端點", () => {
+	it("raw 回流程圖那幾頁的轉錄，帶模型與產生時間", async () => {
+		const body = await (await call(env, "/api/v1/raw/aml?p=8-9", key)).json();
+		expect(body.pages.map((p) => p.page)).toEqual([8, 9]);
+		expect(body.pages[0].text).toBe("flowchart p8");
+		expect(body.pages[0].model).toBe("gemini");
+	});
+
+	// 沒有轉錄不是壞掉：只有 needsVision 判定為流程圖的頁面才會被讀圖，而讀圖有
+	// 每日額度。訊息要指得出退路，不然 skill 會以為整條 API 掛了。
+	it("沒有轉錄的頁碼回 404，而且說得出該退回哪裡", async () => {
+		const r = await call(env, "/api/v1/raw/aml?p=99", key);
+		expect(r.status).toBe(404);
+		expect((await r.json()).error).toContain("/page");
+	});
+
+	it("raw 的頁碼參數壞掉是 400", async () => {
+		expect((await call(env, "/api/v1/raw/aml?p=abc", key)).status).toBe(400);
+	});
+
+	it("notes 搜尋回命中的清單", async () => {
+		const body = await (await call(env, "/api/v1/notes?q=三期", key)).json();
+		expect(body.rows[0].ref).toBe("BINV-12");
+		expect(body.facets).toEqual([{ axis: "stage", value: "III" }]);
+	});
+
+	it("notes 沒帶 q 是 400，不是把整個資料庫倒出來", async () => {
+		expect((await call(env, "/api/v1/notes", key)).status).toBe(400);
+	});
+
+	it("單一份清單回全文", async () => {
+		const body = await (
+			await call(env, "/api/v1/notes/breast/BINV-12", key)
+		).json();
+		expect(body.title).toBe("術後輔助治療");
+		expect(body.body).toBe("生成的清單");
+		expect(body.review).toBe(null);
+	});
+
+	// API 讀到的必須跟頁面上看到的一樣——所以修改要疊上去，不能只回生成內容。
+	it("有人改過的話回的是修改後的版本，並標出原文", async () => {
+		env._edits.push({
+			gid: "breast",
+			ref: "BINV-12",
+			body: "門診改過的版本",
+			base_hash: null,
+			editor: "a@b.com",
+			updated: "2026-09-01",
+		});
+		const body = await (
+			await call(env, "/api/v1/notes/breast/BINV-12", key)
+		).json();
+		expect(body.body).toBe("門診改過的版本");
+		expect(body.generated).toBe("生成的清單");
+		expect(body.edited.editor).toBe("a@b.com");
+	});
+
+	it("查無此份清單是 404", async () => {
+		expect((await call(env, "/api/v1/notes/breast/NOPE", key)).status).toBe(404);
+	});
+
+	it("marks 回書籤與星號，並補上中文以外看得懂的名字", async () => {
+		const body = await (await call(env, "/api/v1/marks", key)).json();
+		expect(body.bookmarks[0].page).toBe(12);
+		expect(body.bookmarks[0].name).toBe("Acute Myeloid Leukemia");
+		expect(body.stars.map((s) => s.id)).toEqual(["breast"]);
+	});
+
+	it("marks 的 id 不認得是 404，不是安靜地回全部", async () => {
+		expect((await call(env, "/api/v1/marks?id=nope", key)).status).toBe(404);
+	});
+
+	it("insights 的 kind 亂填是 400", async () => {
+		expect((await call(env, "/api/v1/insights/aml?kind=nope", key)).status).toBe(
+			400,
+		);
+	});
+});
+
+describe("綁 email 的金鑰", () => {
+	it("金鑰配上自己的 email 就通行", async () => {
+		const k = await userKey(env, "a@b.com");
+		expect((await call(env, "/api/v1/catalogue", k.key, "a@b.com")).status).toBe(
+			200,
+		);
+	});
+
+	// 少帶標頭是最容易犯的錯，而它的症狀（401）跟金鑰被撤銷一模一樣。
+	it("少帶 X-User-Email 就 401", async () => {
+		const k = await userKey(env, "a@b.com");
+		expect((await call(env, "/api/v1/catalogue", k.key)).status).toBe(401);
+	});
+
+	it("報別人的 email 過不了", async () => {
+		await userKey(env, "c@d.com");
+		const k = await userKey(env, "a@b.com");
+		expect((await call(env, "/api/v1/catalogue", k.key, "c@d.com")).status).toBe(
+			401,
+		);
+	});
+
+	it("輪替之後舊金鑰立刻打不通，新的可以", async () => {
+		const old = await userKey(env, "a@b.com");
+		expect((await call(env, "/api/v1/catalogue", old.key, "a@b.com")).status).toBe(200);
+		const fresh = await rotateUserKey(env, "a@b.com");
+		expect((await call(env, "/api/v1/catalogue", old.key, "a@b.com")).status).toBe(401);
+		expect((await call(env, "/api/v1/catalogue", fresh.key, "a@b.com")).status).toBe(200);
+	});
+
+	// 舊的隨機金鑰已經裝在別人的機器上，這次改動不該讓它們安靜地死掉。
+	it("舊的隨機金鑰照舊通行，而且不需要 email", async () => {
+		expect((await call(env, "/api/v1/catalogue", key)).status).toBe(200);
+	});
+
+	it("衍生金鑰的驗證結果一樣絕不進 KV", async () => {
+		const k = await userKey(env, "a@b.com");
+		await call(env, "/api/v1/catalogue", k.key, "a@b.com");
+		expect([...env._kv.keys()].some((x) => x.startsWith("apikey:"))).toBe(false);
+	});
+});
+
 describe("KV 快取", () => {
 	it("第二次取 toc 走 KV，不再碰 R2", async () => {
 		await call(env, "/api/v1/toc/aml", key);
@@ -295,9 +493,40 @@ describe("skill 打包", () => {
 		expect((await call(env, "/api/v1/catalogue", m[1])).status).toBe(200);
 	});
 
-	it("每次產生都是不同的一把", async () => {
+	it("沒有 email 時每次產生都是不同的一把", async () => {
 		const a = await buildSkillZip(env, { label: "a", origin: "https://n.example" });
 		const b = await buildSkillZip(env, { label: "b", origin: "https://n.example" });
 		expect(a.prefix).not.toBe(b.prefix);
+	});
+
+	// 舊行為是每按一次下載就多一把活的金鑰，而那些多出來的沒有人會回去撤銷。
+	it("有 email 時重複下載拿到同一把，也不會多長出一列", async () => {
+		const a = await buildSkillZip(env, {
+			label: "a",
+			origin: "https://n.example",
+			email: "a@b.com",
+		});
+		const before = env._keys.length;
+		const b = await buildSkillZip(env, {
+			label: "b",
+			origin: "https://n.example",
+			email: "a@b.com",
+		});
+		expect(b.prefix).toBe(a.prefix);
+		expect(env._keys.length).toBe(before); // 一列都沒多
+		expect(env._users.length).toBe(1);
+	});
+
+	it("烤進去的 .env 帶著 email，而且那把金鑰配上它真的能用", async () => {
+		const { bytes } = await buildSkillZip(env, {
+			label: "MacBook",
+			origin: "https://n.example",
+			email: "A@b.com",
+		});
+		const text = new TextDecoder().decode(bytes);
+		expect(text).toContain("NCCN_USER_EMAIL=a@b.com");
+		const m = /NCCN_API_KEY=(nccn_[A-Za-z0-9_-]{43})/.exec(text);
+		expect(m).toBeTruthy();
+		expect((await call(env, "/api/v1/catalogue", m[1], "a@b.com")).status).toBe(200);
 	});
 });
