@@ -7,7 +7,7 @@ title        = "Implementation of physical activity recommendations"
 nccn_version = "3.2026"
 nccn_date    = "07/22/26"
 generated    = "2026-08-30"
-see_also     = ["SPA-1", "SPA-2", "SPA-3", "SPA-A", "SPA-B"]
+see_also     = ["SPA-1", "SPA-3", "SPA-A", "SPA-B"]
 
 [facets]
 disease   = "survivorship"

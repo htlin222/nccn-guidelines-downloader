@@ -44,7 +44,7 @@ type = "text"
 - Education on infection prevention practices
     - Safe pet care/avoidance of zoonosis
         - Wash hands with soap and running water after handling animal feces
-        - Survivors at high risk for immune suppression should avoid direct contact with animal feces and other bodily secretions
+        - If possible, survivors at high risk for immune suppression should avoid direct contact with animal feces and other bodily secretions
         - Survivors with elevated risk of infection, and those who are immunocompromised, are at higher risk for zoonoses and should use extra caution
     - Travel precautions
         - Pre-travel vaccines

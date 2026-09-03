@@ -75,7 +75,7 @@ type = "text"
 
 # Footnotes h-i, dietary fat sources
 
-- These types of fats (plant sources such as olive or canola oil, avocados, seeds and nuts, and fatty fish) should be prioritized over saturated fats, and used in moderation in the context of weight loss strategies
+- These types of fats should be prioritized over saturated fats, and used in moderation in the context of weight loss strategies
 - Examples of fatty fish include mackerel, salmon, herring, and others
 
 # Footnote j, soy

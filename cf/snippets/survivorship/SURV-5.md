@@ -69,7 +69,7 @@ options = ["yes", "no"]
     - Pedigree: First-, Second, and Third-Degree Relatives of Proband (EVAL-B)
 - NCCN Guidelines for Genetic/Familial High-Risk Assessment: Colorectal, Endometrial, and Gastric
 - NCCN Guidelines for Kidney Cancer
-    - Hereditary Renal Cell Carcinoma
+    - Hereditary Renal Cell Carcinoma (HERED-RCC)
 - NCCN Guidelines for Myelodysplastic Syndromes
     - Genetic Familial High Risk Assessment: Hereditary Myeloid Malignancy Predisposition Syndromes (MDS-D)
 - NCCN Guidelines for Neuroendocrine and Adrenal Tumors

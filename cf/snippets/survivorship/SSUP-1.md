@@ -28,6 +28,7 @@ type = "text"
 
 - Ask about reasons for supplement use and supplement ingredients
     - ___ (supplement_reason)
+    - Consider use of available resources for information on supplements (SURV-B)
 - Assess supplement use at regular intervals
 
 # Supplement use recommendations
@@ -43,9 +44,11 @@ type = "text"
     - Potential harms exist, including toxicities and drug interactions
 - Taking vitamin supplements does not replace the need for adhering to a healthy diet
     - All efforts should be made to obtain nutrients from dietary intake
+    - Consider referral to registered dietitians, especially those who are CSO, for guidance in supplement use, if deemed necessary
 - Refer survivors using supplements not prescribed by a medical provider
     - To a registered dietitian, preferably one with oncology credentials
     - Or other cancer care team members such as integrative medicine or a clinical pharmacist
 - Survivors of certain cancers are at risk for vitamin deficiencies based on their cancer treatment
     - Deficiencies should be assessed and repleted as needed
+        - For example, see Principles of Survivorship, Management of Long-Term Sequelae of Disease or Treatment in the NCCN Guidelines for Gastric Cancer
 - Antioxidant supplementation should be avoided or discontinued for survivors undergoing chemotherapy, radiotherapy, or photodynamic therapy

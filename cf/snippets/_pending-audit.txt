@@ -36,31 +36,4 @@
 #
 # 這 28 份是這個專案第一批 Sonnet 產出（前 200 份都是 Opus）。重跑時 workflow
 # 已經設成 Sonnet，所以會是 Sonnet 生成加 Sonnet 審查。
-genetics_ceg/CAT-1
-genetics_ceg/GENE-19
-genetics_ceg/GENE-20
-genetics_ceg/GENE-21
-survivorship/HL-1
-survivorship/HL-1A
-survivorship/SIMIN-1
-survivorship/SIMIN-2
-survivorship/SIMIN-3A
-survivorship/SNWM-1
-survivorship/SNWM-1A
-survivorship/SNWM-2
-survivorship/SNWM-3
-survivorship/SNWM-4
-survivorship/SNWM-4A
-survivorship/SPA-1
-survivorship/SPA-1A
-survivorship/SPA-2
-survivorship/SPA-3
-survivorship/SPA-4
-survivorship/SSUP-1
-survivorship/SURV-1
-survivorship/SURV-2
-survivorship/SURV-3
-survivorship/SURV-4
-survivorship/SURV-4A
-survivorship/SURV-5
-survivorship/SURV-6
+# 2026-09-03：那 28 份已補審並通過（見上一批 commit），清單清空。

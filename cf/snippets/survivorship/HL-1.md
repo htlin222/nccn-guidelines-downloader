@@ -7,7 +7,7 @@ title        = "General principles of healthy lifestyles for cancer survivors"
 nccn_version = "3.2026"
 nccn_date    = "07/22/26"
 generated    = "2026-08-30"
-see_also     = ["SURV-1", "SNWM-1", "SNWM-2", "SPA-1", "SSD-1", "SIMIN-1", "SSUP-1"]
+see_also     = ["SNWM-1", "SNWM-2", "SPA-1", "SSD-1", "SIMIN-1", "SSUP-1"]
 
 [facets]
 disease   = "survivorship"

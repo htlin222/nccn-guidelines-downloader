@@ -7,7 +7,7 @@ title        = "General principles of immunizations for cancer and transplant su
 nccn_version = "3.2026"
 nccn_date    = "07/22/26"
 generated    = "2026-08-30"
-see_also     = ["SIMIN-2", "SIMIN-3", "SURV-4A", "HL-1"]
+see_also     = ["SIMIN-A"]
 
 [facets]
 disease   = "survivorship"
