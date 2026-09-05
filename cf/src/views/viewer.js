@@ -56,6 +56,10 @@ document.documentElement.dataset.inv=(d&&localStorage.getItem('nccninv')!=='0')?
     border:1px solid hsl(var(--border));border-radius:8px;padding:6px 8px;font-size:15px;cursor:pointer;background:hsl(var(--bar));color:hsl(var(--fg));}
   .btn:hover{background:hsl(var(--accent));}
   .btn.on{background:hsl(var(--accent));border-color:hsl(var(--ring));}
+  .btn{position:relative;}
+  .btn .dot{position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;padding:0 3px;
+    border-radius:999px;background:#3b82f6;color:#fff;font-size:.62rem;font-weight:700;
+    line-height:15px;text-align:center;}
   .btn.off{opacity:.35;pointer-events:none;}
   /* .btn 的 display:inline-flex 會蓋掉 UA 的 [hidden]{display:none}（作者樣式優先於
      UA 樣式，跟優先權無關），所以標了 hidden 的按鈕其實還是看得見。#tocBtn 一直有
@@ -119,6 +123,16 @@ document.documentElement.dataset.inv=(d&&localStorage.getItem('nccninv')!=='0')?
   .bknote:focus{border-color:hsl(var(--ring));background:hsl(var(--bg));color:hsl(var(--fg));}
   .bkgid{font-size:.66rem;font-weight:700;color:hsl(var(--muted-fg));text-transform:uppercase;letter-spacing:.05em;padding:10px 8px 3px;}
   .bkmsg{color:hsl(var(--muted-fg));font-size:.8rem;padding:16px 8px;line-height:1.6;}
+  .notecard{margin:4px 6px;border:1px solid hsl(var(--border));border-radius:8px;overflow:hidden;}
+  .notehd{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;}
+  .notehd:hover{background:hsl(var(--accent));}
+  .notehd .cref{flex-shrink:0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.72rem;
+    font-weight:700;padding:2px 6px;border-radius:5px;background:hsl(var(--accent));}
+  .notehd .ctitle{flex:1;font-size:.8rem;line-height:1.4;}
+  .notebody{margin:0;padding:0 12px 12px;white-space:pre-wrap;word-break:break-word;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.76rem;line-height:1.7;
+    color:hsl(var(--muted-fg));}
+  .notebody[hidden]{display:none;}
   .btn.bkon svg{fill:currentColor;}
   .aipane{overflow-y:auto;background:hsl(var(--bar));display:flex;flex-direction:column;}
   .aipane[hidden]{display:none;}
@@ -278,6 +292,7 @@ ${TOAST_CSS}
   <button class="btn" id="bkAdd" title="收藏本頁"></button>
   <button class="btn" id="bkBtn" title="書籤清單"></button>
   <button class="btn" id="tocBtn" title="目錄（Discussion）" hidden></button>
+  <button class="btn" id="noteBtn" title="本頁的臨床筆記" hidden></button>
   <button class="btn" id="aiBtn" title="AI 本頁重點"></button>
   <button class="btn" id="invert" title="PDF 反轉" hidden></button>
   <button class="btn" id="theme" title="切換主題"></button>
@@ -298,6 +313,9 @@ ${TOAST_CSS}
   <section class="tocpane bkpane" id="bkpane" hidden>
     <div class="toctabs" id="bktabs"></div>
     <div class="toclist" id="bklist"></div>
+  </section>
+  <section class="tocpane" id="notepane" hidden>
+    <div class="toclist" id="notelist"></div>
   </section>
   <section class="aipane" id="aipane" hidden>
     <div class="aitabs" id="aitabs"></div>
@@ -381,6 +399,10 @@ var ICONS={
   archive:'<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
   bookmark:'<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
   bookmarks:'<path d="M7 3h10a2 2 0 0 1 2 2v16l-7-4-7 4V5a2 2 0 0 1 2-2z"/><path d="M21 17V7a2 2 0 0 0-2-2"/>',
+  notebook:'<path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/>'
+    +'<path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/>'
+    +'<path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87'
+    +'a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/>',
   close:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
   trash:'<path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>',
   printer:'<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect width="12" height="8" x="6" y="14" rx="1"/>',
@@ -397,7 +419,7 @@ var ICONS={
 function svg(n){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[n]||'')+'</svg>';}
 function $(i){return document.getElementById(i);}
 function esc(s){var _d=document.createElement('div');_d.textContent=(s==null?'':s);return _d.innerHTML;}
-$('back').innerHTML=svg('back');$('railBtn').innerHTML=svg('panel');$('gridBtn').innerHTML=svg('grid');$('tocBtn').innerHTML=svg('list');
+$('back').innerHTML=svg('back');$('railBtn').innerHTML=svg('panel');$('gridBtn').innerHTML=svg('grid');$('tocBtn').innerHTML=svg('list');$('noteBtn').innerHTML=svg('notebook');
 $('prev').innerHTML=svg('cl');$('next').innerHTML=svg('cr');
 $('zout').innerHTML=svg('minus');$('zin').innerHTML=svg('plus');$('fit').innerHTML=svg('fit');$('dlic').innerHTML=svg('dl');$('snap').innerHTML=svg('camera');$('histBack').innerHTML=svg('histb');$('histFwd').innerHTML=svg('histf');
 var themeBtn=$('theme'),invBtn=$('invert');
@@ -433,6 +455,17 @@ function yankCite(){var txt=citeText({name:GNAME,id:GID,version:VERSION,src:GSRC
   copyText(txt).then(function(ok){showToast(ok?'已複製引用':'複製失敗，請手動選取',txt);});}
 $('gtitle').onclick=yankCite;$('tver').onclick=yankCite;
 fetch('/api/toc?id='+encodeURIComponent(GID)).then(function(r){return r.json();}).then(function(d){TOC=(d&&d.length)?d:[];if(TOC.length){buildTOC();$('tocBtn').hidden=false;}}).catch(function(){});
+// 這份指引的臨床筆記索引（issue #4 的門診核對清單）。一次抓完整份，翻頁時
+// NOTEBYPAGE 查表就好，不必每頁各打一次 API——跟 TOC 是同一個理由。完全沒有
+// 筆記的指引（多半是還沒做到那個癌別）就整顆按鈕不出現，不留一顆永遠空的按鈕。
+var NOTES=[],NOTEBYPAGE={};
+fetch('/api/notes-index?id='+encodeURIComponent(GID)).then(function(r){return r.json();}).then(function(d){
+  NOTES=(d&&d.rows)?d.rows:[];
+  if(!NOTES.length)return;
+  for(var i=0;i<NOTES.length;i++){var r=NOTES[i];(NOTEBYPAGE[r.page]=NOTEBYPAGE[r.page]||[]).push(r);}
+  $('noteBtn').hidden=false;
+  notePaint();
+}).catch(function(){});
 // Pure helpers shared with the server + unit tests, injected verbatim.
 var tocGroups=${tocGroups.toString()};
 var tocBestIndex=${tocBestIndex.toString()};
@@ -461,6 +494,47 @@ function renderTOC(){
   var t=$('toctabs').children;for(var k=0;k<t.length;k++)t[k].className='toctab'+(t[k].getAttribute('data-s')===tocSec?' on':'');
   paintTOC();}
 function paintTOC(){if(!TOCR.length)return;var it=$('toclist').querySelectorAll('.tocitem');var pn=[];for(var i=0;i<it.length;i++)pn.push(+it[i].getAttribute('data-p'));var best=tocBestIndex(pn,cur);for(var j=0;j<it.length;j++)it[j].className='tocitem l'+((TOCR[j]||{}).l||0)+(j===best?' cur':'');var c=it[best];if(c)c.scrollIntoView({block:'nearest'});}
+// 本頁的臨床筆記：按鈕角標＋（面板開著時）清單。NOTEBYPAGE 已經是記憶體查表，
+// 所以這個函式在每次翻頁時呼叫也不花網路請求，跟 bkPaint() 同一個等級。
+var NOTEBODY={};
+function noteBadge(){
+  var n=(NOTEBYPAGE[cur]||[]).length;
+  var b=$('noteBtn'); if(b.hidden)return;
+  b.classList.toggle('on',curPane==='notes');
+  var dot=b.querySelector('.dot');
+  if(n){
+    if(!dot){dot=document.createElement('span');dot.className='dot';b.appendChild(dot);}
+    dot.textContent=n;
+  }else if(dot){dot.remove();}
+  b.title=n?('本頁的臨床筆記（'+n+'）'):'本頁沒有臨床筆記';
+}
+function renderNoteList(){
+  var rows=NOTEBYPAGE[cur]||[];
+  if(!rows.length){$('notelist').innerHTML='<div class="tochdr"></div><div class="bkmsg">這一頁沒有對應的臨床筆記。</div>';return;}
+  var h=rows.map(function(r){
+    return '<div class="notecard" data-ref="'+esc(r.ref)+'">'
+      +'<div class="notehd"><span class="cref">'+esc(r.ref)+'</span><span class="ctitle">'+esc(r.title)+'</span></div>'
+      +'<pre class="notebody" hidden></pre></div>';
+  }).join('');
+  $('notelist').innerHTML=h;
+}
+function notePaint(){noteBadge(); if(curPane==='notes')renderNoteList();}
+$('notelist').addEventListener('click',function(e){
+  var el=e.target.closest('.notecard'); if(!el)return;
+  var ref=el.getAttribute('data-ref');
+  var body=el.querySelector('.notebody');
+  var open=el.classList.toggle('open'); body.hidden=!open;
+  if(open&&!body.dataset.loaded){
+    var key=GID+'/'+ref;
+    if(NOTEBODY[key]){body.textContent=NOTEBODY[key];body.dataset.loaded='1';return;}
+    body.textContent='載入中…';
+    fetch('/api/notes/'+encodeURIComponent(GID)+'/'+encodeURIComponent(ref)).then(function(r){return r.json();})
+      .then(function(d){var t=d.body||'（讀不到內容）';NOTEBODY[key]=t;
+        if(el.classList.contains('open')){body.textContent=t;body.dataset.loaded='1';}})
+      .catch(function(){if(el.classList.contains('open'))body.textContent='讀取失敗';});
+  }
+});
+$('noteBtn').onclick=function(){if(showPane('notes'))renderNoteList();noteBadge();};
 // 只有在「跨段」時才自動換分頁；同一段內捲動不會蓋掉使用者手動選的分頁。
 function markTOC(){if(!TOCG.length)return;
   var s=tocSecOfPage(cur);
@@ -475,10 +549,12 @@ function showPane(which){
   $('rightpane').hidden=!curPane;$('panegrip').hidden=!curPane;
   $('tocpane').hidden=curPane!=='toc';
   $('bkpane').hidden=curPane!=='bk';
+  $('notepane').hidden=curPane!=='notes';
   $('aipane').hidden=curPane!=='ai';
   $('tocBtn').classList.toggle('on',curPane==='toc');
   $('bkBtn').classList.toggle('on',curPane==='bk');
   $('aiBtn').classList.toggle('on',curPane==='ai');
+  noteBadge();
   // 關鍵：只有「開↔關」會改變檢視區寬度。分頁之間切換寬度不變，就不能重排——
   // relayout() 會把每一頁 innerHTML 清掉重繪，捲動位置也會被重新錨定而看起來在跳。
   invalidate(); if(!!curPane!==!!was&&fit)relayout();
@@ -626,12 +702,12 @@ function setHL(terms){hlTerms=(terms||[]).map(function(t){return String(t).toLow
 var urlT=null;
 function syncURL(){clearTimeout(urlT);urlT=setTimeout(function(){
   try{var u=new URL(location.href);u.searchParams.set('page',cur);history.replaceState(null,'',u.pathname+u.search+u.hash);}catch(e){}},400);}
-function jumpTo(n,rec){ if(n<1||n>pages.length)return; if(rec){hBack.push(cur);hFwd=[];} cur=n; $('pageNum').value=n; scrollToPage(n); try{localStorage.setItem('nccnpg:'+GID,n);}catch(e){} updateHist(); markRail(); if(TOC.length)markTOC(); bkPaint(); aiOnPage(); syncURL(); }
+function jumpTo(n,rec){ if(n<1||n>pages.length)return; if(rec){hBack.push(cur);hFwd=[];} cur=n; $('pageNum').value=n; scrollToPage(n); try{localStorage.setItem('nccnpg:'+GID,n);}catch(e){} updateHist(); markRail(); if(TOC.length)markTOC(); bkPaint(); aiOnPage(); notePaint(); syncURL(); }
 function updateHist(){ $('histBack').classList.toggle('off',!hBack.length); $('histFwd').classList.toggle('off',!hFwd.length); }
 function markRail(){ var items=rail.children; for(var k=0;k<items.length;k++){ items[k].className='thumb'+(k===cur-1?' cur':''); } var c=items[cur-1]; if(c) c.scrollIntoView({block:'nearest'}); }
 function updateCur(){ if(!pages.length)return; if(!topsOK)measure();
   var best=pageAtOffset(tops,viewer.scrollTop+vpH*0.3)+1;
-  if(best!==cur){ cur=best; $('pageNum').value=cur; markRail(); if(TOC.length)markTOC(); bkPaint(); aiOnPage(); syncURL(); try{localStorage.setItem('nccnpg:'+GID,cur);}catch(e){} } }
+  if(best!==cur){ cur=best; $('pageNum').value=cur; markRail(); if(TOC.length)markTOC(); bkPaint(); aiOnPage(); notePaint(); syncURL(); try{localStorage.setItem('nccnpg:'+GID,cur);}catch(e){} } }
 // 預取看的是「意圖」不是「看得到」：往下捲就往下抓三頁、往回只留一頁。捲太快時
 // 一頁都不排，等 settle（120ms）再一次補上——快速翻頁的頓感幾乎全出在這裡。
 var SI={dir:1,speed:0,fast:false},lastY=0,lastT=0,settleT=null;
@@ -666,7 +742,7 @@ var jumped=false,loaded=false,firstBatch=true,LOAD_BATCH=32;
 // 它是佔位圖，所以一開始就在；延後的只有「載入完整版 PDF…」那一行。
 var spinT=setTimeout(function(){ if(!loaded)$('ldot').hidden=false; },200);
 function ready(){ if(loaded)return; loaded=true; clearTimeout(spinT); $('ldot').hidden=true;
-  setZpct(); markRail(); updateHist(); bkPaint(); syncURL(); }
+  setZpct(); markRail(); updateHist(); bkPaint(); notePaint(); syncURL(); }
 // #msg 蓋在檢視區上，裡面就是那張縮圖——它是佔位圖不是 spinner，所以要留到第一頁
 // 真的畫出來才收掉。太早收（例如頁框一建好就收）等於把模糊的佔位換成一片白，
 // 剛好是這次要消滅的東西。
@@ -742,8 +818,8 @@ $('zin').onclick=function(){ zoomTo(activeScale()+0.15); };
 $('zout').onclick=function(){ zoomTo(activeScale()-0.15); };
 $('fit').onclick=function(){ fit=!fit; if(!fit) scale=activeScale(); relayout(); };
 $('railBtn').onclick=function(){ rail.classList.toggle('hide'); invalidate(); if(fit) relayout(); };
-$('histBack').onclick=function(){ if(!hBack.length)return; hFwd.push(cur); var n=hBack.pop(); cur=n; $('pageNum').value=n; scrollToPage(n); updateHist(); markRail(); if(TOC.length)markTOC(); bkPaint(); syncURL(); };
-$('histFwd').onclick=function(){ if(!hFwd.length)return; hBack.push(cur); var n=hFwd.pop(); cur=n; $('pageNum').value=n; scrollToPage(n); updateHist(); markRail(); if(TOC.length)markTOC(); bkPaint(); syncURL(); };
+$('histBack').onclick=function(){ if(!hBack.length)return; hFwd.push(cur); var n=hBack.pop(); cur=n; $('pageNum').value=n; scrollToPage(n); updateHist(); markRail(); if(TOC.length)markTOC(); bkPaint(); notePaint(); syncURL(); };
+$('histFwd').onclick=function(){ if(!hFwd.length)return; hBack.push(cur); var n=hFwd.pop(); cur=n; $('pageNum').value=n; scrollToPage(n); updateHist(); markRail(); if(TOC.length)markTOC(); bkPaint(); notePaint(); syncURL(); };
 document.addEventListener('keydown',function(e){ if(e.target&&e.target.tagName==='INPUT')return;
   if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key==='PageDown'){ e.preventDefault(); if(cur<pages.length)scrollToPage(cur+1); }
   else if(e.key==='ArrowLeft'||e.key==='ArrowUp'||e.key==='PageUp'){ e.preventDefault(); if(cur>1)scrollToPage(cur-1); }

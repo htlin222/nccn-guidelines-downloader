@@ -56,7 +56,7 @@ import {
 import { SKILL_FILENAME, buildSkillZip } from "./lib/skillpack.js";
 import { renderPage } from "./views/home.js";
 import { renderNotes } from "./views/notes.js";
-import { readSnippet, searchSnippets } from "./lib/notes.js";
+import { notesForGid, readSnippet, searchSnippets } from "./lib/notes.js";
 import { remember } from "./lib/cache.js";
 // hashKey 就是 sha256 十六進位，名字是金鑰用途留下的。這裡借它算生成內容的
 // 指紋，不值得為了名字再抄一份同樣的 crypto.subtle.digest。
@@ -129,6 +129,18 @@ export default {
 			const q = url.searchParams.get("q") || "";
 			try {
 				return json(await searchSnippets(env, ctx, q, 80));
+			} catch (e) {
+				return json({ rows: [], error: String(e && e.message) }, 500);
+			}
+		}
+
+		// Viewer 那頁「本頁的臨床筆記」用：一次把整份指引的清單索引抓完，翻頁時
+		// 前端查表就好，不必每翻一頁打一次 API。命名跟 /api/toc?id= 一致。
+		if (pathname === "/api/notes-index") {
+			const gid = url.searchParams.get("id") || "";
+			if (!gid) return json({ rows: [] });
+			try {
+				return json(await notesForGid(env, ctx, gid));
 			} catch (e) {
 				return json({ rows: [], error: String(e && e.message) }, 500);
 			}

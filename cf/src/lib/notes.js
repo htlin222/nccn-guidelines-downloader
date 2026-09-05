@@ -189,6 +189,28 @@ export async function searchSnippets(env, ctx, q, limit) {
 	return { rows: JSON.parse(body).rows, facets: parsed.facets, text: parsed.text };
 }
 
+// 一份指引的全部清單（不分頁、不分軸），給 viewer 一次抓完用來建 page→清單的
+// 對照表。跟 searchSnippets 不同：這裡不查 D1 全文也不查 facet，gid 又是
+// (gid,ref) PK 的前綴，WHERE gid=? 本來就是索引掃描，不必為此另開索引。
+export async function notesForGid(env, ctx, gid) {
+	const body = await remember(
+		env,
+		ctx,
+		"g",
+		gid,
+		async () => {
+			const res = await env.DB.prepare(
+				"SELECT ref, title, kind, page, version, review FROM snippets WHERE gid=? ORDER BY page, ref",
+			)
+				.bind(gid)
+				.all();
+			return { rows: res.results || [] };
+		},
+		"notes",
+	);
+	return JSON.parse(body);
+}
+
 // 單一份清單。查無此份回 null。
 //
 // 只有生成內容進 KV，使用者的修改每次從 D1 讀。這是踩過才改的：原本整包（含修改）

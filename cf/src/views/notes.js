@@ -18,6 +18,13 @@ const NOTEBOOK_SVG =
 	'<path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87' +
 	'a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/></svg>';
 
+// 卡片上直接跳去 PDF 那一頁的小圖示。獨立於右側面板裡「開啟 PDF 第 N 頁」按鈕
+// 之外——那顆要先展開卡片才看得到，這顆讓使用者不必展開就能核對原文。
+const PDF_LINK_SVG =
+	'<svg viewBox="0 0 24 24" aria-hidden="true">' +
+	'<path d="M15 3h6v6"/><path d="M10 14 21 3"/>' +
+	'<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>';
+
 export function renderNotes(request) {
 	const user = request.headers.get("cf-access-authenticated-user-email") || "";
 	// 兩個來源的份數。這一列要跟首頁長一樣，而首頁的數字就是這兩個常數。
@@ -160,6 +167,10 @@ export function renderNotes(request) {
   .cgid{font-size:.74rem;color:hsl(var(--muted-foreground));white-space:nowrap;}
   .cbadge{font-size:.68rem;padding:2px 6px;border-radius:4px;background:hsl(var(--muted));
     color:hsl(var(--muted-foreground));white-space:nowrap;}
+  .cpdf{display:grid;place-items:center;flex-shrink:0;width:22px;height:22px;border-radius:6px;
+    color:hsl(var(--muted-foreground));}
+  .cpdf:hover{background:hsl(var(--muted));color:hsl(var(--foreground));}
+  .cpdf svg{width:13px;height:13px;}
   .cbody{display:none;padding:0 15px 15px;border-top:1px solid hsl(var(--border));}
   .card.open .cbody{display:block;}
   .cbody pre{white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
@@ -257,11 +268,15 @@ function badges(r){
       ? '<span class="cbadge" title="尚未經過對照來源的審查">未審</span>' : '');
 }
 
+var PDF_LINK_SVG=${JSON.stringify(PDF_LINK_SVG)};
 function card(r,i){
   return '<div class="card" data-i="'+i+'" data-gid="'+esc(r.gid)+'" data-ref="'+esc(r.ref)+'">'
     +'<div class="chead"><span class="cref">'+esc(r.ref)+'</span>'
     +'<span class="ctitle">'+esc(r.title)+'</span>'+badges(r)
-    +'<span class="cgid">'+esc(r.gid)+' p'+esc(r.page)+' · v'+esc(r.version)+'</span></div></div>';
+    +'<span class="cgid">'+esc(r.gid)+' p'+esc(r.page)+' · v'+esc(r.version)+'</span>'
+    +'<a class="cpdf" href="/preview/'+encodeURIComponent(r.gid)+'?page='+encodeURIComponent(r.page)
+    +'" target="_blank" rel="noopener" title="開啟 PDF 第 '+esc(r.page)+' 頁" onclick="event.stopPropagation()">'
+    +PDF_LINK_SVG+'</a></div></div>';
 }
 
 // ---- 右欄 ----
