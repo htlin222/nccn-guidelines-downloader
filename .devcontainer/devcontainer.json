@@ -1,0 +1,64 @@
+{
+  "name": "nccn-guidelines-downloader",
+
+  // Node 24 是 CI 的版本（.github/workflows/*.yml 全部 node-version: "24"）。
+  // 對齊它，才不會發生「Codespace 綠燈、CI 紅燈」這種最難查的差異。
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:4-24-bookworm",
+
+  "features": {
+    // gen_insights.sh / strip_nccn_disclaimer.py 要 pymupdf，走系統 python 裝
+    // 會撞 Debian 的 externally-managed-environment，所以用 feature 給一份自己的。
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.12",
+      "installTools": false
+    },
+    // gh secret set / gh workflow run 都要它
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  // 這個 id 已經明文寫在 .github/workflows/*.yml 裡，不是秘密。
+  // 放這裡的用意是：要準備的 Codespaces secret 只剩 token 一個。
+  "containerEnv": {
+    "CLOUDFLARE_ACCOUNT_ID": "3a77813251d473c40d8873a59f6c0e80"
+  },
+
+  // 建立 Codespace 時會提示要填的值（只是提示，實際存放在
+  // github.com/settings/codespaces）。CLOUDFLARE_API_TOKEN 以外都可以留白。
+  "secrets": {
+    "CLOUDFLARE_API_TOKEN": {
+      "description": "Workers Scripts + R2 + D1 + KV 全部要 Edit（見 CLAUDE.md §1）",
+      "documentationUrl": "https://dash.cloudflare.com/profile/api-tokens"
+    },
+    "ANTIGRAVITY_API_KEY": {
+      "description": "選用 — gen_insights.sh 的 Gemini vision 這關"
+    },
+    "GROQ_API_KEY": {
+      "description": "選用 — gen_insights.sh 的四種格式那關"
+    },
+    "NCCN_COOKIE": {
+      "description": "選用 — 只有要在本機測抓 PDF 才需要；平常從 KV 讀就好"
+    }
+  },
+
+  // 系統套件與全域 CLI：只跑一次，而且會被 prebuild 快取起來。
+  "onCreateCommand": "bash .devcontainer/setup-tools.sh",
+
+  // 秘密在 prebuild 階段是拿不到的，所以 .env 的還原要放在每次啟動時做，
+  // 不能放 onCreate/postCreate——不然預建出來的 Codespace 會帶著空的 .env。
+  "postStartCommand": "bash .devcontainer/setup-env.sh",
+
+  // wrangler dev
+  "forwardPorts": [8787],
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "timonwong.shellcheck",
+        "anthropic.claude-code"
+      ]
+    }
+  },
+
+  "remoteUser": "node"
+}
