@@ -855,3 +855,23 @@ curl -sI -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
   Adding a route there is a decision about what the open internet may read; adding
   one that writes is almost certainly a mistake (`handleApi` rejects non-GET).
 - `pnpm test` must pass before `pnpm run deploy`. CI enforces it on push.
+
+---
+
+## 9. 在 Codespaces 上工作
+
+`.devcontainer/` 讓這個 repo 可以整包搬到 GitHub Codespaces，把 Claude Code 裝在
+那台機器上。細節在 [`.devcontainer/README.md`](.devcontainer/README.md)；這裡只記
+三件會咬人的事：
+
+- **Codespaces secret 只需要 `CLOUDFLARE_API_TOKEN` 一個**（`gh secret set … --app
+  codespaces`）。account id 已經明文在 `devcontainer.json` 與所有 workflow 裡。
+  `.env` 由 `setup-env.sh` 在**每次啟動**時還原，不是建立時——prebuild 階段拿不到
+  secrets，用 postCreate 寫的話預建出來的機器會帶著一份空的 `.env`，然後每個
+  wrangler 呼叫都安靜地讀到 0 筆。
+- **`wrangler` 必須全域裝。** 它不在 `cf/package.json` 的 devDependencies 裡（本機
+  是 pnpm 全域），所以 `pnpm install` 帶不出來，44 處呼叫會全部 command not found。
+  `poppler-utils` 與 `webp` 同理，版本對齊 `update-versions.yml`。
+- **`cf/snippets/_src/` 要自己重建**（`bash .devcontainer/dump-src.sh`）。它是 D1
+  `page_text` 的衍生檔、不進版控，但 §5.9 的來源關要比對它。刻意不放進
+  `postCreateCommand`：一輪是對 D1 做 93 次全表掃描，不該綁在開機上。
