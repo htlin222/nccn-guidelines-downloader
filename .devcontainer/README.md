@@ -5,8 +5,15 @@
 （R2 / D1 / KV），Codespace 開起來看到的就是本機看到的。
 
 ```bash
-gh codespace create -R htlin222/nccn-guidelines-downloader -m standardLinux    # 4-core
+gh codespace create -R htlin222/nccn-guidelines-downloader -m standardLinux32gb
 gh codespace ssh
+```
+
+機型只有兩個：`basicLinux32gb`（2 core / 8 GB）與 `standardLinux32gb`
+（4 core / 16 GB）。`gh api repos/<owner>/<repo>/codespaces/machines` 可以列出來。
+```bash
+# 忘記名字時：
+gh api repos/htlin222/nccn-guidelines-downloader/codespaces/machines -q '.machines[].name'
 ```
 
 ---
