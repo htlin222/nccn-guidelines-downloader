@@ -34,3 +34,7 @@ Thumbs.db
 # 核對清單的素材：從 D1 的 page_text dump 出來的衍生檔，隨時可用
 # cf/dump_snippet_src.sh 重建。verify 需要它，但不該進版控。
 cf/snippets/_src/
+
+# 簡報素材圖的 PNG：從 cf/courses/figures/**.html 用 cf/gen_figures.sh 重建的
+# 衍生檔。每張 3200x1600 約 300 KB，進版控的話幾十張就是十幾 MB 的二進位 diff。
+cf/figures-out/

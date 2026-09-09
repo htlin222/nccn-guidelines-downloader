@@ -1,0 +1,488 @@
+/* 簡報素材圖的共用 primitives。
+ *
+ * 每張圖手刻一個 .html，但 class 全部來自這裡——手刻是為了讓矩陣、分解樹、環形、
+ * 時間軸各自長成該有的樣子（它們沒有共同的資料模型），共用 CSS 是為了第 30 張跟
+ * 第 1 張看起來像同一個人做的，而且改配色只改這一個檔。
+ *
+ * 畫布固定 1600x800（2:1）。為什麼是 2:1：投影片是 16:9，上面留標題、下面留引用，
+ * 中間剩下的就是 2:1。所以圖生下來就是這個比例，貼進去不用裁——也因此**圖裡不放
+ * 大標題**，標題是投影片的事。
+ *
+ * **圖裡的文字一律英文。** 這些圖是要貼進學會演講的投影片的，而那個場合的語言是
+ * 英文；課程本文則維持中英夾雜（台灣醫學共筆的寫法）。所以同一課裡文字是中文、圖
+ * 是英文，這是刻意的，不是漏翻。改圖的時候不要「順手翻成中文」。
+ *
+ * 圖永遠白底，不隨網站主題變。深色模式下它就是一張白卡片。這不是偷懶：網頁上看到
+ * 的那張圖，就是匯出成 PNG 貼進投影片的那一張。跟著主題反白就有兩套渲染，而只有
+ * 其中一套會出現在演講裡，另一套的排版問題永遠不會被發現。
+ */
+
+/* 每一個變數都帶 --fig- 前綴，因為這份 CSS 會被原樣注入課程頁面，而那一頁的 :root
+   也有自己的一組變數。第一版沒有前綴，於是頁面的 --brand（HSL 分量 "181 27% 32%"）
+   蓋掉了圖的 --brand（色碼 #3d6869）：background: var(--brand) 收到一段不是顏色的
+   字串而失效，實心節點變成透明，白字落在白底上——整排 preferred 方案在網頁上直接
+   消失，而 PNG 那邊完全正常，因為那裡沒有宿主頁面。 */
+:root {
+	--fig-w: 1600px;
+	--fig-h: 800px;
+
+	--fig-ink: #111111; /* 墨：正文、實心終點節點 */
+	--fig-ink-2: #4a4a4a; /* 次要文字 */
+	--fig-ink-3: #8a8a8a; /* 註腳、圖例說明 */
+	--fig-brand: #3d6869; /* 主色：強調節點、群組標籤 */
+	--fig-brand-ink: #2c4c4d; /* 主色的深色版，用於小字（對比度） */
+	--fig-line: #d8d8d8; /* 1px 細框與連接線 */
+	--fig-line-2: #ececec; /* 更淡的分隔線 */
+	--fig-wash: rgba(61, 104, 105, 0.055); /* 群組底 */
+	--fig-wash-2: rgba(61, 104, 105, 0.13); /* 次要節點底 */
+	--fig-paper: #ffffff;
+
+	/* 字級是簡報可讀性的底線，**不要在單張圖裡覆寫**。
+	 *
+	 * 這些圖貼進 16:9 投影片、佔九成寬時，1600px 畫布放大約 1.08 倍，所以
+	 * 22px 的節點正文 ≈ 13pt、16px 的圖例 ≈ 9.5pt。一般會議建議圖表最小 14pt，
+	 * 所以這已經是「密集參考圖」能走到的邊界了。
+	 *
+	 * 放不下的時候：先收 gap（dense / tight），再減內容，最後**拆成兩張圖**。
+	 * 不要縮字級——縮到後排看不見，這張圖在演講裡就沒有作用了，而它在網頁上
+	 * 看起來仍然很好，所以你不會發現。
+	 */
+	--fig-fs-lane: 22px; /* 欄／列標籤 */
+	--fig-fs-node: 22px; /* 節點正文 */
+	--fig-fs-sm: 18px; /* 小注 */
+	--fig-fs-xs: 16px; /* 圖例、角標 */
+}
+
+/* ---------- 畫布 ---------- */
+
+.fig {
+	width: var(--fig-w);
+	height: var(--fig-h);
+	background: var(--fig-paper);
+	color: var(--fig-ink);
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Noto Sans TC",
+		"Microsoft JhengHei", sans-serif;
+	-webkit-font-smoothing: antialiased;
+	font-size: var(--fig-fs-node);
+	line-height: 1.3;
+	box-sizing: border-box;
+	padding: 22px 30px;
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	position: relative;
+	overflow: hidden;
+}
+.fig *,
+.fig *::before,
+.fig *::after {
+	box-sizing: border-box;
+}
+
+/* 嵌進課程頁時等比縮到容器寬度。用 container query units 是為了不必寫 JS——
+   一張圖在文章裡的寬度由版面決定，而 JS 縮放要處理 resize、字體載入、列印三種
+   時機，每一種都曾經是別人專案裡的 bug。 */
+.figwrap {
+	container-type: inline-size;
+	width: 100%;
+	aspect-ratio: 2 / 1;
+	overflow: hidden;
+	background: var(--fig-paper);
+	border: 1px solid var(--fig-line);
+	border-radius: 8px;
+}
+.figwrap > .fig {
+	transform-origin: top left;
+	/* 除以 1600px 而不是 1600：長度除以無單位數還是長度，而 scale() 只吃無單位數，
+	   於是整條 transform 被丟掉、圖以 1:1 溢出容器。長度除以長度才得到比例。 */
+	transform: scale(calc(100cqw / 1600px));
+}
+
+/* 節點多的圖用預設間距一律溢出 800px（下緣的圖例會被裁掉，而 PNG 的尺寸看不出來）。
+   dense 只縮空白、不動字級——縮字級會讓同一套圖出現兩種閱讀密度，投影片上並排時
+   一眼就看得出來。 */
+.fig.dense {
+	gap: 15px;
+}
+.fig.dense .fig-row {
+	gap: 12px;
+}
+.fig.dense .fig-col {
+	gap: 10px;
+}
+.fig.dense .fig-node.sm {
+	padding: 4px 8px;
+	min-height: 25px;
+}
+.fig.dense .fig-node.stack {
+	gap: 2px;
+}
+.fig.dense .fig-group {
+	padding: 11px 9px 9px;
+}
+
+/* 再緊一級，給列數與欄數都到頂的矩陣（六列 × 四欄那種）。仍然只動空白：字級是圖
+   與圖之間唯一必須一致的東西，投影片上並排時第一個看得出來的就是它。
+   需要第三級的圖只有兩張——再多就該拆成兩張圖，而不是繼續縮。 */
+.fig.dense.tight {
+	gap: 10px;
+	padding: 16px 24px;
+}
+.fig.dense.tight .fig-row {
+	gap: 10px;
+}
+.fig.dense.tight .fig-col {
+	gap: 8px;
+}
+.fig.dense.tight .fig-node {
+	min-height: 32px;
+	padding: 5px 9px;
+}
+.fig.dense.tight .fig-node.sm {
+	padding: 3px 7px;
+	min-height: 22px;
+}
+
+/* ---------- 版面 ---------- */
+
+.fig-row {
+	display: flex;
+	gap: 14px;
+	align-items: stretch;
+}
+.fig-col {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+.fig-grow {
+	flex: 1;
+	min-width: 0;
+}
+.fig-center {
+	align-items: center;
+	justify-content: center;
+}
+
+/* 欄標籤：矩陣頂端那一列（First line / Salvage …） */
+.fig-head {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 7px 12px;
+	font-size: var(--fig-fs-lane);
+	font-weight: 700;
+	letter-spacing: 0.01em;
+	background: var(--fig-wash-2);
+	color: var(--fig-brand-ink);
+	border-radius: 4px;
+	text-align: center;
+}
+.fig-head.solid {
+	background: var(--fig-brand);
+	color: #fff;
+}
+
+/* 列標籤：矩陣左緣那條色帶（Fit for intensive chemo …）。
+   橫排窄欄，不是直排。參考圖用直排是因為英文標籤長，中文四到六個字橫排折行就夠，
+   而中文直排要嘛得 text-orientation:upright（夾在裡面的 HR、HER2 會變成一個字
+   一行），要嘛 rotate 180 度整段顛倒。兩種都比折行難讀。 */
+.fig-side {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 10px 8px;
+	/* 五列以上、四欄以上的矩陣需要窄一點的列標籤才塞得下，覆寫這個變數而不是
+	   在每張圖裡寫 inline width。 */
+	width: var(--fig-side-w, 112px);
+	flex: none;
+	font-size: var(--fig-fs-sm);
+	font-weight: 700;
+	background: var(--fig-wash-2);
+	color: var(--fig-brand-ink);
+	border-radius: 4px;
+	text-align: center;
+	line-height: 1.35;
+	/* 跟 .fig-node 同一個問題：這是 flex container，所以「主標 + <span> 小字」會變成
+	   並排的兩個 item 把標籤撐爆。column 讓它們照直覺往下疊，單一子元素時沒有差別。 */
+	flex-direction: column;
+}
+.fig-side.solid {
+	background: var(--fig-brand);
+	color: #fff;
+}
+
+/* ---------- 節點 ---------- */
+
+/* **節點的內容一律包一層 <div>，不要放裸文字。**
+ *
+ *   <div class="fig-node">A germline <i>BRCA1/2</i> PV</div>   ← 壞的
+ *   <div class="fig-node"><div>A germline <i>BRCA1/2</i> PV</div></div>   ← 對的
+ *
+ * .fig-node 是 flex container，裸文字與其中的 <i>/<b> 會各自變成 anonymous flex
+ * item，item 之間的空白被丟棄——上面第一行會渲染成 germlineBRCA1/2PV。網頁與 PNG
+ * 會「一致地錯」，所以看起來像漏字而不像版面壞掉，對著原始碼也看不出來。
+ *
+ * 換 display:grid 更糟：那會讓每個 inline 元素各自佔一列（實測過）。所以這是約定，
+ * 不是 CSS 能修的東西——verify_courses.py 的第 4 關會在瀏覽器裡檢查有沒有違反。
+ */
+.fig-node {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 7px 11px;
+	background: var(--fig-paper);
+	border: 1px solid var(--fig-line);
+	border-radius: 4px;
+	text-align: center;
+	font-size: var(--fig-fs-node);
+	min-height: 38px;
+}
+.fig-node.solid {
+	background: var(--fig-brand);
+	border-color: var(--fig-brand);
+	color: #fff;
+	font-weight: 600;
+} /* 這一格是重點 */
+.fig-node.ink {
+	background: var(--fig-ink);
+	border-color: var(--fig-ink);
+	color: #fff;
+	font-weight: 600;
+} /* 終點／結論 */
+.fig-node.wash {
+	background: var(--fig-wash);
+	border-color: transparent;
+} /* 次要 */
+.fig-node.key {
+	border: 1.5px solid var(--fig-brand);
+	font-weight: 600;
+} /* biomarker／分層條件 */
+.fig-node.dashed {
+	border-style: dashed;
+}
+.fig-node.left {
+	justify-content: flex-start;
+	text-align: left;
+}
+.fig-node.sm {
+	font-size: var(--fig-fs-sm);
+	padding: 5px 9px;
+	min-height: 28px;
+}
+.fig-node.circle {
+	border-radius: 999px;
+	aspect-ratio: 1;
+	padding: 10px;
+	line-height: 1.2;
+}
+
+/* 節點右上的小角標（category 1、preferred …） */
+.fig-tag {
+	display: inline-block;
+	margin-left: 8px;
+	padding: 2px 6px;
+	border-radius: 3px;
+	font-size: var(--fig-fs-xs);
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	background: var(--fig-wash-2);
+	color: var(--fig-brand-ink);
+	vertical-align: middle;
+	white-space: nowrap;
+}
+.fig-node.solid .fig-tag,
+.fig-node.ink .fig-tag {
+	background: rgba(255, 255, 255, 0.22);
+	color: #fff;
+}
+
+/* 一格就是一段散文的節點。
+ *
+ * .fig-node 是 row 方向的 flex container，所以節點裡只要有裸文字加 <b>，每一段都會
+ * 變成獨立的 flex item 被排成一欄一欄——寫矩陣圖的密集文字時一定會踩到，而且 PNG
+ * 上一眼就知道壞了、原始碼裡卻看不出哪裡錯。.left 只改 justify-content，不改 flex
+ * 方向，所以單獨用它不夠。
+ */
+.fig-node.body {
+	flex-direction: column;
+	align-items: flex-start;
+	justify-content: center;
+	text-align: left;
+	line-height: 1.34;
+}
+.fig-node.body > div {
+	width: 100%;
+}
+.fig-node.stack.left {
+	align-items: flex-start;
+	text-align: left;
+} /* .stack 轉成 column 之後 .left 的 justify-content 變成主軸，靠左會失效 */
+
+.fig-node.body.mid {
+	align-items: center;
+	text-align: center;
+} /* 短標籤格（頻率、孕期…） */
+
+/* 群組「內部」的次級欄標籤。.fig-head 太重（實心底、19px），而 .fig-glabel 是絕對
+   定位的群組標籤，拿來當欄頭會疊到框線上。 */
+.fig-subhead {
+	font-size: var(--fig-fs-xs);
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	color: var(--fig-brand-ink);
+	text-align: center;
+	padding: 2px 0;
+}
+
+/* 節點內的第二行：對應的關鍵試驗。treatment landscape 沒有試驗名就只是一張藥名
+   表——「為什麼這格是首選」才是要記的東西。刻意做得比藥名淡：它是註解，不是指令。 */
+.fig-node.stack {
+	flex-direction: column;
+	gap: 3px;
+}
+.fig-sub {
+	font-size: var(--fig-fs-xs);
+	font-weight: 400;
+	opacity: 0.78;
+	letter-spacing: 0.01em;
+}
+/* 第二行放的是「這一格的條件」而不是註解時用這個。預設的淡化是給試驗名那種旁註
+   的，條件被淡掉會讓人以為可以略過。 */
+.fig-sub.strong {
+	opacity: 1;
+	color: var(--fig-ink-2);
+}
+.fig-node.solid .fig-sub.strong,
+.fig-node.ink .fig-sub.strong {
+	color: rgba(255, 255, 255, 0.92);
+}
+
+/* 讓一欄裡的節點平分欄高，把整列撐滿。矩陣圖若不這樣做，最長的那一欄決定列高，
+   其他欄下方就是一片與內容無關的空白——參考圖裡格子有大有小、彼此對齊，靠的就是
+   這個。補充說明用 .keep 維持自然高度，它不該被拉成跟藥名一樣重。 */
+.fig-col.fill > * {
+	flex: 1;
+}
+.fig-col.fill > .keep {
+	flex: none;
+}
+
+/* ---------- 群組 ---------- */
+
+.fig-group {
+	position: relative;
+	padding: 13px 11px 11px;
+	background: var(--fig-wash);
+	border-radius: 6px;
+}
+.fig-group.dashed {
+	background: none;
+	border: 1px dashed var(--fig-line);
+} /* 可選／範圍／不確定 */
+.fig-group.plain {
+	background: none;
+	border: 1px solid var(--fig-line);
+}
+.fig-group > .fig-glabel {
+	position: absolute;
+	top: -11px;
+	left: 14px;
+	padding: 1px 8px;
+	background: var(--fig-paper);
+	font-size: var(--fig-fs-xs);
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	color: var(--fig-brand-ink);
+	text-transform: uppercase;
+}
+
+/* ---------- 連接線 ---------- */
+
+.fig-arrow {
+	flex: none;
+	align-self: center;
+	width: 26px;
+	height: 1px;
+	background: var(--fig-line);
+	position: relative;
+}
+.fig-arrow::after {
+	content: "";
+	position: absolute;
+	right: 0;
+	top: -3.5px;
+	border: 4px solid transparent;
+	border-left-color: var(--fig-ink-3);
+	border-right: 0;
+}
+.fig-arrow.long {
+	width: 44px;
+}
+.fig-vline {
+	width: 1px;
+	background: var(--fig-line);
+	align-self: stretch;
+	margin: 0 6px;
+}
+.fig-hline {
+	height: 1px;
+	background: var(--fig-line-2);
+	width: 100%;
+}
+
+/* ---------- 文字零件 ---------- */
+
+.fig-note {
+	font-size: var(--fig-fs-sm);
+	color: var(--fig-ink-2);
+	line-height: 1.45;
+}
+.fig-foot {
+	font-size: var(--fig-fs-xs);
+	color: var(--fig-ink-3);
+	line-height: 1.5;
+}
+.fig-em {
+	color: var(--fig-brand-ink);
+	font-weight: 700;
+}
+
+/* ---------- 圖例 ---------- */
+
+.fig-legend {
+	display: flex;
+	gap: 18px;
+	align-items: center;
+	font-size: var(--fig-fs-xs);
+	color: var(--fig-ink-2);
+}
+.fig-legend i {
+	display: inline-block;
+	width: 22px;
+	height: 12px;
+	border-radius: 2px;
+	margin-right: 6px;
+	vertical-align: -1px;
+	border: 1px solid var(--fig-line);
+	background: var(--fig-paper);
+}
+.fig-legend i.solid {
+	background: var(--fig-brand);
+	border-color: var(--fig-brand);
+}
+.fig-legend i.ink {
+	background: var(--fig-ink);
+	border-color: var(--fig-ink);
+}
+.fig-legend i.key {
+	border: 1.5px solid var(--fig-brand);
+}
+.fig-legend i.wash {
+	background: var(--fig-wash-2);
+	border-color: transparent;
+}
+.fig-legend span {
+	white-space: nowrap;
+}
