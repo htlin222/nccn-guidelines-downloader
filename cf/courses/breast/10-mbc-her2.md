@@ -6,7 +6,7 @@ group   = "晚期"
 title   = "轉移性 HER2 陽性乳癌"
 oneline = "THP 打到進展，換 T-DXd，有腦轉移就 CLIMB；換的是化療骨架，抗 HER2 不停"
 refs    = ["BINV-21", "BINV-24", "BINV-25", "BINV-26", "BINV-P", "BINV-Q", "BINV-R", "BINV-A"]
-figures = ["breast/mbc-her2-landscape", "breast/mbc-her2-flow", "breast/mbc-her2-trials", "breast/mbc-her2-numbers", "breast/mbc-her2-pitfalls"]
+figures = ["breast/mbc-her2-landscape", "breast/mbc-her2-flow", "breast/mbc-her2-trials", "breast/mbc-her2-numbers", "breast/mbc-her2-pitfalls", "breast/adc-mechanism"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -21,6 +21,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 ---
 
 ## 治療地景
+
+![[fig:breast/adc-mechanism]]
 
 ![[fig:breast/mbc-her2-landscape]]
 

@@ -505,6 +505,82 @@
 	padding: 3px 8px;
 }
 
+/* ---------- 機轉示意（SVG） ---------- */
+
+/* 分子機轉、訊號路徑這類東西沒辦法用方塊排出來，只能畫。但畫出來的東西必須吃同一組
+ * 變數，否則它會變成圖庫裡的第七種風格。
+ *
+ * 規則：SVG 內**不要寫任何顏色與字級的字面值**，一律用下面這些 class。字級用
+ * var(--fig-fs-*) 而不是 px——整張 .fig 會被 scale 到投影片寬度，SVG 裡的 px 跟外面
+ * 的 px 是同一個單位，所以字級規則對 SVG 一樣成立（verify 的字級檢查也照樣會抓）。
+ *
+ * 一張機轉圖通常是「四格步驟，每格一個小圖示 + 一句話」，不是一整張大 SVG——小圖示
+ * 各自獨立，改一步不會動到別步的座標。
+ */
+.fig-svg {
+	display: block;
+	width: 100%;
+	height: auto;
+	overflow: visible;
+}
+.fig-svg .ln {
+	fill: none;
+	stroke: var(--fig-line);
+	stroke-width: 1.5;
+}
+.fig-svg .memb {
+	fill: none;
+	stroke: var(--fig-ink);
+	stroke-width: 3;
+	stroke-linecap: round;
+}
+.fig-svg .ab {
+	fill: none;
+	stroke: var(--fig-brand);
+	stroke-width: 3;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+.fig-svg .rec {
+	fill: var(--fig-wash-2);
+	stroke: var(--fig-ink);
+	stroke-width: 1.5;
+}
+.fig-svg .pay {
+	fill: var(--fig-ink);
+}
+.fig-svg .brand-fill {
+	fill: var(--fig-brand);
+}
+.fig-svg .vesicle {
+	fill: none;
+	stroke: var(--fig-brand);
+	stroke-width: 1.5;
+	stroke-dasharray: 4 3;
+}
+.fig-svg .arw {
+	fill: none;
+	stroke: var(--fig-ink-3);
+	stroke-width: 1.5;
+}
+/* 抑制記號：一橫槓，不是箭頭 */
+.fig-svg .inh {
+	fill: none;
+	stroke: var(--fig-brand);
+	stroke-width: 2.5;
+	stroke-linecap: round;
+}
+.fig-svg text {
+	font-family: inherit;
+	font-size: var(--fig-fs-xs);
+	fill: var(--fig-ink-2);
+	text-anchor: middle;
+}
+.fig-svg text.lab {
+	font-weight: 700;
+	fill: var(--fig-brand-ink);
+}
+
 /* ---------- 時間軸 ---------- */
 
 /* 治療全程的時序。早期癌症最需要這一張——決策矩陣說得出「該給什麼」，說不出

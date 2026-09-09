@@ -1,0 +1,134 @@
+<!doctype html>
+<!-- fig
+id:    breast/adc-mechanism
+title: How an antibody-drug conjugate works, and why the bystander effect matters
+kind:  mechanism
+tags:  [breast, adc, her2, mechanism, trastuzumab-deruxtecan, sacituzumab]
+cite:  [{ gid: "breast", refs: ["BINV-Q"], page: 93 }]
+note:  機轉本身是教科書通識，不在 NCCN 頁面上——NCCN 只列方案與證據等級。圖上已標明策展補充
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>How an antibody-drug conjugate works</title>
+<link rel="stylesheet" href="../figure.css">
+<style>body{margin:0;background:#fff}</style>
+</head>
+<body>
+
+<section class="fig dense">
+
+  <div class="fig-row">
+    <div class="fig-head fig-grow">Three parts, four steps &mdash; and the part that explains HER2-low</div>
+  </div>
+
+  <!-- 上排：ADC 的三個部件 -->
+  <div class="fig-row" style="gap:14px">
+    <div class="fig-node stack" style="flex:1">
+      <svg class="fig-svg" viewBox="0 0 200 96" style="max-height:112px">
+        <path class="ab" d="M100 78 L100 52 M100 52 L74 26 M100 52 L126 26"/>
+        <circle class="brand-fill" cx="74" cy="22" r="6"/>
+        <circle class="brand-fill" cx="126" cy="22" r="6"/>
+        <text class="lab" x="100" y="94">Antibody</text>
+      </svg>
+      <div class="fig-sub strong">Picks the target: HER2, or TROP-2 for sacituzumab</div>
+    </div>
+
+    <div class="fig-node stack" style="flex:1">
+      <svg class="fig-svg" viewBox="0 0 200 96" style="max-height:112px">
+        <path class="ab" d="M100 20 L100 40"/>
+        <path class="ln" stroke-dasharray="5 4" d="M100 40 L100 66" stroke-width="2.5"/>
+        <circle class="pay" cx="100" cy="74" r="7"/>
+        <path class="inh" d="M84 53 L116 53"/>
+        <text x="100" y="46">cleaved here</text>
+        <text class="lab" x="100" y="94">Linker</text>
+      </svg>
+      <div class="fig-sub strong">Holds the payload until the antibody is inside. Cleavable linkers are what allow the bystander effect</div>
+    </div>
+
+    <div class="fig-node stack" style="flex:1">
+      <svg class="fig-svg" viewBox="0 0 200 96" style="max-height:112px">
+        <circle class="pay" cx="100" cy="44" r="12"/>
+        <circle class="pay" cx="70" cy="62" r="6"/>
+        <circle class="pay" cx="130" cy="62" r="6"/>
+        <circle class="pay" cx="100" cy="72" r="5"/>
+        <text class="lab" x="100" y="94">Payload</text>
+      </svg>
+      <div class="fig-sub strong">The cytotoxic drug. Its potency, and how many copies ride on each antibody, set the therapeutic window</div>
+    </div>
+
+    <div class="fig-node wash stack keep" style="flex:1.15">
+      <div><b>Why this matters clinically</b></div>
+      <div class="fig-sub strong">A cleavable linker plus a membrane-permeable payload kills the neighbouring cell too &mdash; even if that cell carries little or no target. That is the mechanistic reason a HER2-directed ADC can work in <b>HER2-low</b> disease, where trastuzumab alone does not.</div>
+    </div>
+  </div>
+
+  <!-- 下排：四步機轉 -->
+  <div class="fig-row fig-grow" style="gap:14px">
+    <div class="fig-node stack fig-grow">
+      <svg class="fig-svg" viewBox="0 0 220 150" style="max-height:215px">
+        <path class="memb" d="M10 108 H210"/>
+        <rect class="rec" x="96" y="92" width="28" height="16" rx="3"/>
+        <path class="ab" d="M110 56 L110 34 M110 34 L92 16 M110 34 L128 16"/>
+        <path class="arw" d="M110 62 L110 84" marker-end=""/>
+        <path class="arw" d="M104 78 L110 86 L116 78"/>
+        <circle class="pay" cx="110" cy="26" r="5"/>
+        <text x="110" y="132">Target on the surface</text>
+        <text class="lab" x="110" y="148">1 · Binding</text>
+      </svg>
+      <div class="fig-sub strong">The antibody binds its antigen. Expression level decides how much drug arrives</div>
+    </div>
+
+    <div class="fig-node stack fig-grow">
+      <svg class="fig-svg" viewBox="0 0 220 150" style="max-height:215px">
+        <path class="memb" d="M10 60 H82 M138 60 H210"/>
+        <path class="memb" d="M82 60 Q110 104 138 60"/>
+        <path class="ab" d="M110 84 L110 72"/>
+        <circle class="pay" cx="110" cy="90" r="5"/>
+        <text x="110" y="132">Receptor-mediated uptake</text>
+        <text class="lab" x="110" y="148">2 · Internalisation</text>
+      </svg>
+      <div class="fig-sub strong">The whole complex is drawn into the cell inside a vesicle</div>
+    </div>
+
+    <div class="fig-node stack fig-grow">
+      <svg class="fig-svg" viewBox="0 0 220 150" style="max-height:215px">
+        <circle class="vesicle" cx="110" cy="66" r="40"/>
+        <path class="ab" d="M110 74 L110 58"/>
+        <circle class="pay" cx="96" cy="82" r="5"/>
+        <circle class="pay" cx="124" cy="80" r="5"/>
+        <circle class="pay" cx="110" cy="92" r="4"/>
+        <text x="110" y="132">Lysosome cleaves the linker</text>
+        <text class="lab" x="110" y="148">3 · Release</text>
+      </svg>
+      <div class="fig-sub strong">Free payload is now loose in the cytoplasm and kills that cell</div>
+    </div>
+
+    <div class="fig-node stack fig-grow">
+      <svg class="fig-svg" viewBox="0 0 220 150" style="max-height:215px">
+        <circle class="ln" cx="72" cy="62" r="34" stroke-width="2"/>
+        <circle class="ln" cx="152" cy="62" r="34" stroke-width="2"/>
+        <circle class="pay" cx="72" cy="62" r="5"/>
+        <circle class="pay" cx="104" cy="58" r="4"/>
+        <circle class="pay" cx="152" cy="62" r="5"/>
+        <path class="arw" d="M92 62 H130"/>
+        <path class="arw" d="M124 56 L132 62 L124 68"/>
+        <text x="72" y="112">target +</text>
+        <text x="152" y="112">target low</text>
+        <text class="lab" x="110" y="148">4 · Bystander effect</text>
+      </svg>
+      <div class="fig-sub strong">Membrane-permeable payload crosses into neighbouring cells that express little or no target</div>
+    </div>
+  </div>
+
+  <div class="fig-hline"></div>
+  <div class="fig-foot">
+    The mechanism itself is textbook pharmacology and is <b>not</b> on any NCCN page &mdash; NCCN lists regimens and
+    categories. Shown here because it is what makes the HER2-low and TROP-2 indications make sense.
+    Which ADC sits in which line: see the treatment landscape figures.
+  </div>
+
+</section>
+
+</body>
+</html>
