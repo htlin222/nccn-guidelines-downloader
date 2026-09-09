@@ -51,7 +51,11 @@ for (const f of fs.existsSync(figDir) ? walk(figDir) : []) {
   // class 要整段留著（"fig dense tight"），不能寫死成 "fig"：dense/tight 是密度
   // 修飾子，掉了的話網頁上的圖會用預設間距而溢出，PNG 卻是對的——兩邊不一樣，
   // 而這正是這整套「同一份原始碼」要避免的事。
-  const body = /<section class="(fig[^"]*)">([\s\S]*?)<\/section>/.exec(src);
+  // 整個開標籤都要留著，不只 class。圖可以在 section 上帶 style（例如覆寫
+  // --fig-side-w），那些屬性掉了的話網頁版會用預設值而溢出，PNG 卻是對的——
+  // 兩邊不一樣，正是這整套「同一份原始碼」要避免的事。第一版寫死 class="fig"、
+  // 第二版只抓 class 屬性，都在加修飾子的當下才發現。
+  const body = /<section (class="fig[^"]*"[^>]*)>([\s\S]*?)<\/section>/.exec(src);
   if (!body) { console.error("圖裡找不到 <section class=\"fig…\">：" + f); process.exit(1); }
   const cite = get("cite");
   figures[id] = {
@@ -63,7 +67,7 @@ for (const f of fs.existsSync(figDir) ? walk(figDir) : []) {
     refs: (cite.match(/"([A-Z][A-Z0-9]*-[0-9A-Z]+)"/g) || []).map((s) => s.slice(1, -1)),
     page: Number((/page:\s*(\d+)/.exec(cite) || [])[1] || 0) || null,
     file: f,
-    html: `<section class="${body[1]}">${body[2]}</section>`,
+    html: `<section ${body[1]}>${body[2]}</section>`,
   };
 }
 

@@ -166,7 +166,7 @@ for f in sorted(fig_dir.rglob("*.html")):
         err(where, "metadata 缺 cite")
     # class 要用 regex 比對，不能寫死 "fig"：dense / tight 是密度修飾子，圖上會寫成
     # class="fig dense tight"。寫死的話那些圖會被誤報成「壞掉」。
-    if not re.search(r'<section class="fig[^"]*">', src):
+    if not re.search(r'<section class="fig[^"]*"[^>]*>', src):
         err(where, '找不到 <section class="fig…">')
     if 'lang="en"' not in src:
         # 圖裡的文字一律英文（要貼進學會演講的投影片）。lang 標錯多半代表整張圖是中文的。
@@ -287,7 +287,7 @@ def check_overflow(paths: list[Path]) -> None:
     html = f"""<!doctype html><meta charset="utf-8"><body style="margin:0">{frames}
 <pre id="out"></pre><script>
 window.addEventListener('load', function(){{
-  var names = {names}, bad = [], all = [], bare = [];
+  var names = {names}, bad = [], all = [], bare = [], clip = [];
   document.querySelectorAll('iframe').forEach(function(f, i){{
     try {{
       var d = f.contentDocument.querySelector('.fig');
@@ -297,6 +297,14 @@ window.addEventListener('load', function(){{
       if (w > 1601 || h > 801) bad.push([names[i], w + 'x' + h]);
       // .fig-node 裡的裸文字混 inline 標籤：flex 會把它們拆成多個 anonymous item，
       // item 之間的空白被丟棄，渲染出來像漏字。只有在真的排版之後才看得出來。
+      // 元素自己的內容溢出自己的邊框。整張圖的 scrollHeight 抓不到這一類：
+      // .fig-col.fill 的 flex:1 把節點高度固定住，文字滿出去時節點沒有變高，
+      // 畫布也沒有變高——量起來是漂亮的 1600x800，而 PNG 上文字已經掉出白框。
+      d.querySelectorAll('.fig-node, .fig-head, .fig-side, .fig-group').forEach(function(n){{
+        var dh = n.scrollHeight - n.clientHeight, dw = n.scrollWidth - n.clientWidth;
+        if (dh > 1 || dw > 1)
+          clip.push([names[i], n.textContent.trim().slice(0, 40), dw + 'x' + dh]);
+      }});
       d.querySelectorAll('.fig-node').forEach(function(n){{
         var hasText = false, hasEl = false;
         for (var k = 0; k < n.childNodes.length; k++) {{
@@ -310,7 +318,8 @@ window.addEventListener('load', function(){{
     }} catch (e) {{ bad.push([names[i], 'unreadable: ' + e.message]); }}
   }});
   document.getElementById('out').textContent =
-    'MEASURED=' + JSON.stringify(all) + '\\nBARE=' + JSON.stringify(bare) +
+    'MEASURED=' + JSON.stringify(all) + '\\nCLIP=' + JSON.stringify(clip) +
+    '\\nBARE=' + JSON.stringify(bare) +
     '\\nOVERFLOW=' + JSON.stringify(bad);
 }});
 </script></body>"""
@@ -351,6 +360,12 @@ window.addEventListener('load', function(){{
             print(f"  量到 {name}: {size}")
     for name, size in json.loads(m.group(1)):
         err(name, f"內容超出 1600x800 畫布（{size}）— 會被裁掉，而 PNG 的尺寸看不出來")
+
+    clipm = re.search(r"CLIP=(\[.*?\])\n", out, re.S)
+    if clipm:
+        for name, text, over in json.loads(clipm.group(1)):
+            err(name, f"有元素的內容溢出自己的邊框（超出 {over} px，「{text}」）"
+                      f"— 整張圖的高度看不出來，但 PNG 上文字會掉出白框")
 
     barem = re.search(r"BARE=(\[.*?\])\n", out, re.S)
     if barem:

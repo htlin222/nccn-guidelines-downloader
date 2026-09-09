@@ -194,8 +194,14 @@
 	justify-content: center;
 	padding: 10px 8px;
 	/* 五列以上、四欄以上的矩陣需要窄一點的列標籤才塞得下，覆寫這個變數而不是
-	   在每張圖裡寫 inline width。 */
-	width: var(--fig-side-w, 112px);
+	   在每張圖裡寫 inline width。112px 裝不下 "mastectomy" 這種長單字（18px 字級下
+	   約 100px 加左右內距就滿了），而溢出的方式是橫向頂出邊框——整張圖的高度看不
+	   出來，PNG 上卻缺一角。 */
+	width: var(--fig-side-w, 134px);
+	/* break-word 而不是 anywhere：anywhere 會在任何字元斷開，"mastectomy" 變成
+	   "mastectom / y"——溢出檢查會通過（沒有超出邊框），但視覺上就是壞的，而那是
+	   只有人眼看得出來的一類。寬度給到裝得下最長的常見單字，斷字就不會發生。 */
+	overflow-wrap: break-word;
 	flex: none;
 	font-size: var(--fig-fs-sm);
 	font-weight: 700;
