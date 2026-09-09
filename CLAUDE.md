@@ -748,6 +748,13 @@ cf/verify_courses.py                       四關
 路由：`/course`（學習路徑）、`/course/<track>/<module>`（本文）、`/figures`（圖庫）、
 `/figures/<id>.png`（R2）。
 
+**Bundle 預算已經比設計時估的大一個量級。** 設計文件預估 13 課約 200 KB；實際上
+`src/data/courses.js` 是 **1.3 MB**（85 張圖的 HTML 佔絕大部分），整包 Worker 上傳
+1.9 MB、gzip 後 428 KB。Workers 的限制是壓縮後 3 MB，所以**目前安全，但第二個癌別
+就會逼近**。退路在設計文件裡寫好了：`courses.js` 只被 `views/course.js` 引用，把圖的
+HTML 搬去 R2、bundle 裡只留索引是單點改動。加下一個癌別之前先看 `wrangler deploy`
+回報的 gzip 數字。
+
 ### 五個決定值得知道
 
 - **內容真相在 git，網頁唯讀。** 勾選與遮罩進度走 `localStorage`，不動 D1、不加 API。
