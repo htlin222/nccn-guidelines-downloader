@@ -10,6 +10,7 @@
 
 import { GUIDELINES } from "../data/guidelines.js";
 import { ALGORITHMS } from "../data/algorithms.js";
+import { COURSES, FIGURES } from "../data/courses.js";
 
 const NOTEBOOK_SVG =
 	'<svg viewBox="0 0 24 24" aria-hidden="true">' +
@@ -198,6 +199,8 @@ export function renderNotes(request) {
       <a href="/?src=nccn">NCCN<b>${nccnN}</b></a>
       <a href="/?src=mda">MD Anderson<b>${mdaN}</b></a>
       <a href="/notes" class="act"><span class="ni">${NOTEBOOK_SVG}</span>臨床筆記<b id="tabN"></b></a>
+      <a href="/course">核心課程<b>${COURSES.length}</b></a>
+      <a href="/figures">圖庫<b>${Object.keys(FIGURES).length}</b></a>
     </div>
     <div class="searchrow">
       <span class="si"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>

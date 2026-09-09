@@ -6,6 +6,7 @@ import { escapeHtml } from "../lib/http.js";
 import { citeText, copyText, showToast, TOAST_CSS } from "../lib/cite.js";
 import { fmtEvent, relTime, staleEvent } from "../lib/notify.js";
 import { hayHit } from "../lib/search.js";
+import { COURSES, FIGURES } from "../data/courses.js";
 
 export function renderPage(request) {
 	const user = request.headers.get("cf-access-authenticated-user-email") || "";
@@ -502,6 +503,7 @@ filtersEl.addEventListener('click',function(e){var b=e.target.closest&&e.target.
 
 // ---------------------------------------------------------------- 來源分頁
 var srcTabsEl=document.getElementById('srctabs');
+var COURSE_N=${COURSES.length},FIG_N=${Object.keys(FIGURES).length};
 // 臨床筆記的份數是 D1 的動態狀態，不像另外兩顆是編譯進來的常數。載入後補上，
 // 不讓首頁的 render 依賴 D1——首頁掛掉的成本遠高於一個數字晚半秒出現。
 var NOTES_N=0;try{NOTES_N=+localStorage.getItem('notesN')||0;}catch(e){}
@@ -517,10 +519,14 @@ function buildTabs(){
     h+='<button class="srctab'+(k===SRC?' act':'')+'" data-src="'+k+'">'+esc(SRCS[k].label)
       +'<b>'+SRCS[k].data.length+'</b></button>';
   });
-  // 第三顆跟前兩顆不是同一種東西：切來源只是換指標，這顆是換頁。所以它是 <a>
-  // 不是 <button>，在首頁上也永遠不會 .act——當前分頁不是它。
+  // 後三顆跟前兩顆不是同一種東西：切來源只是換指標，這三顆是換頁。所以它們是 <a>
+  // 不是 <button>，在首頁上也永遠不會 .act——當前分頁不是它們。
   h+='<a class="srctab tnav" href="/notes" title="門診核對清單">'
     +'<span class="ni" id="notesicon"></span>臨床筆記<b id="notesCount"></b></a>';
+  h+='<a class="srctab tnav" href="/course" title="以 subtype 切分的學習模組">'
+    +'核心課程<b>'+COURSE_N+'</b></a>';
+  h+='<a class="srctab tnav" href="/figures" title="簡報素材圖庫，可下載 PNG">'
+    +'圖庫<b>'+FIG_N+'</b></a>';
   srcTabsEl.innerHTML=h;
   document.getElementById('notesicon').innerHTML=svg('notebookpen');
   if(NOTES_N) document.getElementById('notesCount').textContent=NOTES_N;
