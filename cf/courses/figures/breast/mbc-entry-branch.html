@@ -1,0 +1,93 @@
+<!doctype html>
+<!-- fig
+id:    breast/mbc-entry-branch
+title: The four-way split at the start of metastatic breast cancer
+kind:  flow
+tags:  [breast, metastatic, branch, entry]
+cite:  [{ gid: "breast", refs: ["BINV-21"], page: 34 }]
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The four-way split at the start of metastatic breast cancer</title>
+<link rel="stylesheet" href="../figure.css">
+<style>body{margin:0;background:#fff}</style>
+</head>
+<body>
+
+<section class="fig">
+
+  <div class="fig-row">
+    <div class="fig-head fig-grow">Receptor status decides the page &mdash; everything downstream follows from these four boxes</div>
+  </div>
+
+  <!-- 主分流：一進四出，直角線由 .fig-branch / .fig-fan 自動長出來 -->
+  <div class="fig-branch fig-grow">
+    <div class="fig-stem fig-node ask" style="width:250px">
+      <div>Recurrent unresectable<br>(local or regional),<br>or stage IV (M1)</div>
+    </div>
+
+    <div class="fig-fan fill" style="--fig-fan-half:64px;gap:14px">
+      <div class="fig-node stack left" style="align-items:flex-start">
+        <span class="fig-when">ER and/or PR positive &middot; HER2-negative</span>
+        <div><b>Endocrine track by default</b> &mdash; go to BINV-22</div>
+        <div class="fig-sub strong">Endocrine therapy + CDK4/6 inhibitor is preferred over chemotherapy even with extensive visceral involvement. Chemotherapy only in true visceral crisis</div>
+      </div>
+
+      <div class="fig-node stack left" style="align-items:flex-start">
+        <span class="fig-when">ER and/or PR positive &middot; HER2-positive</span>
+        <div><b>Two tracks to choose from</b> &mdash; go to BINV-24</div>
+        <div class="fig-sub strong">Cytotoxic therapy + anti-HER2, <b>or</b> endocrine therapy &plusmn; anti-HER2. NCCN lists them as &ldquo;or&rdquo; and gives no criterion for choosing</div>
+      </div>
+
+      <div class="fig-node stack left" style="align-items:flex-start">
+        <span class="fig-when">ER and PR negative &middot; HER2-positive</span>
+        <div><b>Cytotoxic therapy + anti-HER2</b> &mdash; go to BINV-26</div>
+        <div class="fig-sub strong">Anti-HER2 continues until progression; only the chemotherapy backbone is switched</div>
+      </div>
+
+      <div class="fig-node stack left" style="align-items:flex-start">
+        <span class="fig-when">ER and PR negative &middot; HER2-negative</span>
+        <div><b>Cytotoxic therapy</b> &mdash; go to BINV-27</div>
+        <div class="fig-sub strong">Biomarkers (PD-L1, germline <i>BRCA1/2</i>, HER2 IHC score) sit in BINV-Q, not on this page</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 平行處置：骨轉移不是一條分支，是加在任何一條路上的。畫成橫帶而不是第五個分支，
+       否則會讀成「骨轉移的病人走另一條路」。 -->
+  <div class="fig-group plain" style="flex:none">
+    <div class="fig-glabel">Alongside any of the four &mdash; not a branch of its own</div>
+    <div class="fig-row" style="gap:12px">
+      <div class="fig-node sm fig-grow stack">
+        <div><b>Bone disease present</b> &rarr; denosumab, zoledronic acid or pamidronate</div>
+        <div class="fig-sub strong">Category 1, with calcium and vitamin D. Zoledronic acid every 12 weeks</div>
+      </div>
+      <div class="fig-node sm fig-grow stack">
+        <div>Requires survival <b>&ge;3 months</b>, adequate renal function, <b>dental exam first</b></div>
+        <div class="fig-sub strong">Baseline bone density if starting an aromatase inhibitor with osteoporosis risk</div>
+      </div>
+      <div class="fig-node sm fig-grow stack">
+        <div>De novo <b>oligometastatic</b> disease with favourable features</div>
+        <div class="fig-sub strong">An aggressive multimodality approach <b>may be considered</b>; routine locoregional or ablative treatment has not improved survival prospectively</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fig-hline"></div>
+
+  <div class="fig-row" style="align-items:flex-end;gap:24px">
+    <div class="fig-legend" style="flex:none">
+      <span><i class="key"></i>Decision point</span>
+      <span><i></i>Destination page</span>
+    </div>
+    <div class="fig-foot fig-grow" style="text-align:right">
+      Male breast cancer follows BINV-J. ER 1&ndash;10% (ER-low positive) behaves closer to ER-negative &mdash;
+      weigh endocrine therapy individually rather than defaulting to the endocrine track.
+    </div>
+  </div>
+
+</section>
+
+</body>
+</html>

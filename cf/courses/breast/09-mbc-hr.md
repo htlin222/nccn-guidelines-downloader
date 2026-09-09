@@ -6,7 +6,7 @@ group   = "晚期"
 title   = "轉移性 HR 陽性、HER2 陰性"
 oneline = "內分泌 + CDK4/6i 是預設，只有真正的 visceral crisis 才先上化療；換線之前先問 ESR1、PIK3CA/AKT1/PTEN、BRCA"
 refs    = ["BINV-21", "BINV-22", "BINV-23", "BINV-P", "BINV-Q", "BINV-R", "BINV-A"]
-figures = ["breast/mbc-hr-landscape-endocrine", "breast/mbc-hr-landscape-cytotoxic", "breast/mbc-hr-flow-entry", "breast/mbc-hr-flow-progression"]
+figures = ["breast/mbc-hr-landscape-endocrine", "breast/mbc-hr-landscape-cytotoxic", "breast/mbc-hr-flow-entry", "breast/mbc-hr-flow-progression", "breast/mbc-entry-branch"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 

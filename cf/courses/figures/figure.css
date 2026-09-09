@@ -534,6 +534,120 @@
 	text-transform: uppercase;
 }
 
+/* ---------- 分支 ---------- */
+
+/* 一進多出，中間自動長出直角連接線。決策樹、分岔點用它，不要用一堆 .fig-col 手排
+ * ——手排的線對不齊，而且分支數改變時要重算每一條。
+ *
+ *   <div class="fig-branch">
+ *     <div class="fig-stem fig-node ask">Recurrent or stage IV</div>
+ *     <div class="fig-fan">
+ *       <div class="fig-node"><span class="fig-when">ER+ HER2&minus;</span>BINV-22</div>
+ *       <div class="fig-node"><span class="fig-when">ER+ HER2+</span>BINV-24</div>
+ *     </div>
+ *   </div>
+ *
+ * 垂直幹線的頭尾要停在第一個與最後一個分支的**中心**，而那需要知道分支的半高。
+ * CSS 算不出來（子項高度不定），所以用 --fig-fan-half 給值，預設 20px ≈ 一個
+ * .fig-node 的半高。分支比較高時在 .fig-fan 上覆寫它。
+ */
+.fig-branch {
+	display: flex;
+	align-items: center;
+}
+.fig-branch > .fig-stem {
+	flex: none;
+	position: relative;
+	align-self: center;
+}
+
+.fig-fan {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	position: relative;
+	padding-left: 44px;
+}
+/* 起點到幹線那一段。畫在 fan 自己的 padding 區裡（left 0→22px），不是掛在 .fig-stem
+   的 ::after 上——後者會伸出節點邊框 22px，讓那個節點的 scrollWidth 溢出，於是
+   verify 的逐元素檢查把一條刻意的連接線報成爆版。線的歸屬要跟著它畫在誰身上走。 */
+.fig-fan::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 50%;
+	width: 22px;
+	height: 1px;
+	background: var(--fig-line);
+}
+
+/* 幹線 */
+.fig-fan::before {
+	content: "";
+	position: absolute;
+	left: 22px;
+	top: var(--fig-fan-half, 20px);
+	bottom: var(--fig-fan-half, 20px);
+	width: 1px;
+	background: var(--fig-line);
+}
+/* 每一條枝線 */
+.fig-fan > * {
+	position: relative;
+}
+.fig-fan > *::before {
+	content: "";
+	position: absolute;
+	left: -22px;
+	top: 50%;
+	width: 22px;
+	height: 1px;
+	background: var(--fig-line);
+}
+/* 分支平分高度，把整塊撐滿。矩陣的 .fig-col.fill 是同一個道理，也同樣有 .keep。 */
+.fig-fan.fill > * {
+	flex: 1;
+}
+.fig-fan.fill > .keep {
+	flex: none;
+}
+
+/* 只有一個分支時不需要幹線 */
+.fig-fan > :only-child::before {
+	left: -44px;
+	width: 44px;
+}
+.fig-fan:has(> :only-child)::before {
+	display: none;
+}
+
+/* 分支的條件標籤：節點內的第一行，不是浮在枝線上的絕對定位元素。
+   第一版讓它 absolute 坐在枝線上方，結果它一寬就越過節點左緣壓在內文上——節點高度
+   不定，沒有一個 top 值能同時對得準枝線又不撞到文字。當成第一行反而更好讀：條件在
+   上、去向在下，跟節點自己的 .fig-sub 是同一個閱讀方向。 */
+.fig-when {
+	display: block;
+	font-size: var(--fig-fs-xs);
+	font-weight: 700;
+	letter-spacing: 0.01em;
+	color: var(--fig-brand-ink);
+	margin-bottom: 2px;
+}
+.fig-node.solid .fig-when,
+.fig-node.ink .fig-when {
+	color: rgba(255, 255, 255, 0.9);
+}
+
+/* 決策節點。語意上跟 .key 一樣是「要判斷的條件」，分開命名是為了讀 HTML 時看得出
+   這一格是問句而不是分層標籤。 */
+.fig-node.ask {
+	border: 1.5px solid var(--fig-brand);
+	font-weight: 600;
+	background: var(--fig-wash);
+}
+
 /* ---------- 連接線 ---------- */
 
 .fig-arrow {
@@ -555,6 +669,25 @@
 }
 .fig-arrow.long {
 	width: 44px;
+}
+/* 垂直流向。水平的那個是 width x 1px，這個是 1px x height，箭頭轉 90 度。 */
+.fig-arrow.down {
+	width: 1px;
+	height: 26px;
+	align-self: center;
+}
+.fig-arrow.down::after {
+	right: auto;
+	top: auto;
+	left: -3.5px;
+	bottom: 0;
+	border: 4px solid transparent;
+	border-top-color: var(--fig-ink-3);
+	border-bottom: 0;
+}
+.fig-arrow.down.long {
+	width: 1px;
+	height: 44px;
 }
 .fig-vline {
 	width: 1px;

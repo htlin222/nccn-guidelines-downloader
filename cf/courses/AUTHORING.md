@@ -172,6 +172,34 @@ cite:  [{ gid: "breast", refs: ["BINV-6", "BINV-7"], page: 19 }]
 - `.fig-col.fill > *` 的 `flex:1` 會讓內容較高的節點靜靜溢出邊框（PNG 上看得到文字掉出
   白框）。`.keep` 是逃生口，給補充說明那種不該被拉高的格子用。
 
+### 分支 `.fig-branch` / `.fig-fan`
+
+決策樹、分岔點用它，不要用一堆 `.fig-col` 手排——手排的線對不齊，而且分支數改變時
+要重算每一條。
+
+```html
+<div class="fig-branch">
+  <div class="fig-stem fig-node ask">Recurrent or stage IV</div>
+  <div class="fig-fan fill" style="--fig-fan-half:64px">   <!-- .fill 讓分支平分高度 -->
+    <div class="fig-node stack left" style="align-items:flex-start">
+      <span class="fig-when">ER+ · HER2−</span>            <!-- 條件，節點的第一行 -->
+      <div>Endocrine track — go to BINV-22</div>
+      <div class="fig-sub strong">…</div>
+    </div>
+  </div>
+</div>
+```
+
+- `.fig-node.ask` 是決策節點（語意上跟 `.key` 一樣，分開命名是為了讀 HTML 時看得出
+  這一格是問句）
+- `--fig-fan-half` 是分支的**半高**，幹線的頭尾要停在第一個與最後一個分支的中心，
+  而 CSS 算不出子項高度。用 `.fill` 讓分支等高之後，這個值就好估
+- **`.fig-when` 是節點的第一行，不是浮在線上的標籤。** 第一版讓它 absolute 坐在枝線
+  上方，一寬就越過節點左緣壓在內文上——節點高度不定，沒有一個 top 值能同時對得準
+  枝線又不撞到文字
+- **平行的處置不要畫成分支。** 骨保護是加在任何一條路上的，畫成第五個分支會被讀成
+  「骨轉移的病人走另一條路」。那種東西放底部橫帶（`.fig-group.plain`）
+
 ### 寬表格 `.fig-tbl`
 
 資料密集、需要並排比較的內容用表格，不要硬塞進矩陣的格子裡。
