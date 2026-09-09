@@ -6,7 +6,7 @@ group   = "早期"
 title   = "Neoadjuvant 策略與術後升階"
 oneline = "術前治療換到的是資訊；開完刀看 pCR 還是殘留，再看 subtype，八格決定要不要加藥"
 refs    = ["BINV-12", "BINV-13", "BINV-14", "BINV-15", "BINV-16", "BINV-L", "BINV-M"]
-figures = ["breast/neoadjuvant-escalation-her2", "breast/neoadjuvant-escalation-hr-tnbc", "breast/neoadjuvant-who", "breast/neoadjuvant-rt", "breast/neoadjuvant-trials", "breast/neoadjuvant-numbers", "breast/neoadjuvant-pitfalls"]
+figures = ["breast/neoadjuvant-escalation-her2", "breast/neoadjuvant-escalation-hr-tnbc", "breast/neoadjuvant-who", "breast/neoadjuvant-rt", "breast/neoadjuvant-trials", "breast/neoadjuvant-numbers", "breast/neoadjuvant-pitfalls", "breast/neoadjuvant-timeline"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -37,6 +37,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 ---
 
 ## 決策路徑
+
+![[fig:breast/neoadjuvant-timeline]]
 
 ![[fig:breast/neoadjuvant-who]]
 
@@ -142,16 +144,16 @@ nccn    = { gid = "breast", version = "6.2026" }
 
 ![[fig:breast/neoadjuvant-trials]]
 
-| 試驗 | 族群 | 比較 | 結果 | 改變了什麼 |
-|---|---|---|---|---|
-| **KEYNOTE-522** | 早期 TNBC | 術前化療 **± pembrolizumab**，術後續用 pembrolizumab | pCR 提高、EFS 顯著改善 | [[BINV-16]] 裡 TNBC 兩格 pembrolizumab 的來源，也是「術前有給才能術後給」這個前提的由來 |
-| **CREATE-X** | HER2-negative、術前化療後有殘留病灶 | 觀察 **vs capecitabine** | DFS 與 OS 均改善 | TNBC 殘留病灶的 capecitabine 6–8 cycles |
-| **OlympiA** | germline BRCA1/2、高風險 HER2-negative 早期乳癌 | 安慰劑 **vs olaparib 一年** | iDFS 與 OS 均改善 | HR+/HER2− 與 TNBC 兩列殘留格裡的 olaparib（category 1） |
-| **KATHERINE** | HER2-positive、術前治療後有 residual invasive disease | trastuzumab **vs T-DM1** | iDFS 顯著改善 | 「殘留就換 ADC」這個概念的原型 |
-| **DESTINY-Breast05** | HER2-positive、術前治療後有殘留病灶 | T-DM1 **vs T-DXd** | iDFS 優於 T-DM1 | NCCN 6.2026 把 T-DXd 寫在 T-DM1 前面，並限定「high risk of recurrence」 |
-| **APHINITY** | HER2-positive 早期乳癌 | 化療 + trastuzumab **± pertuzumab** | 中位追蹤 11.3 年確認預防復發的效益 | 直接被引在 [[BINV-16]] 的註腳裡，支撐「初始分期淋巴結陽性者用 pertuzumab + trastuzumab」 |
-| **NSABP B-51** | cN1 經術前治療轉成 ypN0 | 加或不加 RNI／PMRT | 追蹤期有限，未能對這個次族群證明長期非劣性 | [[BINV-14]] 因此寫「不常規建議」，同時要求把治療不足的風險攤開來談 |
-| **monarchE**（abemaciclib）、**NATALEE**（ribociclib） | HR+/HER2− 高風險早期乳癌 | 內分泌治療 ± CDK4/6 抑制劑 | iDFS 改善 | [[BINV-16]] 裡的 “consider ribociclib”（pCR 格）與 “consider abemaciclib or ribociclib”（殘留格）；資格條件在 BINV-K |
+| 試驗                                                   | 族群                                                  | 比較                                                 | 結果                                       | 改變了什麼                                                                                                           |
+| ------------------------------------------------------ | ----------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| **KEYNOTE-522**                                        | 早期 TNBC                                             | 術前化療 **± pembrolizumab**，術後續用 pembrolizumab | pCR 提高、EFS 顯著改善                     | [[BINV-16]] 裡 TNBC 兩格 pembrolizumab 的來源，也是「術前有給才能術後給」這個前提的由來                              |
+| **CREATE-X**                                           | HER2-negative、術前化療後有殘留病灶                   | 觀察 **vs capecitabine**                             | DFS 與 OS 均改善                           | TNBC 殘留病灶的 capecitabine 6–8 cycles                                                                              |
+| **OlympiA**                                            | germline BRCA1/2、高風險 HER2-negative 早期乳癌       | 安慰劑 **vs olaparib 一年**                          | iDFS 與 OS 均改善                          | HR+/HER2− 與 TNBC 兩列殘留格裡的 olaparib（category 1）                                                              |
+| **KATHERINE**                                          | HER2-positive、術前治療後有 residual invasive disease | trastuzumab **vs T-DM1**                             | iDFS 顯著改善                              | 「殘留就換 ADC」這個概念的原型                                                                                       |
+| **DESTINY-Breast05**                                   | HER2-positive、術前治療後有殘留病灶                   | T-DM1 **vs T-DXd**                                   | iDFS 優於 T-DM1                            | NCCN 6.2026 把 T-DXd 寫在 T-DM1 前面，並限定「high risk of recurrence」                                              |
+| **APHINITY**                                           | HER2-positive 早期乳癌                                | 化療 + trastuzumab **± pertuzumab**                  | 中位追蹤 11.3 年確認預防復發的效益         | 直接被引在 [[BINV-16]] 的註腳裡，支撐「初始分期淋巴結陽性者用 pertuzumab + trastuzumab」                             |
+| **NSABP B-51**                                         | cN1 經術前治療轉成 ypN0                               | 加或不加 RNI／PMRT                                   | 追蹤期有限，未能對這個次族群證明長期非劣性 | [[BINV-14]] 因此寫「不常規建議」，同時要求把治療不足的風險攤開來談                                                   |
+| **monarchE**（abemaciclib）、**NATALEE**（ribociclib） | HR+/HER2− 高風險早期乳癌                              | 內分泌治療 ± CDK4/6 抑制劑                           | iDFS 改善                                  | [[BINV-16]] 裡的 “consider ribociclib”（pCR 格）與 “consider abemaciclib or ribociclib”（殘留格）；資格條件在 BINV-K |
 
 > 這張表是策展補充，不在 NCCN 原文頁面上。NCCN 只列方案與證據等級，APHINITY 與 NSABP B-51 是唯二被寫進 [[BINV-16]]／[[BINV-14]] 註腳的試驗。
 

@@ -34,7 +34,7 @@ wrangler r2 object get "nccn-pdfs/meta/toc/$GID.json" --file="$WORK/toc.json" --
 tails_ok=0
 for try in 1 2 3; do
   if wrangler d1 execute nccn-search --remote --json \
-      --command "SELECT page, substr(body, -260) AS tail FROM page_text WHERE gid='$GID'" \
+      --command "SELECT page, substr(body, -420) AS tail FROM page_text WHERE gid='$GID'" \
       > "$WORK/tails.json" 2>"$WORK/tails.err"; then
     tails_ok=1; break
   fi
@@ -52,19 +52,45 @@ try:
     rows = json.load(open(sys.argv[1]))[0]["results"]
 except Exception:
     rows = []
+rows_out = []
 for r in rows:
     tail = r.get("tail") or ""
     # 多頁節點的頁尾長這樣：「BINV-Q 4 OF 15」。這一類的 ref 可以是字母結尾（BINV-Q、
     # BINV-M），所以要用比下面寬的樣式去抓——原本的樣式只認 `-數字`，於是 15 頁的
     # BINV-Q 一頁都對不上，只能靠 TOC 給的那一個條目，結果每次都只倒出第 1 頁。
-    m = re.search(r"\b([A-Z]{2,}[A-Z0-9]*-[0-9A-Z]+)\s+(\d+)\s+OF\s+(\d+)\s*$", tail)
+    m = re.search(r"\b([A-Z]{2,}[A-Z0-9]*-[0-9A-Z]+)\s+(\d+)\s+OF\s+(\d+)\b", tail)
     if m:
-        print("%s\t%s\t%s\t%s" % (m.group(1), r["page"], m.group(2), m.group(3)))
+        rows_out.append((m.group(1), r["page"], int(m.group(2)), int(m.group(3))))
         continue
     # 單頁節點：頁尾最後一個像 ref 的字串就是這一頁的編號
     hits = re.findall(r"\b([A-Z]{2,}[A-Z0-9]*-[0-9]+[A-Z]?)\b", tail)
     if hits:
-        print("%s\t%s\t1\t1" % (hits[-1], r["page"]))
+        rows_out.append((hits[-1], r["page"], 1, 1))
+
+# 多頁節點漏掉中間某一頁時，用連續性補回來。
+#
+# 為什麼會漏：頁尾那 420 個字元裡不一定有 ref 標記。breast 的 BINV-M 3 OF 10 就落在
+# 距離結尾 310 字的位置（那一頁的版權宣告與 category 2A 註記順序跟其他頁相反），
+# 掃 260 字時整頁消失，而 _src 的檔案裡只會看到頁碼從 2 跳到 4——沒有任何錯誤。
+#
+# 補的條件很嚴：前一分頁與後一分頁都在、而且它們的頁碼剛好差 2，中間那一頁才補。
+byref = {}
+for ref, page, part, total in rows_out:
+    if total > 1:
+        byref.setdefault(ref, {})[part] = (page, total)
+for ref, parts in byref.items():
+    total = next(iter(parts.values()))[1]
+    for i in range(2, total):
+        if i in parts:
+            continue
+        prev, nxt = parts.get(i - 1), parts.get(i + 1)
+        if prev and nxt and nxt[0] - prev[0] == 2:
+            rows_out.append((ref, prev[0] + 1, i, total))
+            sys.stderr.write("  補回 %s %d OF %d（page %d，頁尾沒有 ref 標記）\n"
+                             % (ref, i, total, prev[0] + 1))
+
+for ref, page, part, total in rows_out:
+    print("%s\t%s\t%s\t%s" % (ref, page, part, total))
 PY2
 
 python3 - "$WORK/toc.json" "$KIND" > "$WORK/refs.tsv" <<'PY'

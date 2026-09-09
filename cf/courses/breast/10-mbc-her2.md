@@ -6,7 +6,7 @@ group   = "晚期"
 title   = "轉移性 HER2 陽性乳癌"
 oneline = "THP 打到進展，換 T-DXd，有腦轉移就 CLIMB；換的是化療骨架，抗 HER2 不停"
 refs    = ["BINV-21", "BINV-24", "BINV-25", "BINV-26", "BINV-P", "BINV-Q", "BINV-R", "BINV-A"]
-figures = ["breast/mbc-her2-landscape", "breast/mbc-her2-flow", "breast/mbc-her2-trials", "breast/mbc-her2-numbers", "breast/mbc-her2-pitfalls", "breast/adc-mechanism"]
+figures = ["breast/mbc-her2-landscape", "breast/mbc-her2-flow", "breast/mbc-her2-trials", "breast/mbc-her2-numbers", "breast/mbc-her2-pitfalls", "breast/adc-mechanism", "breast/mbc-her2-toxicity"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -149,6 +149,8 @@ HER2 陽性換線時，動的是化療那一半；[[BINV-25]] 與 [[BINV-26]] �
 ## 常見陷阱
 
 ![[fig:breast/mbc-her2-pitfalls]]
+
+![[fig:breast/mbc-her2-toxicity]]
 
 **把抗 HER2 跟化療一起停掉。**
 最常見的一個。換線換的是化療骨架，trastuzumab 要繼續。[[BINV-25]] 的原句是 “Continue HER2-targeted therapy until progression”，[[BINV-26]] 則寫 “Alternate cytotoxic therapy + HER2-targeted therapy until progression”——兩頁講的是同一件事。

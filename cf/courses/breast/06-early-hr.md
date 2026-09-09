@@ -6,7 +6,7 @@ group   = "早期"
 title   = "早期 HR 陽性、HER2 陰性"
 oneline = "先問停經狀態，再問淋巴結，最後才問 gene assay——而 assay 只在「這個人本來就可能給化療」時才有意義"
 refs    = ["BINV-6", "BINV-7", "BINV-8", "BINV-K", "BINV-N", "BINV-O", "BINV-16"]
-figures = ["breast/early-hr-landscape", "breast/early-hr-assay", "breast/early-hr-trials", "breast/early-hr-numbers", "breast/early-hr-pitfalls"]
+figures = ["breast/early-hr-landscape", "breast/early-hr-assay", "breast/early-hr-trials", "breast/early-hr-numbers", "breast/early-hr-pitfalls", "breast/early-hr-timeline", "breast/early-hr-toxicity"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -35,6 +35,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 ---
 
 ## 決策路徑
+
+![[fig:breast/early-hr-timeline]]
 
 ### 進門的三件事
 
@@ -116,16 +118,16 @@ HR+/HER2− 走過術前全身治療的人，術後看的是病理反應：
 
 ![[fig:breast/early-hr-trials]]
 
-| 試驗 | 族群 | 比較 | 結果 | 改變了什麼 |
-|---|---|---|---|---|
-| **TAILORx** | HR+/HER2−、pN0、21-gene RS 11–25 | 化療 + 內分泌 **vs** 內分泌單獨 | 整體不劣於；≤50 歲、RS 16–25 的次群有化療效益 | 停經後 RS <26 不化療、停經前 16–25 加化療的來源。NCCN 註腳特別提醒它**沒有納入** T1b 低惡性度無 LVI 的腫瘤 |
-| **RxPONDER** | HR+/HER2−、pN1（1–3 顆）、RS ≤25 | 化療 + 內分泌 **vs** 內分泌單獨 | 停經後看不到化療效益；停經前有 | 為什麼 pN1 這一格停經前後的建議不同。[[BINV-N]] 的註腳就是引 RxPONDER |
-| **MINDACT** | 臨床高風險、70-gene 基因低風險 | 化療 **vs** 不化療 | 遠端無轉移存活率高 | 70-gene 拿到 category 1，但仍列 Other——它證明的是預後，不是預測化療效益 |
-| **monarchE** | 高風險 node-positive、HR+/HER2− | 內分泌 **± abemaciclib** 2 年 | IDFS 顯著改善 | 「consider adjuvant abemaciclib for eligible patients」的來源 |
-| **NATALEE** | stage II–III、HR+/HER2− | 內分泌 **± ribociclib** 3 年 | IDFS 顯著改善 | 為什麼 ribociclib 出現在連 pN0 的格子裡（monarchE 只做 node-positive） |
-| **OlympiA** | germline BRCA1/2 PV、HER2− 高風險早期 | 術後 olaparib 1 年 **vs** 安慰劑 | IDFS 與 OS 皆改善 | 「and/or adjuvant olaparib if germline BRCA1/2 PV」的來源 |
-| **SOFT / TEXT** | 停經前 HR+ | tamoxifen **vs** OFS + tamoxifen **vs** OFS + exemestane | 加卵巢抑制者結果較佳，高風險族群獲益最明顯 | 為什麼停經前每一格都掛著 “± ovarian suppression/ablation” |
-| **EBCTCG 雙磷酸鹽統合分析** | 早期乳癌術後 | 雙磷酸鹽 **vs** 無 | 停經後族群骨轉移與乳癌死亡下降；停經前看不到 | 為什麼 NCCN 的雙磷酸鹽註腳把族群限定在「postmenopausal（natural or induced）」 |
+| 試驗                        | 族群                                  | 比較                                                     | 結果                                          | 改變了什麼                                                                                                 |
+| --------------------------- | ------------------------------------- | -------------------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **TAILORx**                 | HR+/HER2−、pN0、21-gene RS 11–25      | 化療 + 內分泌 **vs** 內分泌單獨                          | 整體不劣於；≤50 歲、RS 16–25 的次群有化療效益 | 停經後 RS <26 不化療、停經前 16–25 加化療的來源。NCCN 註腳特別提醒它**沒有納入** T1b 低惡性度無 LVI 的腫瘤 |
+| **RxPONDER**                | HR+/HER2−、pN1（1–3 顆）、RS ≤25      | 化療 + 內分泌 **vs** 內分泌單獨                          | 停經後看不到化療效益；停經前有                | 為什麼 pN1 這一格停經前後的建議不同。[[BINV-N]] 的註腳就是引 RxPONDER                                      |
+| **MINDACT**                 | 臨床高風險、70-gene 基因低風險        | 化療 **vs** 不化療                                       | 遠端無轉移存活率高                            | 70-gene 拿到 category 1，但仍列 Other——它證明的是預後，不是預測化療效益                                    |
+| **monarchE**                | 高風險 node-positive、HR+/HER2−       | 內分泌 **± abemaciclib** 2 年                            | IDFS 顯著改善                                 | 「consider adjuvant abemaciclib for eligible patients」的來源                                              |
+| **NATALEE**                 | stage II–III、HR+/HER2−               | 內分泌 **± ribociclib** 3 年                             | IDFS 顯著改善                                 | 為什麼 ribociclib 出現在連 pN0 的格子裡（monarchE 只做 node-positive）                                     |
+| **OlympiA**                 | germline BRCA1/2 PV、HER2− 高風險早期 | 術後 olaparib 1 年 **vs** 安慰劑                         | IDFS 與 OS 皆改善                             | 「and/or adjuvant olaparib if germline BRCA1/2 PV」的來源                                                  |
+| **SOFT / TEXT**             | 停經前 HR+                            | tamoxifen **vs** OFS + tamoxifen **vs** OFS + exemestane | 加卵巢抑制者結果較佳，高風險族群獲益最明顯    | 為什麼停經前每一格都掛著 “± ovarian suppression/ablation”                                                  |
+| **EBCTCG 雙磷酸鹽統合分析** | 早期乳癌術後                          | 雙磷酸鹽 **vs** 無                                       | 停經後族群骨轉移與乳癌死亡下降；停經前看不到  | 為什麼 NCCN 的雙磷酸鹽註腳把族群限定在「postmenopausal（natural or induced）」                             |
 
 > 這張表是策展補充，不在 NCCN 原文頁面上。NCCN 只列方案與證據等級，不列試驗。
 
@@ -189,6 +191,8 @@ NCCN 把 HR+/HER2− 拆成三頁，拆的軸剛好就是前兩個問題：[[BIN
 ## 常見陷阱
 
 ![[fig:breast/early-hr-pitfalls]]
+
+![[fig:breast/early-hr-toxicity]]
 
 **把 gene assay 當成篩檢，人人都送。**
 [[BINV-6]] 與 [[BINV-7]] 的流程都是 “Determine if candidate for chemotherapy” → “If candidate for chemotherapy: Strongly consider 21-gene RT-PCR assay”。不是化療候選人的話，分數不會改變處置。而 [[BINV-6]] 對 ≥4 顆淋巴結那一群直接說「there are few data regarding the role of gene expression assays」，決定「should be based on clinical factors」。

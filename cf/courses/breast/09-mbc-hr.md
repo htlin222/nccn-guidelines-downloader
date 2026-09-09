@@ -6,7 +6,7 @@ group   = "晚期"
 title   = "轉移性 HR 陽性、HER2 陰性"
 oneline = "內分泌 + CDK4/6i 是預設，只有真正的 visceral crisis 才先上化療；換線之前先問 ESR1、PIK3CA/AKT1/PTEN、BRCA"
 refs    = ["BINV-21", "BINV-22", "BINV-23", "BINV-P", "BINV-Q", "BINV-R", "BINV-A"]
-figures = ["breast/mbc-hr-landscape-endocrine", "breast/mbc-hr-landscape-cytotoxic", "breast/mbc-hr-flow-entry", "breast/mbc-hr-flow-progression", "breast/mbc-entry-branch", "breast/mbc-hr-trials", "breast/mbc-hr-numbers", "breast/mbc-hr-pitfalls"]
+figures = ["breast/mbc-hr-landscape-endocrine", "breast/mbc-hr-landscape-cytotoxic", "breast/mbc-hr-flow-entry", "breast/mbc-hr-flow-progression", "breast/mbc-entry-branch", "breast/mbc-hr-trials", "breast/mbc-hr-numbers", "breast/mbc-hr-pitfalls", "breast/mbc-hr-toxicity"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -223,6 +223,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 ## 常見陷阱
 
 ![[fig:breast/mbc-hr-pitfalls]]
+
+![[fig:breast/mbc-hr-toxicity]]
 
 **看到廣泛內臟轉移就直接上化療。**
 [[BINV-P]] 的原句沒有留餘地：“Endocrine therapy + CDK4/6 inhibitor is preferred over chemotherapy, even for extensive visceral involvement. Chemotherapy recommended only if true visceral crisis.” 這是這一課最常被做錯的一步。

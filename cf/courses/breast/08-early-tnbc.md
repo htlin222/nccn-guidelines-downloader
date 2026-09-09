@@ -6,7 +6,7 @@ group   = "早期"
 title   = "早期三陰性"
 oneline = "先分岔：夠大就先做術前治療、由病理反應決定術後加什麼；夠小就直接開刀、由 pT/pN 決定要不要化療"
 refs    = ["BINV-10", "BINV-11", "BINV-16", "BINV-L", "BINV-M"]
-figures = ["breast/early-tnbc-landscape", "breast/early-tnbc-flow", "breast/early-tnbc-trials", "breast/early-tnbc-numbers", "breast/early-tnbc-pitfalls"]
+figures = ["breast/early-tnbc-landscape", "breast/early-tnbc-flow", "breast/early-tnbc-trials", "breast/early-tnbc-numbers", "breast/early-tnbc-pitfalls", "breast/early-tnbc-timeline", "breast/early-tnbc-toxicity"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -35,6 +35,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 ---
 
 ## 決策路徑
+
+![[fig:breast/early-tnbc-timeline]]
 
 ![[fig:breast/early-tnbc-flow]]
 
@@ -94,13 +96,13 @@ nccn    = { gid = "breast", version = "6.2026" }
 
 ![[fig:breast/early-tnbc-trials]]
 
-| 試驗 | 族群 | 比較 | 結果 | 改變了什麼 |
-|---|---|---|---|---|
-| **KEYNOTE-522** | stage II–III TNBC，術前 | 化療 **± pembrolizumab**，術後續用 pembrolizumab | pCR 率提高，EFS 顯著改善 | [[BINV-16]] 兩格的 pembrolizumab，以及那句條件 “if pembrolizumab-containing regimen was given preoperatively” |
-| **CREATE-X** | 術前治療後**有殘餘病灶**（HER2 陰性，TNBC 次群獲益最明顯） | 觀察 **vs capecitabine** | 無病存活與整體存活改善 | [[BINV-16]] 的 adjuvant capecitabine（6–8 個療程） |
-| **OlympiA** | germline BRCA1/2 PV、HER2 陰性高風險早期 | 術後 olaparib 1 年 **vs** 安慰劑 | IDFS 與 OS 皆改善 | 兩條路上的 olaparib——直接開刀那條的「if germline BRCA1/2 PV」，與 [[BINV-16]] 殘餘病灶那格的 category 1 |
-| **CTNeoBC 匯總分析** | 術前治療的各亞型 | pCR **vs** 有殘餘病灶 | pCR 與較佳長期結果相關，TNBC 的關聯最強 | [[BINV-L]] 那句「treatment response provides important prognostic information at an individual patient level, particularly in patients with TNBC」 |
-| **BrighTNess / GeparSixto** | TNBC，術前 | 標準化療 **± carboplatin** | pCR 率提高 | 為什麼術前療程裡常看到鉑類。**注意**：[[BINV-M]] 這一頁沒有列出任何具體療程，鉑類的位置要回去看 NCCN 的療程頁 |
+| 試驗                        | 族群                                                       | 比較                                             | 結果                                    | 改變了什麼                                                                                                                                         |
+| --------------------------- | ---------------------------------------------------------- | ------------------------------------------------ | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **KEYNOTE-522**             | stage II–III TNBC，術前                                    | 化療 **± pembrolizumab**，術後續用 pembrolizumab | pCR 率提高，EFS 顯著改善                | [[BINV-16]] 兩格的 pembrolizumab，以及那句條件 “if pembrolizumab-containing regimen was given preoperatively”                                      |
+| **CREATE-X**                | 術前治療後**有殘餘病灶**（HER2 陰性，TNBC 次群獲益最明顯） | 觀察 **vs capecitabine**                         | 無病存活與整體存活改善                  | [[BINV-16]] 的 adjuvant capecitabine（6–8 個療程）                                                                                                 |
+| **OlympiA**                 | germline BRCA1/2 PV、HER2 陰性高風險早期                   | 術後 olaparib 1 年 **vs** 安慰劑                 | IDFS 與 OS 皆改善                       | 兩條路上的 olaparib——直接開刀那條的「if germline BRCA1/2 PV」，與 [[BINV-16]] 殘餘病灶那格的 category 1                                            |
+| **CTNeoBC 匯總分析**        | 術前治療的各亞型                                           | pCR **vs** 有殘餘病灶                            | pCR 與較佳長期結果相關，TNBC 的關聯最強 | [[BINV-L]] 那句「treatment response provides important prognostic information at an individual patient level, particularly in patients with TNBC」 |
+| **BrighTNess / GeparSixto** | TNBC，術前                                                 | 標準化療 **± carboplatin**                       | pCR 率提高                              | 為什麼術前療程裡常看到鉑類。**注意**：[[BINV-M]] 這一頁沒有列出任何具體療程，鉑類的位置要回去看 NCCN 的療程頁                                      |
 
 > 這張表是策展補充，不在 NCCN 原文頁面上。NCCN 只列方案與證據等級，不列試驗。
 
@@ -163,6 +165,8 @@ pembrolizumab、capecitabine、olaparib 之間 NCCN 用的是 and/or，而且承
 ## 常見陷阱
 
 ![[fig:breast/early-tnbc-pitfalls]]
+
+![[fig:breast/early-tnbc-toxicity]]
 
 **把「術前治療 preferred」當成「術前治療 required」，或反過來只在無法手術時才想到它。**
 [[BINV-L]] 把兩件事分開寫：**無法手術**者（IBC、bulky/matted cN2、cN3、cT4）是候選人；**可手術**者當中，TNBC 若 ≥cT2 或 ≥cN1，術前治療是 “preferred”。cT1c、cN0 則是 “can be considered”。三種強度，三個不同的句子。

@@ -6,7 +6,7 @@ group   = "早期"
 title   = "早期 HER2 陽性"
 oneline = "腫瘤大小與淋巴結決定要不要抗 HER2、要不要加 pertuzumab；做過術前治療的人，決定權交給病理反應"
 refs    = ["BINV-5", "BINV-9", "BINV-16", "BINV-L", "BINV-M", "BINV-A"]
-figures = ["breast/early-her2-landscape", "breast/early-her2-postneo", "breast/early-her2-trials", "breast/early-her2-numbers", "breast/early-her2-pitfalls", "breast/early-her2-timeline"]
+figures = ["breast/early-her2-landscape", "breast/early-her2-postneo", "breast/early-her2-trials", "breast/early-her2-numbers", "breast/early-her2-pitfalls", "breast/early-her2-timeline", "breast/early-her2-toxicity"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -180,6 +180,8 @@ grade 1、pure mucinous、pure tubular、pure cribriform。這四個都是「本
 ## 常見陷阱
 
 ![[fig:breast/early-her2-pitfalls]]
+
+![[fig:breast/early-her2-toxicity]]
 
 **把 `± pertuzumab` 讀成「加 pertuzumab」。**
 [[BINV-9]] 那一句的完整寫法是 “Adjuvant chemotherapy with trastuzumab (category 1) (**± pertuzumab for pT2–T3**)”。它同時做了兩件事：把 pertuzumab 標成可選，並且把可選的範圍限在 pT2–T3。pT1c、pN0 的病人不在這個括號裡。

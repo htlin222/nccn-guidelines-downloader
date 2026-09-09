@@ -6,7 +6,7 @@ group   = "早期"
 title   = "DCIS"
 oneline = "只驗 ER，不動腋下；放射治療把同側復發砍掉一半以上，而復發裡有一半是侵襲癌——這就是所有決策的分母"
 refs    = ["DCIS-1", "DCIS-2", "BINV-F", "BINV-G", "BINV-B", "ST-4"]
-figures = ["breast/dcis-options-matrix", "breast/dcis-flow", "breast/dcis-trials", "breast/dcis-numbers", "breast/dcis-pitfalls"]
+figures = ["breast/dcis-options-matrix", "breast/dcis-flow", "breast/dcis-trials", "breast/dcis-numbers", "breast/dcis-pitfalls", "breast/dcis-timeline"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -36,44 +36,46 @@ nccn    = { gid = "breast", version = "6.2026" }
 
 ## 決策路徑
 
+![[fig:breast/dcis-timeline]]
+
 ![[fig:breast/dcis-flow]]
 
 ### 診斷與 workup
 
 - 適用對象：DCIS（Tis, N0, M0），以及 encapsulated 或 solid papillary carcinoma [[DCIS-1]]
-    - encapsulated papillary carcinoma 沒有合併傳統侵襲時，依 AJCC 分為 pTis，因為行為類似 DCIS
-    - solid papillary carcinoma 要依 WHO 標準指明是原位還是侵襲，但兩種型式預後都好
+  - encapsulated papillary carcinoma 沒有合併傳統侵襲時，依 AJCC 分為 pTis，因為行為類似 DCIS
+  - solid papillary carcinoma 要依 WHO 標準指明是原位還是侵襲，但兩種型式預後都好
 - 病史與理學檢查、雙側診斷性乳房攝影 [[DCIS-1]]
 - 病理審閱（NCCN 背書 CAP 的報告協定）[[DCIS-1]]
 - **決定腫瘤的 ER 狀態**——workup 裡唯一的 biomarker [[DCIS-1]]
 - 有遺傳性乳癌風險者做基因諮詢 [[DCIS-1]]
 - 有指徵時做乳房 MRI [[DCIS-1]] [[BINV-B]]
-    - 但 [[DCIS-1]] 的註腳先把期待壓下來：MRI **沒有**被證實能提高陰性 margin 的機會或降低轉為全乳切除的比率，長期預後改善的資料也付之闕如
+  - 但 [[DCIS-1]] 的註腳先把期待壓下來：MRI **沒有**被證實能提高陰性 margin 的機會或降低轉為全乳切除的比率，長期預後改善的資料也付之闕如
 - Distress 評估 [[DCIS-1]]
 - Grade 用的是 **nuclear grade**，不是侵襲癌那套 Nottingham 三項相加 [[ST-4]]
 
 ### 局部治療：兩條路
 
 - **乳房保留手術，不做淋巴結手術** [[DCIS-1]]，接著三選一：
-    - 全乳放射治療（**category 1**）± 對腫瘤床加強
-    - 加速部分乳房照射／部分乳房照射（APBI/PBI）
-    - 不做放射治療（**category 2B**）
+  - 全乳放射治療（**category 1**）± 對腫瘤床加強
+  - 加速部分乳房照射／部分乳房照射（APBI/PBI）
+  - 不做放射治療（**category 2B**）
 - **全乳切除加 SLNB ± 重建** [[DCIS-1]]
 - 保乳要拿到陰性 margin 可以再切；**再切仍拿不到適當 margin 的病人應該做全乳切除** [[DCIS-1]] [[BINV-F]]
 - 全乳切除或再切除時發現侵襲病灶 → 改按 clinical stage I 或 II 處理 [[DCIS-1]]
 - 有這些情況就不能保乳 [[BINV-G]]：
-    - **瀰漫性可疑或惡性外觀的微鈣化**（絕對禁忌）
-    - 一次或多次再切除後仍無法清除多處陽性病理 margin（絕對禁忌）
-    - **多中心的 pure DCIS**——列在「mandate mastectomy」那一組條件裡
-    - 任何導致無法給予輔助全乳放射治療加 boost 的理由
+  - **瀰漫性可疑或惡性外觀的微鈣化**（絕對禁忌）
+  - 一次或多次再切除後仍無法清除多處陽性病理 margin（絕對禁忌）
+  - **多中心的 pure DCIS**——列在「mandate mastectomy」那一組條件裡
+  - 任何導致無法給予輔助全乳放射治療加 boost 的理由
 
 ### 腋下：預設不動，但要分清楚是哪一種手術
 
 - 術前（切片判定）的 pure DCIS **不做**手術腋下分期，除非臨床、影像或病理上有侵襲或腋下轉移的跡象 [[DCIS-1]]
 - 三種可以考慮做 SLNB 的情況 [[DCIS-1]]：
-    - 擔心 margin 持續陽性
-    - 切除的解剖位置會影響日後執行 SLNB
-    - 做 oncoplastic 的乳房保留手術
+  - 擔心 margin 持續陽性
+  - 切除的解剖位置會影響日後執行 SLNB
+  - 做 oncoplastic 的乳房保留手術
 - **全乳切除那一格，NCCN 是把 SLNB 寫進治療名稱裡的**——因為切掉之後就沒有機會再做 [[DCIS-1]]
 - 全乳切除時可考慮省略 SLNB 的族群很窄：>50 歲、**non-palpable、low-grade、ER 陽性**的 DCIS、腋下無異常發現；以及以病人意願為主要理由而做全乳切除者 [[DCIS-1]]
 
@@ -89,22 +91,22 @@ nccn    = { gid = "breast", version = "6.2026" }
 ### 術後：risk reduction 與追蹤
 
 - **同側乳房**：ER 陽性 DCIS，符合下列任一情況可考慮五年內分泌治療 [[DCIS-2]]
-    - 接受 BCS 加放射治療（**category 1**）
-    - 單做切除
+  - 接受 BCS 加放射治療（**category 1**）
+  - 單做切除
 - 藥怎麼選 [[DCIS-2]]：
-    - 停經前：tamoxifen
-    - 停經後：tamoxifen 或 aromatase inhibitor；**<60 歲或有血栓栓塞疑慮者，AI 有一些優勢**
-    - 低劑量 tamoxifen（5 mg/日，或 10 mg 隔日，共 3–5 年）是選項，適用於 20 mg 有症狀、或不願意／無法服用標準劑量者；這個劑量在停經前族群還需要更多研究
-    - **不建議做 CYP2D6 基因型檢測**
+  - 停經前：tamoxifen
+  - 停經後：tamoxifen 或 aromatase inhibitor；**<60 歲或有血栓栓塞疑慮者，AI 有一些優勢**
+  - 低劑量 tamoxifen（5 mg/日，或 10 mg 隔日，共 3–5 年）是選項，適用於 20 mg 有症狀、或不願意／無法服用標準劑量者；這個劑量在停經前族群還需要更多研究
+  - **不建議做 CYP2D6 基因型檢測**
 - 用 AI 的話，bisphosphonate（口服或靜脈）或 denosumab 可用來維持骨密度、降低骨折風險 [[DCIS-2]]
-    - **開始前要做牙科檢查與預防性牙科治療**，並補充鈣與維生素 D
-    - 最佳療程未定；超過三年的效益未知
-    - denosumab 停藥後有自發性骨折的個案報告
+  - **開始前要做牙科檢查與預防性牙科治療**，並補充鈣與維生素 D
+  - 最佳療程未定；超過三年的效益未知
+  - denosumab 停藥後有自發性骨折的個案報告
 - **對側乳房**：做 risk reduction 的諮詢 [[DCIS-2]]
 - 追蹤 ：
-    - 病史與理學檢查每 6–12 個月，持續 5 年，之後每年一次
-    - 第一次乳房攝影：放射治療結束後 6–12 個月；若沒做放射治療，則是 BCS 後 6–12 個月（**category 2B**），之後每年
-- 存活優勢尚未被證實，所以個別權衡利弊很重要——這是 [[DCIS-2]] 自己寫的 
+  - 病史與理學檢查每 6–12 個月，持續 5 年，之後每年一次
+  - 第一次乳房攝影：放射治療結束後 6–12 個月；若沒做放射治療，則是 BCS 後 6–12 個月（**category 2B**），之後每年
+- 存活優勢尚未被證實，所以個別權衡利弊很重要——這是 [[DCIS-2]] 自己寫的
 
 ---
 
@@ -112,14 +114,14 @@ nccn    = { gid = "breast", version = "6.2026" }
 
 ![[fig:breast/dcis-trials]]
 
-| 試驗 | 族群 | 比較 | 結果 | 改變了什麼 |
-|---|---|---|---|---|
-| **NSABP B-17** | DCIS，腫瘤切除後 | 觀察 **vs** 全乳放射治療 | 同側乳房腫瘤復發顯著降低，侵襲性與非侵襲性復發都減少 | 「BCS 之後給放射治療」成為標準；[[DCIS-1]] 註腳那句 50%–70% 的量級就是從這一類試驗來的 |
-| **NSABP B-24** | DCIS，腫瘤切除加放射治療後 | 安慰劑 **vs** tamoxifen | 同側與對側的乳房事件都減少 | 與 [[DCIS-2]] 那條 category 1 的建議一致；也是「同側與對側要分開講」的由來 |
-| **RTOG 9804** | good-risk DCIS：screen-detected、grade 1–2、≤2.5 cm、margins ≥3 mm | 放射治療 **vs** 不放射（可用內分泌治療） | 放射治療進一步降低同側復發，但兩組的絕對復發率都低 | 這是 NCCN 唯一點名的 DCIS 試驗——[[DCIS-1]] 把它的四個條件原封不動搬成「可以考慮省略放射治療」的門檻 |
-| **NSABP B-35** | 停經後、ER 陽性 DCIS，腫瘤切除加放射治療後 | tamoxifen **vs** anastrozole | anastrozole 的乳癌無病間期較佳，效益主要見於較年輕的一群 | [[DCIS-2]] 那句「<60 歲有一些優勢」的依據 |
-| **IBIS-II DCIS** | 停經後、ER 陽性 DCIS | tamoxifen **vs** anastrozole | 復發率相當，副作用型態不同 | 與 B-35 併看，說明選藥時真正在權衡的是毒性而不是效力 |
-| **低劑量 tamoxifen（DeCensi 2019）** | 乳房上皮內腫瘤，含 DCIS | 安慰劑 **vs** tamoxifen 5 mg/日 | 復發事件減少 | [[DCIS-2]] 直接引用了這篇（J Clin Oncol 2019;37:1629-1637），是低劑量選項的出處 |
+| 試驗                                 | 族群                                                               | 比較                                     | 結果                                                     | 改變了什麼                                                                                          |
+| ------------------------------------ | ------------------------------------------------------------------ | ---------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| **NSABP B-17**                       | DCIS，腫瘤切除後                                                   | 觀察 **vs** 全乳放射治療                 | 同側乳房腫瘤復發顯著降低，侵襲性與非侵襲性復發都減少     | 「BCS 之後給放射治療」成為標準；[[DCIS-1]] 註腳那句 50%–70% 的量級就是從這一類試驗來的              |
+| **NSABP B-24**                       | DCIS，腫瘤切除加放射治療後                                         | 安慰劑 **vs** tamoxifen                  | 同側與對側的乳房事件都減少                               | 與 [[DCIS-2]] 那條 category 1 的建議一致；也是「同側與對側要分開講」的由來                          |
+| **RTOG 9804**                        | good-risk DCIS：screen-detected、grade 1–2、≤2.5 cm、margins ≥3 mm | 放射治療 **vs** 不放射（可用內分泌治療） | 放射治療進一步降低同側復發，但兩組的絕對復發率都低       | 這是 NCCN 唯一點名的 DCIS 試驗——[[DCIS-1]] 把它的四個條件原封不動搬成「可以考慮省略放射治療」的門檻 |
+| **NSABP B-35**                       | 停經後、ER 陽性 DCIS，腫瘤切除加放射治療後                         | tamoxifen **vs** anastrozole             | anastrozole 的乳癌無病間期較佳，效益主要見於較年輕的一群 | [[DCIS-2]] 那句「<60 歲有一些優勢」的依據                                                           |
+| **IBIS-II DCIS**                     | 停經後、ER 陽性 DCIS                                               | tamoxifen **vs** anastrozole             | 復發率相當，副作用型態不同                               | 與 B-35 併看，說明選藥時真正在權衡的是毒性而不是效力                                                |
+| **低劑量 tamoxifen（DeCensi 2019）** | 乳房上皮內腫瘤，含 DCIS                                            | 安慰劑 **vs** tamoxifen 5 mg/日          | 復發事件減少                                             | [[DCIS-2]] 直接引用了這篇（J Clin Oncol 2019;37:1629-1637），是低劑量選項的出處                     |
 
 > 這張表是策展補充，不在 NCCN 原文頁面上。RTOG 9804 的四個條件與 DeCensi 那篇引用是 [[DCIS-1]] 與 [[DCIS-2]] 本文就有的；其餘只寫定性結論，不寫數字。
 
