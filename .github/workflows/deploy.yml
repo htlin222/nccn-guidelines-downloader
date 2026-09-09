@@ -55,6 +55,17 @@ jobs:
         working-directory: cf
         run: pnpm test
 
+      # 課程的產物是編譯出來的（courses/**.md → src/data/courses.js）。有人改了 md
+      # 卻沒重跑 gen_courses.sh 的話，部署上去的會是舊內容——而網頁看起來完全正常，
+      # 只是少了那次修改。--check 不寫檔，只比對。
+      #
+      # 這裡刻意不跑 verify_courses.py 的完整四關：它的第 4 關要開瀏覽器量圖有沒有
+      # 溢出，那在 CI 上要裝 chromium，而溢出是寫圖的當下就該看出來的事，不是部署
+      # 的守門條件。
+      - name: Courses in sync
+        working-directory: cf
+        run: bash gen_courses.sh --check
+
       # deploy.sh stamps the Taipei build time into src/lib/constants.js and
       # then runs `wrangler deploy`. There is no ../.env in CI, so it falls
       # through to CLOUDFLARE_API_TOKEN from the environment. The stamped file

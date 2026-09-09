@@ -56,6 +56,11 @@ import {
 import { SKILL_FILENAME, buildSkillZip } from "./lib/skillpack.js";
 import { renderPage } from "./views/home.js";
 import { renderNotes } from "./views/notes.js";
+import {
+	renderCourseIndex,
+	renderCourseModule,
+	renderFigures,
+} from "./views/course.js";
 import { notesForGid, readSnippet, searchSnippets } from "./lib/notes.js";
 import { remember } from "./lib/cache.js";
 // hashKey 就是 sha256 十六進位，名字是金鑰用途留下的。這裡借它算生成內容的
@@ -67,9 +72,7 @@ import { faviconResponse, manifestResponse, SW_JS } from "./views/static.js";
 // Cloudflare Access 驗過的身分。只有在 Access 後面的路徑讀得到——/api/v1 走 Bypass，
 // 那邊這個標頭一定是空的，身分改由金鑰本身承載（見 lib/apikey.js 的衍生金鑰）。
 function accessEmail(request) {
-	return String(
-		request.headers.get("cf-access-authenticated-user-email") || "",
-	)
+	return String(request.headers.get("cf-access-authenticated-user-email") || "")
 		.trim()
 		.toLowerCase();
 }
@@ -98,6 +101,57 @@ export default {
 		// 臨床筆記：門診核對清單的瀏覽與檢索（issue #4）。跟 /api/v1 不同，這條
 		// 路徑留在 Cloudflare Access 後面——它是給人用的頁面，不是給 token 用的。
 		if (pathname === "/notes") return html(renderNotes(request));
+
+		// 核心課程：把 NCCN 拆成能講給別人聽的學習模組（第四個 tab）。
+		// /course 是學習路徑，/course/<track>/<module> 是本文。只有一個 track 時
+		// 不多做一層癌別選單——多一次點擊換不到任何資訊。
+		if (pathname === "/course" || pathname === "/course/")
+			return html(renderCourseIndex(request));
+		if (pathname.startsWith("/course/")) {
+			const id = decodeURIComponent(
+				pathname.slice("/course/".length).replace(/\/+$/, ""),
+			);
+			const page = renderCourseModule(request, id);
+			// 找不到就回課程首頁而不是 404：課程改名之後舊連結還在別人的分頁裡，
+			// 把人丟到學習路徑上比丟一頁錯誤有用。
+			if (!page)
+				return Response.redirect(
+					new URL("/course", request.url).toString(),
+					302,
+				);
+			return html(page);
+		}
+
+		// 圖庫。備講的入口——「我下週要講 CDK4/6，需要一張圖」不該先經過課程。
+		if (pathname === "/figures" || pathname === "/figures/")
+			return html(renderFigures(request));
+
+		// 簡報用的 PNG。由 gen_figures.sh 產生後上傳到 R2 figure/<id>.png，
+		// 照 thumb/ 的模式服務——3200x1600 的 PNG 不該進 Worker bundle。
+		if (pathname.startsWith("/figures/") && pathname.endsWith(".png")) {
+			const id = decodeURIComponent(
+				pathname.slice("/figures/".length, -".png".length),
+			);
+			const obj = await env.PDFS.get(
+				"figure/" + id.replace(/\//g, "-") + ".png",
+			);
+			if (!obj)
+				return new Response(
+					"這張圖還沒上傳。在本機跑 `bash gen_figures.sh && bash upload_figures.sh`。",
+					{
+						status: 404,
+						headers: { "content-type": "text/plain; charset=utf-8" },
+					},
+				);
+			return new Response(obj.body, {
+				headers: {
+					"content-type": "image/png",
+					"cache-control":
+						"private, max-age=86400, stale-while-revalidate=604800",
+					etag: obj.httpEtag,
+				},
+			});
+		}
 
 		// 首頁那一列分頁要顯示份數。另外兩顆的數字是編譯進去的常數，這顆是 D1 的
 		// 動態狀態，所以獨立成一個端點在載入後補——不讓首頁的 render 依賴 D1。
