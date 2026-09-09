@@ -6,7 +6,7 @@ group   = "早期"
 title   = "早期三陰性"
 oneline = "先分岔：夠大就先做術前治療、由病理反應決定術後加什麼；夠小就直接開刀、由 pT/pN 決定要不要化療"
 refs    = ["BINV-10", "BINV-11", "BINV-16", "BINV-L", "BINV-M"]
-figures = ["breast/early-tnbc-landscape", "breast/early-tnbc-flow"]
+figures = ["breast/early-tnbc-landscape", "breast/early-tnbc-flow", "breast/early-tnbc-trials", "breast/early-tnbc-numbers", "breast/early-tnbc-pitfalls"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -92,6 +92,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 
 ## 關鍵試驗
 
+![[fig:breast/early-tnbc-trials]]
+
 | 試驗 | 族群 | 比較 | 結果 | 改變了什麼 |
 |---|---|---|---|---|
 | **KEYNOTE-522** | stage II–III TNBC，術前 | 化療 **± pembrolizumab**，術後續用 pembrolizumab | pCR 率提高，EFS 顯著改善 | [[BINV-16]] 兩格的 pembrolizumab，以及那句條件 “if pembrolizumab-containing regimen was given preoperatively” |
@@ -105,6 +107,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 ---
 
 ## 必背數字
+
+![[fig:breast/early-tnbc-numbers]]
 
 - 直接開刀那條路的三個答案，分界只有兩處：pT1a 且 pN0 是==不治療==；pT1c（==>1 cm==）以上或 pN+ 是==化療 category 1==；中間那一段是 ==consider==
 - pT1a ==≤0.5 cm==、pT1b ==0.6–1.0 cm==、pT1c ==>1 cm==；pN1mi ==≤2 mm==、pN+ 是 ≥1 顆同側 >2 mm
@@ -157,6 +161,8 @@ pembrolizumab、capecitabine、olaparib 之間 NCCN 用的是 and/or，而且承
 ---
 
 ## 常見陷阱
+
+![[fig:breast/early-tnbc-pitfalls]]
 
 **把「術前治療 preferred」當成「術前治療 required」，或反過來只在無法手術時才想到它。**
 [[BINV-L]] 把兩件事分開寫：**無法手術**者（IBC、bulky/matted cN2、cN3、cT4）是候選人；**可手術**者當中，TNBC 若 ≥cT2 或 ≥cN1，術前治療是 “preferred”。cT1c、cN0 則是 “can be considered”。三種強度，三個不同的句子。

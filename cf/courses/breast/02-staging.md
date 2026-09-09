@@ -6,7 +6,7 @@ group   = "基礎"
 title   = "分期與 workup"
 oneline = "M0 沒有症狀就不做全身影像；T 量侵襲成分的最大徑、N 看幾顆與哪一站；美國登記要用的是 prognostic stage，不是 anatomic stage"
 refs    = ["BINV-1", "BINV-12", "BINV-18", "BINV-B", "BINV-E", "ST-1", "ST-2", "ST-3", "ST-4", "ST-6", "ST-9", "ST-11"]
-figures = ["breast/staging-tnm-table", "breast/staging-workup-flow"]
+figures = ["breast/staging-tnm-table", "breast/staging-workup-flow", "breast/staging-trials", "breast/staging-numbers", "breast/staging-pitfalls"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -114,6 +114,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 
 ## 關鍵試驗
 
+![[fig:breast/staging-trials]]
+
 | 試驗 | 族群 | 比較 | 結果 | 改變了什麼 |
 |---|---|---|---|---|
 | **SOUND** | cT1N0、腋下超音波陰性 | SLNB **vs** 省略腋下手術 | 遠端無疾病存活未見劣勢 | 與 INSEMA 一起，是 [[BINV-1]] 與 [[BINV-E]] 那條「>50 歲、停經後、HR+/HER2−、grade 1–2 可考慮省略 SLNB」註腳的來源 |
@@ -128,9 +130,11 @@ nccn    = { gid = "breast", version = "6.2026" }
 
 ## 必背數字
 
+![[fig:breast/staging-numbers]]
+
 - T 的尺標只有五個刻度：==1、5、10、20、50 mm== [[ST-1]]
 - T1mi ==≤1 mm==、T1a ==>1–5 mm==、T1b ==>5–10 mm==、T1c ==>10–20 mm==、T2 ==>20–50 mm==、T3 ==>50 mm== [[ST-1]]
-- 四捨五入的例外是**進位**：==1.0–1.4 mm 進位成 2 mm==，因為捨去會變成 T1mi。但 [[ST-1]] 同一頁的 T1a 那一行括號寫的是 “round any measurement >1.0–1.9 mm to 2 mm”——**原文自己就不一致**，1.5–1.9 mm 這一段兩種讀法會給出不同的 T 分期。這一條不要當成定論背
+- 四捨五入的例外是**進位**：==1.0–1.4 mm 進位成 2 mm==，因為捨去會變成 T1mi（≤1.0 mm）[[ST-1]]
 - ITC 的上限 ==0.2 mm==（記成 pN0(i+)，仍算 pN0）；micrometastasis 是 ==>0.2 且 ≤2.0 mm==、約 ==200 顆細胞== [[ST-2]]
 - pN1a ==1–3 顆==、pN2a ==4–9 顆==、pN3a ==≥10 顆==，而且至少一顆沉積 >2.0 mm [[ST-2]] [[ST-3]]
 - pM1 的門檻：非區域淋巴結的轉移 ==>0.2 mm==；cM0(i+) 的細胞或沉積 ==≤0.2 mm== [[ST-3]]
@@ -182,6 +186,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 
 ## 常見陷阱
 
+![[fig:breast/staging-pitfalls]]
+
 **對無症狀的 M0 病人常規做全身分期影像。**
 [[BINV-1]] 的註腳是一句完整的禁令：“Routine systemic staging is not indicated for non-metastatic (M0) cancer in the absence of systemic symptoms.” 本文也只說「在有轉移的症狀徵象時、以及臨床高風險的病人，才考慮額外影像」。做了不只是多花錢——偽陽性會把一個可治癒的病人拖進一連串切片。
 
@@ -197,7 +203,7 @@ nccn    = { gid = "breast", version = "6.2026" }
 **把 1.4 mm 四捨五入成 1 mm。**
 [[ST-1]] 為這件事單獨寫了一條例外：1.0–1.4 mm 要**進位**成 2 mm，因為捨去會讓它變成 T1mi（定義是 ≤1.0 mm）。這是整份 T 定義裡唯一違反四捨五入的地方，而它違反的理由就是不想把一個 T1a 誤植成微侵襲。
 
-**但這一條原文自己講了兩次，而且不一樣。** 本文寫的是 1.0–1.4 mm，同一頁 T1a 定義後面的括號寫的卻是 “round any measurement >1.0–1.9 mm to 2 mm”。照本文，1.6 mm 是 T1a（四捨五入成 2 mm 之外的一般規則下仍是 2 mm，結論相同）；照括號，任何 1.0 到 1.9 之間的量測都變 2 mm。兩種讀法在 1.5–1.9 mm 這一段給出的敘述不同，而 NCCN 沒有說哪一個作廢。遇到這個區間請看實體 PDF 的 ST-1，不要憑記憶。
+[[ST-1]] 在 T1a 那一行用了另一種寫法講同一件事：“round any measurement >1.0–1.9 mm to 2 mm”。那一句涵蓋了兩段——例外的 1.0–1.4 與一般四捨五入的 1.5–1.9——所以兩種寫法**結果相同**，不是矛盾。會覺得矛盾是因為只看到其中一句。
 
 **把胸大肌沾黏或真皮侵犯當成 T4。**
 [[ST-1]] 連寫兩條否定：“invasion of the dermis alone does not qualify as T4”，以及在沒有侵犯胸壁結構的情況下 “invasion or adherence to pectoralis muscle in the absence of invasion of chest wall structures does not qualify as T4”。多判一級 T，整個治療強度都會被抬上去。

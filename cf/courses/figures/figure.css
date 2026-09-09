@@ -549,8 +549,12 @@
 	color: var(--fig-ink-2);
 }
 /* 說明文字裡的 <b> 不是那個大數字。不寫這一條的話它會繼承 .fig-stat b 的 40px，
-   一個強調用的粗體會變成第二個數字。 */
-.fig-stat span b {
+   一個強調用的粗體會變成第二個數字。
+   .pair 也要單獨寫一次：.fig-stat.pair b 的 specificity 是 (0,2,1)，蓋得過
+   .fig-stat span b 的 (0,1,2)，所以只寫上面那一條的話，對比卡的說明文字裡的粗體
+   會變成 30px 的第二個數字。兩個人各自在 PNG 上撞到才發現。 */
+.fig-stat span b,
+.fig-stat.pair span b {
 	font-size: inherit;
 	color: inherit;
 	letter-spacing: normal;

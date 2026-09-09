@@ -6,7 +6,7 @@ group   = "晚期"
 title   = "特殊情境"
 oneline = "五種情境五條紅線：IBC 不保皮不保乳、Paget 要全層皮膚切片、phyllodes 邊緣陽性不放療、懷孕第一孕期不化療且全程不放療、男性不單用 AI"
 refs    = ["IBC-1", "IBC-2", "PAGET-1", "PAGET-2", "PHYLL-1", "PREG-1", "PREG-2", "BINV-J"]
-figures = ["breast/special-matrix-presentations", "breast/special-matrix-populations", "breast/special-preg-flow"]
+figures = ["breast/special-matrix-presentations", "breast/special-matrix-populations", "breast/special-preg-flow", "breast/special-evidence", "breast/special-numbers", "breast/special-pitfalls"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -147,6 +147,8 @@ Core biopsy 結果的三條路：
 
 ## 關鍵試驗
 
+![[fig:breast/special-evidence]]
+
 特殊情境幾乎都沒有大型隨機試驗——這本身就是要講出來的重點，而不是硬湊幾個試驗名。所以這一段列的是**每種情境的證據型態**：
 
 | 情境                           | 證據型態                                                                                                                                             | 目前的結論                                                              | NCCN 怎麼反映它                                                                                                                                                                       |
@@ -162,6 +164,8 @@ Core biopsy 結果的三條路：
 ---
 
 ## 必背數字
+
+![[fig:breast/special-numbers]]
 
 - IBC 的診斷三要件：==≤6 個月==內出現、佔==≥1/3 乳房==、病理確認為侵襲癌；dermal lymphatic involvement ==不是必要條件==
 - IBC 術後的抗 HER2 療程：完成==最多一年==（category 1）
@@ -221,6 +225,8 @@ Core biopsy **不**一定分得出來、excisional biopsy **不**以取邊緣為
 ---
 
 ## 常見陷阱
+
+![[fig:breast/special-pitfalls]]
 
 **IBC 做 skin-sparing 或 nipple-sparing mastectomy。**
 [[IBC-2]] 寫得很直白：“Total mastectomy (skin-sparing and nipple-sparing mastectomy are contraindicated)”。同一句還規定 level I/II axillary dissection——用 SLNB 取代腋窩廓清在這裡也不是選項。重建只能是 delayed。

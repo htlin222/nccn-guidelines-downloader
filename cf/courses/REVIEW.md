@@ -46,13 +46,18 @@ capecitabine_ 兩個藥名上，但課程在**四個地方**（`07`、`08`、`ea
 可考慮第二孕期給術前化療」——掛在晚期第三孕期說不通。要百分之百確定得看 PDF 第 111 頁
 的原圖。
 
-### 1.5 `ST-1` 的腫瘤大小進位規則（NCCN 原文自相矛盾）
+### 1.5 ~~`ST-1` 的進位規則~~　❌ 這一條是誤判，已撤回
 
-- 本文：「1.0–1.4 mm 進位成 2 mm」
-- 同一頁 T1a 那行的括號：「round any measurement **>1.0–1.9 mm** to 2 mm」
+一度以為 `ST-1` 自相矛盾：本文寫「1.0–1.4 mm 進位成 2 mm」，同一頁 T1a 那行的括號寫
+「round any measurement **>1.0–1.9 mm** to 2 mm」。
 
-兩種讀法在 1.5–1.9 mm 這一段給出不同敘述。課程原本靜靜挑了本文版並寫成必背數字，
-**現已改成揭露衝突**。仍需有人確認這是 NCCN 印錯、還是 `page_text` 抽取問題。
+**兩者等價。** 本文那條講的是例外（1.0–1.4，若照一般四捨五入會變成 T1mi），括號那句
+把例外與一般四捨五入（1.5–1.9 → 2）合起來寫成一個範圍。結果完全相同，沒有任何區間
+會因為選哪一句而得到不同的 T。
+
+留著這一條是因為過程本身值得記：我先把它判成矛盾、寫進課程的必背數字要讀者「不要當成
+定論背」，還把它列為最需要臨床拍板的五件事之一。實際上只要把兩句話一起算一次就知道
+它們相同。**在宣告原文有錯之前，先確認自己算過。**
 
 ---
 
@@ -68,6 +73,22 @@ capecitabine_ 兩個藥名上，但課程在**四個地方**（`07`、`08`、`ea
 | `09-mbc-hr.md`         | 「以**化療**起始的病人穩定後可換回內分泌」                   | 註腳 `xxx` 只說 "acceptable to switch to endocrine-based therapy after disease stabilizes"，「以化療起始」是從方框位置推的 |
 | `11-mbc-tnbc.md`       | 2L gBRCA→PARPi「前提是第一線沒用過」                         | p92 沒寫這個前提，從第一線 PARPi 只給 CPS<10 那格推的                                                                      |
 | `BINV-16`              | 殘餘病灶那一格由兩個 HER2+ 列共用                            | 該區塊結尾是 "and If HR-positive, adjuvant endocrine therapy (category 1)"，且 7 個區塊對 8 格                             |
+
+### 2.1 課程 09 的兩處族群描述（量產圖時發現）
+
+| 位置 | 張力 |
+|---|---|
+| **CAPItello-291** | 關鍵試驗表寫族群是「`PIK3CA`/`AKT1`/`PTEN` 有變化、**AI 後**進展」，但同一課的決策路徑寫 capivasertib/fulvestrant 用在「**前一線內分泌 + CDK4/6i 之後**」。兩句描述的前線不同，需要回素材確認哪一個是 NCCN 的原文限定 |
+| **TROPiCS-02** | 關鍵試驗表的試驗族群與必背數字的 NCCN 使用前提被寫成同一組條件。實務上通常一致，但一個是 **trial eligibility**、一個是 **guideline prerequisite**，本文沒有區分（圖裡已經把兩者分開放） |
+
+### 2.2 課程 12、13 的兩處無來源敘述
+
+- `12-special.md` 的「歐洲曾做過單臂 phase II 檢驗保乳路徑」（Paget）與「三段都做的族群
+  結果較好，缺一段就變差」（IBC）——課程與 `_src` 都找不到出處。§5 已經把整張表列為待審，
+  這兩格是最需要補上名字的，因為它們現在也在投影片上
+- `13-survivorship.md` 的 POSITIVE 那一列：NCCN 列的參考文獻（Partridge 2021, *Breast*）
+  是該試驗的 design/rationale 論文，而該列陳述的結果來自 2023 年的 readout。對 NCCN 的
+  描述沒有錯，但讀者會把 2021 那篇當成結果的出處
 
 ---
 
@@ -127,7 +148,6 @@ regimen」），但補齊素材之後這幾課都能再厚一層。
 
 ## 4. NCCN 原文自身的瑕疵（記錄用，不需要處理）
 
-- `ST-1` 的進位規則自相矛盾（見 1.5）
 - `BINV-P 1 of 3` 交叉引用寫 "BINV-Q 2 of **14**"，但 `BINV-Q` 是 15 頁
 - `IBC-1` 指向「Preoperative/Adjuvant Therapy Regimens (**BINV-L**)」，但方案表在 `BINV-M`
 - `BINV-D` 註腳 g 把 OTOASOR 拼成 **OTOASAR**（Sávolt Á, Ann Oncol 2017）

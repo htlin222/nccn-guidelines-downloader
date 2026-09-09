@@ -6,7 +6,7 @@ group   = "早期"
 title   = "Neoadjuvant 策略與術後升階"
 oneline = "術前治療換到的是資訊；開完刀看 pCR 還是殘留，再看 subtype，八格決定要不要加藥"
 refs    = ["BINV-12", "BINV-13", "BINV-14", "BINV-15", "BINV-16", "BINV-L", "BINV-M"]
-figures = ["breast/neoadjuvant-escalation-her2", "breast/neoadjuvant-escalation-hr-tnbc", "breast/neoadjuvant-who", "breast/neoadjuvant-rt"]
+figures = ["breast/neoadjuvant-escalation-her2", "breast/neoadjuvant-escalation-hr-tnbc", "breast/neoadjuvant-who", "breast/neoadjuvant-rt", "breast/neoadjuvant-trials", "breast/neoadjuvant-numbers", "breast/neoadjuvant-pitfalls"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -140,6 +140,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 
 ## 關鍵試驗
 
+![[fig:breast/neoadjuvant-trials]]
+
 | 試驗 | 族群 | 比較 | 結果 | 改變了什麼 |
 |---|---|---|---|---|
 | **KEYNOTE-522** | 早期 TNBC | 術前化療 **± pembrolizumab**，術後續用 pembrolizumab | pCR 提高、EFS 顯著改善 | [[BINV-16]] 裡 TNBC 兩格 pembrolizumab 的來源，也是「術前有給才能術後給」這個前提的由來 |
@@ -156,6 +158,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 ---
 
 ## 必背數字
+
+![[fig:breast/neoadjuvant-numbers]]
 
 - 術前治療 preferred 的門檻：HER2-positive 或 TNBC 且 ==≥cT2 或 ≥cN1== [[BINV-L]]
 - 可以「考慮」術前治療的最小分期：==cT1c, cN0== 的 HER2-positive disease 與 TNBC [[BINV-L]]
@@ -212,6 +216,8 @@ L 是「誰能做」，12 與 13 是「開始前要查什麼」，15 是「不�
 ---
 
 ## 常見陷阱
+
+![[fig:breast/neoadjuvant-pitfalls]]
 
 **把 “consider ribociclib” 跟 “consider abemaciclib or ribociclib” 當成同一句。**
 [[BINV-16]] 在 HR-positive／HER2-negative 的 **pCR** 那一格只寫 ribociclib；**殘留**那一格才寫 abemaciclib 或 ribociclib。兩格的資格條件都指向 BINV-K，但可選的藥不一樣。

@@ -6,7 +6,7 @@ group   = "早期"
 title   = "早期 HER2 陽性"
 oneline = "腫瘤大小與淋巴結決定要不要抗 HER2、要不要加 pertuzumab；做過術前治療的人，決定權交給病理反應"
 refs    = ["BINV-5", "BINV-9", "BINV-16", "BINV-L", "BINV-M", "BINV-A"]
-figures = ["breast/early-her2-landscape", "breast/early-her2-postneo"]
+figures = ["breast/early-her2-landscape", "breast/early-her2-postneo", "breast/early-her2-trials", "breast/early-her2-numbers", "breast/early-her2-pitfalls"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -104,6 +104,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 
 ## 關鍵試驗
 
+![[fig:breast/early-her2-trials]]
+
 | 試驗 | 族群 | 比較 | 結果 | 改變了什麼 |
 |---|---|---|---|---|
 | **HERA / NSABP B-31 / NCCTG N9831** | 早期 HER2 陽性 | 化療 **± trastuzumab** 一年 | 無病存活與整體存活顯著改善 | 「一年抗 HER2」這個框架本身，也是 [[BINV-16]] 「complete up to 1 year」的由來 |
@@ -119,6 +121,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 ---
 
 ## 必背數字
+
+![[fig:breast/early-her2-numbers]]
 
 - 抗 HER2 的療程長度：==一年==（[[BINV-16]] 一律寫 “complete (up to) 1 year”）
 - LVEF 監測：治療前一次，之後 ==每 3 個月==（FDA 仿單；NCCN 說最佳頻率其實未知）[[BINV-M]]
@@ -172,6 +176,8 @@ grade 1、pure mucinous、pure tubular、pure cribriform。這四個都是「本
 ---
 
 ## 常見陷阱
+
+![[fig:breast/early-her2-pitfalls]]
 
 **把 `± pertuzumab` 讀成「加 pertuzumab」。**
 [[BINV-9]] 那一句的完整寫法是 “Adjuvant chemotherapy with trastuzumab (category 1) (**± pertuzumab for pT2–T3**)”。它同時做了兩件事：把 pertuzumab 標成可選，並且把可選的範圍限在 pT2–T3。pT1c、pN0 的病人不在這個括號裡。

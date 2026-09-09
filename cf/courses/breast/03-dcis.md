@@ -6,7 +6,7 @@ group   = "早期"
 title   = "DCIS"
 oneline = "只驗 ER，不動腋下；放射治療把同側復發砍掉一半以上，而復發裡有一半是侵襲癌——這就是所有決策的分母"
 refs    = ["DCIS-1", "DCIS-2", "BINV-F", "BINV-G", "BINV-B", "ST-4"]
-figures = ["breast/dcis-options-matrix", "breast/dcis-flow"]
+figures = ["breast/dcis-options-matrix", "breast/dcis-flow", "breast/dcis-trials", "breast/dcis-numbers", "breast/dcis-pitfalls"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -14,7 +14,7 @@ nccn    = { gid = "breast", version = "6.2026" }
 
 一個 Tis、N0、M0 的病人，**要驗什麼、要不要動腋下、要不要放射治療、術後要不要吃藥**。
 
-- **DCIS 的 workup 短得驚人**。[[DCIS-1]] 只有六項：病史理學檢查、雙側診斷性乳房攝影、病理審閱、**ER 狀態**、有風險者的基因諮詢、必要時 MRI，加上 distress 評估。沒有 PR、沒有 HER2、沒有全身影像。
+- **DCIS 的 workup 短得驚人**。[[DCIS-1]] 只有七項：病史理學檢查、雙側診斷性乳房攝影、病理審閱、**ER 狀態**、有風險者的基因諮詢、必要時 MRI，以及 distress 評估。沒有 PR、沒有 HER2、沒有全身影像。
 - **腋下預設不動**。原句是 “Surgical axillary staging should not be performed for preoperative (biopsy-determined) pure DCIS unless there is some clinical-radiographic-pathologic suggestion of invasion or axillary metastasis”——除了這個 unless，另外還有三種可以考慮 SLNB 的情況。而全乳切除是另一回事，那一格 NCCN 直接把 SLNB 寫進去了。
 - **所有的取捨都繞著同一個數字轉**：全乳放射治療讓同側乳房腫瘤復發降低 50%–70%，而復發之中**約一半是侵襲癌**。省略放射治療、放寬 margin、不吃內分泌藥，都是在動這個分母。
 
@@ -101,14 +101,16 @@ nccn    = { gid = "breast", version = "6.2026" }
     - 最佳療程未定；超過三年的效益未知
     - denosumab 停藥後有自發性骨折的個案報告
 - **對側乳房**：做 risk reduction 的諮詢 [[DCIS-2]]
-- 追蹤 [[DCIS-2]]：
+- 追蹤 ：
     - 病史與理學檢查每 6–12 個月，持續 5 年，之後每年一次
     - 第一次乳房攝影：放射治療結束後 6–12 個月；若沒做放射治療，則是 BCS 後 6–12 個月（**category 2B**），之後每年
-- 存活優勢尚未被證實，所以個別權衡利弊很重要——這是 [[DCIS-2]] 自己寫的 [[DCIS-2]]
+- 存活優勢尚未被證實，所以個別權衡利弊很重要——這是 [[DCIS-2]] 自己寫的 
 
 ---
 
 ## 關鍵試驗
+
+![[fig:breast/dcis-trials]]
 
 | 試驗 | 族群 | 比較 | 結果 | 改變了什麼 |
 |---|---|---|---|---|
@@ -124,6 +126,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 ---
 
 ## 必背數字
+
+![[fig:breast/dcis-numbers]]
 
 - 全乳放射治療讓 IBTR 降低 ==50%–70%==，而復發之中約 ==一半是侵襲癌== [[DCIS-1]]
 - RTOG 9804 的四個條件，**要全中**才考慮省略放射治療：==screen-detected==、==grade 1–2==、==≤2.5 cm==、==margins ≥3 mm== [[DCIS-1]]
@@ -179,6 +183,8 @@ Pure DCIS 不做手術腋下分期；但一旦決定全乳切除，SLNB 就跟�
 ---
 
 ## 常見陷阱
+
+![[fig:breast/dcis-pitfalls]]
 
 **對 pure DCIS 做腋下分期。**
 [[DCIS-1]] 的註腳是完整的禁令：“Surgical axillary staging should not be performed for preoperative (biopsy-determined) pure DCIS unless there is some clinical-radiographic-pathologic suggestion of invasion or axillary metastasis.” 那三個「可考慮 SLNB」的例外，講的都是**日後做不到**的技術問題，不是分期需求。

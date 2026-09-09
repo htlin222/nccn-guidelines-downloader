@@ -6,7 +6,7 @@ group   = "晚期"
 title   = "轉移性 HR 陽性、HER2 陰性"
 oneline = "內分泌 + CDK4/6i 是預設，只有真正的 visceral crisis 才先上化療；換線之前先問 ESR1、PIK3CA/AKT1/PTEN、BRCA"
 refs    = ["BINV-21", "BINV-22", "BINV-23", "BINV-P", "BINV-Q", "BINV-R", "BINV-A"]
-figures = ["breast/mbc-hr-landscape-endocrine", "breast/mbc-hr-landscape-cytotoxic", "breast/mbc-hr-flow-entry", "breast/mbc-hr-flow-progression", "breast/mbc-entry-branch"]
+figures = ["breast/mbc-hr-landscape-endocrine", "breast/mbc-hr-landscape-cytotoxic", "breast/mbc-hr-flow-entry", "breast/mbc-hr-flow-progression", "breast/mbc-entry-branch", "breast/mbc-hr-trials", "breast/mbc-hr-numbers", "breast/mbc-hr-pitfalls"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -134,6 +134,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 
 ## 關鍵試驗
 
+![[fig:breast/mbc-hr-trials]]
+
 | 試驗                        | 族群                                                         | 比較                                                         | 結果                             | 改變了什麼                                                                      |
 | --------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | -------------------------------- | ------------------------------------------------------------------------------- |
 | **MONALEESA-2**             | 一線、停經後 HR+/HER2−                                       | letrozole **± ribociclib**                                   | PFS 與 OS 都顯著改善             | 一線 AI + CDK4/6i 裡唯一拿到 category 1 的那一格                                |
@@ -156,6 +158,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 ---
 
 ## 必背數字
+
+![[fig:breast/mbc-hr-numbers]]
 
 - 只有 ==true visceral crisis== 才建議化療；廣泛內臟侵犯**不算**，[[BINV-P]] 說內分泌 + CDK4/6i 在那種情況下仍然優於化療
 - 從內分泌軌道跳化療的兩個門檻（「或」不是「且」）：==up to 3 線==內分泌無臨床效益，或==有症狀的內臟疾病== [[BINV-23]]
@@ -217,6 +221,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 ---
 
 ## 常見陷阱
+
+![[fig:breast/mbc-hr-pitfalls]]
 
 **看到廣泛內臟轉移就直接上化療。**
 [[BINV-P]] 的原句沒有留餘地：“Endocrine therapy + CDK4/6 inhibitor is preferred over chemotherapy, even for extensive visceral involvement. Chemotherapy recommended only if true visceral crisis.” 這是這一課最常被做錯的一步。

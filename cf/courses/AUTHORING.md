@@ -227,6 +227,18 @@ cite:  [{ gid: "breast", refs: ["BINV-6", "BINV-7"], page: 19 }]
 
 兩個表並排就是把兩個 `.fig-tbl` 放進一個 `.fig-row`。
 
+**欄寬失衡時加 `<colgroup>`，而且它必須放在 `<caption>` 之後。** 放在 caption 之前會被
+HTML parser 整個忽略，寬度完全不變，**而且沒有任何錯誤訊息**——你會以為 colgroup 沒
+效果而去改別的地方。auto layout 很容易把空間分給只寫「PFS improved」的短欄，讓真正
+需要寬度的敘述欄擠成三行：
+
+```html
+<table class="fig-tbl fill">
+  <caption>…</caption>
+  <colgroup><col style="width:7%"><col style="width:10%"><col style="width:37%"></colgroup>
+  <thead>…
+```
+
 **圖例只用來解釋資料編碼。** 表頭是什麼顏色不是資訊，替它做圖例只會佔掉版面——
 第一版就犯了這個錯（「Result column ■ / Current NCCN position ■」）。
 

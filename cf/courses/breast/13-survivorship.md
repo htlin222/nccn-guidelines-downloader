@@ -6,7 +6,7 @@ group   = "長期"
 title   = "追蹤與存活者照護"
 oneline = "無症狀就不追影像；局部復發先全身治療再手術再放療；存活者照護管的是骨、心、生育與心理，不是掃描"
 refs    = ["BINV-17", "BINV-18", "BINV-19", "BINV-20", "BINV-28", "BINV-C"]
-figures = ["breast/survivorship-schedule", "breast/survivorship-recurrence-flow"]
+figures = ["breast/survivorship-schedule", "breast/survivorship-recurrence-flow", "breast/survivorship-trials", "breast/survivorship-numbers", "breast/survivorship-pitfalls"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -143,6 +143,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 
 ## 關鍵試驗
 
+![[fig:breast/survivorship-trials]]
+
 | 試驗                                                                          | 族群                                                               | 比較                                           | 結果                                         | 改變了什麼                                                                                                  |
 | ----------------------------------------------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | **密集追蹤的兩個義大利隨機試驗**（1990 年代，GIVIO 與 Rosselli Del Turco）    | 早期乳癌術後、無症狀                                               | 例行影像與實驗室追蹤 **vs** 臨床追蹤加乳房攝影 | 整體存活**沒有差別**，生活品質也沒有更好     | 這是「無症狀不做轉移篩檢」的證據來源。[[BINV-17]] 那一句禁令背後就是這兩個試驗                              |
@@ -155,6 +157,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 ---
 
 ## 必背數字
+
+![[fig:breast/survivorship-numbers]]
 
 - 病史與理學檢查的頻率：==1–4 次／年，共 5 年==，之後==每年==
 - 乳房攝影：==每 12 個月==，從保乳治療完成後 ==6 個月或更久==開始（放療結束後 ==6–12 個月==）
@@ -214,6 +218,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 ---
 
 ## 常見陷阱
+
+![[fig:breast/survivorship-pitfalls]]
 
 **幫無症狀的存活者排年度 CT 或腫瘤指標。**
 [[BINV-17]]：“In the absence of clinical signs and symptoms suggestive of recurrent disease, there is no indication for laboratory or imaging studies for metastases screening.” 這是整頁最沒有轉圜餘地的一句。1990 年代兩個隨機試驗顯示密集追蹤不改善存活，這一句就是它們的結論。

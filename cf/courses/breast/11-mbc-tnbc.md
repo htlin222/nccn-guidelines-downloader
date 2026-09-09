@@ -6,7 +6,7 @@ group   = "晚期"
 title   = "轉移性三陰性乳癌"
 oneline = "第一線由 PD-L1 CPS 與 germline BRCA 兩張門票決定，之後是 ADC 接力；序貫單藥為主"
 refs    = ["BINV-21", "BINV-27", "BINV-Q", "BINV-R", "BINV-A"]
-figures = ["breast/mbc-tnbc-landscape", "breast/mbc-tnbc-flow"]
+figures = ["breast/mbc-tnbc-landscape", "breast/mbc-tnbc-flow", "breast/mbc-tnbc-trials", "breast/mbc-tnbc-numbers", "breast/mbc-tnbc-pitfalls"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -102,6 +102,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 
 ## 關鍵試驗
 
+![[fig:breast/mbc-tnbc-trials]]
+
 | 試驗                 | 族群                                                      | 比較                                          | 結果                                              | 改變了什麼                                               |
 | -------------------- | --------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------- | -------------------------------------------------------- |
 | **KEYNOTE-355**      | 一線 mTNBC                                                | 化療 **± pembrolizumab**                      | CPS ≥10 族群 PFS 與 OS 都顯著改善；CPS <10 沒有   | CPS ≥10 那一列的來源，也是門檻為什麼訂在 10              |
@@ -119,6 +121,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 ---
 
 ## 必背數字
+
+![[fig:breast/mbc-tnbc-numbers]]
 
 - PD-L1 的抗體與門檻：==22C3==，==CPS ≥10== [[BINV-Q]]
 - CPS ≥10 那一列的關鍵字：==regardless of== germline BRCA1/2 PV status——有 gBRCA 也走免疫那一列 [[BINV-Q]]
@@ -174,6 +178,8 @@ KEYNOTE-355 是第一線加化療的組合，KEYNOTE-119 是後線單藥——�
 ---
 
 ## 常見陷阱
+
+![[fig:breast/mbc-tnbc-pitfalls]]
 
 **CPS ≥10 又帶 gBRCA，卻先給了 PARPi。**
 [[BINV-Q]] 第一線第一列寫的是 “PD-L1 CPS ≥10 regardless of germline BRCA1/2 PV status”，而 PARPi／platinum 那一列的前提是 **CPS <10 且**有 gBRCA。兩個條件是「且」，掉一個就把病人放錯格。

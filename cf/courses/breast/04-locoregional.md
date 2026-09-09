@@ -6,7 +6,7 @@ group   = "早期"
 title   = "局部治療決策"
 oneline = "能不能保乳看 BINV-G，腋下開到哪看 SLN 幾顆，放射線給到哪看 pN 幾顆——三個問題，三張表"
 refs    = ["BINV-2", "BINV-3", "BINV-4", "BINV-D", "BINV-E", "BINV-F", "BINV-G", "BINV-H", "BINV-I"]
-figures = ["breast/locoregional-rt", "breast/locoregional-surgery-conservation", "breast/locoregional-surgery-operation", "breast/locoregional-axilla"]
+figures = ["breast/locoregional-rt", "breast/locoregional-surgery-conservation", "breast/locoregional-surgery-operation", "breast/locoregional-axilla", "breast/locoregional-trials", "breast/locoregional-numbers", "breast/locoregional-pitfalls"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -149,6 +149,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 
 ## 關鍵試驗
 
+![[fig:breast/locoregional-trials]]
+
 | 試驗 | 族群 | 比較 | 結果 | 改變了什麼 |
 |---|---|---|---|---|
 | **ACOSOG Z0011** | cT1–2 cN0、保乳 + 全乳 RT、1–2 顆陽性 SLN | ALND vs 不做 ALND | 存活與局部區域復發沒有差別 | [[BINV-D]] 那組「SLN 陽性也可以不再開腋下」條件的原型 |
@@ -167,6 +169,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 ---
 
 ## 必背數字
+
+![[fig:breast/locoregional-numbers]]
 
 - Invasive 的 positive margin 定義：==ink on tumor==——沒有距離，任何 invasive 或 DCIS 細胞碰到墨水就是 [[BINV-F]]
 - DCIS 的切緣才有數字：BCS + 全乳 RT 是 ==≥2 mm==；只切除不照射是「至少 ==2 mm==，最佳寬度未知」[[BINV-F]]
@@ -225,10 +229,12 @@ Invasive 的切緣定義是四個英文字；==2 mm== 是 **DCIS** 的門檻。�
 
 ## 常見陷阱
 
+![[fig:breast/locoregional-pitfalls]]
+
 **把「免 ALND」當成「腋下不用管」。**
 [[BINV-D]] 的註腳寫得很明白：全切的情況下，原本 cN0、SLNB 陽性、沒做 axillary dissection 的人，胸壁 RT 要涵蓋 “undissected axilla at risk” ± RNI。[[BINV-2]] 在保乳那一列也寫了同一句。省下來的是手術，不是治療。
 
-**把 [[BINV-2]] 的四條與 [[BINV-D]] 的五條當成同一組。**
+**把 [[BINV-2]] 的四條與 [[BINV-D]] 的六條當成同一組。**
 兩頁的清單不完全一樣。[[BINV-2]] 寫的是：cT1–T3、cN0；no preoperative chemotherapy；1–2 positive SLNs；whole breast RT planned。[[BINV-D]] 寫的是：cT1–T2、T3（限「資料有限」）；cN0；no preoperative chemotherapy；pN1mic；1–2 positive SLNs；adjuvant RT planned。要引用時就引用你正在看的那一頁，不要合併成一份記憶中的清單。
 
 **把 invasive 的切緣講成「幾 mm」。**

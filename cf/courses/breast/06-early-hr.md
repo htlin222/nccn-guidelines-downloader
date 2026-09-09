@@ -6,7 +6,7 @@ group   = "早期"
 title   = "早期 HR 陽性、HER2 陰性"
 oneline = "先問停經狀態，再問淋巴結，最後才問 gene assay——而 assay 只在「這個人本來就可能給化療」時才有意義"
 refs    = ["BINV-6", "BINV-7", "BINV-8", "BINV-K", "BINV-N", "BINV-O", "BINV-16"]
-figures = ["breast/early-hr-landscape", "breast/early-hr-assay"]
+figures = ["breast/early-hr-landscape", "breast/early-hr-assay", "breast/early-hr-trials", "breast/early-hr-numbers", "breast/early-hr-pitfalls"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -114,6 +114,8 @@ HR+/HER2− 走過術前全身治療的人，術後看的是病理反應：
 
 ## 關鍵試驗
 
+![[fig:breast/early-hr-trials]]
+
 | 試驗 | 族群 | 比較 | 結果 | 改變了什麼 |
 |---|---|---|---|---|
 | **TAILORx** | HR+/HER2−、pN0、21-gene RS 11–25 | 化療 + 內分泌 **vs** 內分泌單獨 | 整體不劣於；≤50 歲、RS 16–25 的次群有化療效益 | 停經後 RS <26 不化療、停經前 16–25 加化療的來源。NCCN 註腳特別提醒它**沒有納入** T1b 低惡性度無 LVI 的腫瘤 |
@@ -131,9 +133,11 @@ HR+/HER2− 走過術前全身治療的人，術後看的是病理反應：
 
 ## 必背數字
 
+![[fig:breast/early-hr-numbers]]
+
 - 停經後只有**一個** RS 分界：==26==。<26 走內分泌（category 1），≥26 加化療（category 1）[[BINV-6]]
 - 停經前有**三段**：==≤15==、==16–25==、==≥26==。中間那段是加化療的，跟停經後不一樣 [[BINV-7]]
-- pN 的三個門檻：pN1mi ==≤2 mm==、pN1 ==1–3 顆==、pN2/pN3 ==≥4 顆==同側且 >2 mm
+- pN 的三個門檻：pN1mi ==>0.2 到 ≤2.0 mm==、pN1 ==1–3 顆==、pN2/pN3 ==≥4 顆==同側且 >2 mm
 - pT 的三個門檻：pT1a ==≤0.5 cm==、pT1b ==0.6–1.0 cm==、pT1c ==>1 cm==
 - ER 陽性的定義：染色 ==1%–100%==；ER-low-positive 是 ==1%–10%==（療效資料有限）[[BINV-K]]
 - PR 判讀只有兩檔：陽性 ==1%–100%== 有核染色，陰性 ==<1% 或 0%== [[BINV-K]]
@@ -183,6 +187,8 @@ NCCN 把 HR+/HER2− 拆成三頁，拆的軸剛好就是前兩個問題：[[BIN
 ---
 
 ## 常見陷阱
+
+![[fig:breast/early-hr-pitfalls]]
 
 **把 gene assay 當成篩檢，人人都送。**
 [[BINV-6]] 與 [[BINV-7]] 的流程都是 “Determine if candidate for chemotherapy” → “If candidate for chemotherapy: Strongly consider 21-gene RT-PCR assay”。不是化療候選人的話，分數不會改變處置。而 [[BINV-6]] 對 ≥4 顆淋巴結那一群直接說「there are few data regarding the role of gene expression assays」，決定「should be based on clinical factors」。

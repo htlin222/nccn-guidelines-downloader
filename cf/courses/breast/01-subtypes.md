@@ -6,7 +6,7 @@ group   = "基礎"
 title   = "分子分型與 biomarker"
 oneline = "兩個軸切出四格，NCCN 的輔助治療就照這四格分頁；難的不是分類，是邊界——HER2 的 0 與 0+，ER 的 1%–10%"
 refs    = ["BINV-A", "BINV-N", "BINV-1", "BINV-5", "BINV-6", "BINV-7", "BINV-8", "BINV-9", "BINV-10", "BINV-11", "BINV-18"]
-figures = ["breast/subtypes-her2-framework", "breast/subtypes-assay-matrix"]
+figures = ["breast/subtypes-her2-framework", "breast/subtypes-assay-matrix", "breast/subtypes-trials", "breast/subtypes-numbers", "breast/subtypes-pitfalls"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -97,6 +97,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 
 ## 關鍵試驗
 
+![[fig:breast/subtypes-trials]]
+
 | 試驗 | 族群 | 比較 | 結果 | 改變了什麼 |
 |---|---|---|---|---|
 | **TAILORx** | HR+/HER2−、pN0、21-gene RS 11–25 | 內分泌單用 **vs** 化療後接內分泌 | 整體族群內分泌單用不劣於加化療；≤50 歲、RS 偏高的一段仍看到化療效益 | RS 26 這一刀的來源；也是 NCCN 註明「T1b 低惡性度無 LVI 不適用」的原因——那類腫瘤不在試驗裡 |
@@ -110,6 +112,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 ---
 
 ## 必背數字
+
+![[fig:breast/subtypes-numbers]]
 
 - ER 陽性的判定範圍：==1%–100%== 的 IHC 染色都算陽性，都符合內分泌治療資格 [[BINV-6]]
 - ER-low positive 的區間：==1%–10%==，行為常常像 ER 陰性，要個別權衡 [[BINV-7]]
@@ -163,6 +167,8 @@ ER 的兩個數字連在一起記：入場門檻是 1%，但 1%–10% 這一段�
 ---
 
 ## 常見陷阱
+
+![[fig:breast/subtypes-pitfalls]]
 
 **把 HER2 IHC 0 當成一句話寫完。**
 [[BINV-A]] 要求依 CAP 協定寫出染色型態，並且鼓勵病理醫師在高倍下重看無染色的切片。原句給的理由是這個區分 “is currently clinically relevant since patients with metastatic disease may be eligible for treatment targeting non-amplified levels of HER2 expression”。少寫那一格，病人後線可能少一個選項。
