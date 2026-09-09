@@ -505,6 +505,106 @@
 	padding: 3px 8px;
 }
 
+/* ---------- 數字卡 ---------- */
+
+/* 一格一個要記住的數字，大字在上、說明在下。整張圖排成 2x4 就是一頁 summary slide。
+ *
+ *   <div class="fig-stat"><b>57.1</b><u>months</u><span>CLEOPATRA median OS…</span></div>
+ *
+ * <b> 是數字本身，<u> 是單位（不畫底線，只是不必再發明一個 class），<span> 是說明。
+ * 數字用 tabular-nums，一整排卡片的數字才會對齊——這種圖最常見的毛病就是每張卡的
+ * 數字左右飄，看起來像沒有對齊的清單而不是一組數據。
+ */
+.fig-stat {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 2px;
+	padding: 10px 12px;
+	background: var(--fig-paper);
+	border: 1px solid var(--fig-line);
+	border-radius: 4px;
+	text-align: center;
+}
+.fig-stat b {
+	font-size: 40px;
+	line-height: 1.05;
+	font-weight: 700;
+	color: var(--fig-brand);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: -0.01em;
+}
+.fig-stat u {
+	text-decoration: none;
+	font-size: var(--fig-fs-xs);
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--fig-brand-ink);
+}
+.fig-stat span {
+	font-size: var(--fig-fs-xs);
+	line-height: 1.35;
+	color: var(--fig-ink-2);
+}
+/* 說明文字裡的 <b> 不是那個大數字。不寫這一條的話它會繼承 .fig-stat b 的 40px，
+   一個強調用的粗體會變成第二個數字。 */
+.fig-stat span b {
+	font-size: inherit;
+	color: inherit;
+	letter-spacing: normal;
+}
+.fig-stat.solid {
+	background: var(--fig-brand);
+	border-color: var(--fig-brand);
+}
+.fig-stat.solid b,
+.fig-stat.solid u {
+	color: #fff;
+}
+.fig-stat.solid span {
+	color: rgba(255, 255, 255, 0.88);
+}
+/* 兩個數字對比（before → after）時用小一號，才放得下箭頭 */
+.fig-stat.pair b {
+	font-size: 30px;
+}
+/* 數字之間的連接詞（vs、→）。用 <small> 而不是 inline font-size：那條規則對每個人
+   都成立，包括我自己——字級檢查抓到的第一個違規就是這裡。 */
+.fig-stat b small {
+	font-size: 0.52em;
+	font-weight: 400;
+	opacity: 0.72;
+	letter-spacing: 0;
+}
+
+/* ---------- 對照（做對的 vs 做錯的） ---------- */
+
+/* 「常見做法 vs 指引怎麼說」。左右兩欄，錯的那一欄用虛線框與淡字——不要用第三個
+   顏色去標紅，雙色系統裡「錯」是靠**弱化**表示的，不是靠警示色。 */
+.fig-vs {
+	display: flex;
+	gap: 0;
+	align-items: stretch;
+}
+.fig-vs > * {
+	flex: 1;
+	min-width: 0;
+}
+.fig-vs > .fig-col + .fig-col {
+	padding-left: 16px;
+	margin-left: 16px;
+	border-left: 1px solid var(--fig-line);
+}
+.fig-node.wrong {
+	border-style: dashed;
+	color: var(--fig-ink-3);
+}
+.fig-node.wrong b {
+	color: var(--fig-ink-2);
+}
+
 /* ---------- 群組 ---------- */
 
 .fig-group {

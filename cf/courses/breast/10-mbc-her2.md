@@ -6,7 +6,7 @@ group   = "晚期"
 title   = "轉移性 HER2 陽性乳癌"
 oneline = "THP 打到進展，換 T-DXd，有腦轉移就 CLIMB；換的是化療骨架，抗 HER2 不停"
 refs    = ["BINV-21", "BINV-24", "BINV-25", "BINV-26", "BINV-P", "BINV-Q", "BINV-R", "BINV-A"]
-figures = ["breast/mbc-her2-landscape", "breast/mbc-her2-flow", "breast/mbc-her2-trials"]
+figures = ["breast/mbc-her2-landscape", "breast/mbc-her2-flow", "breast/mbc-her2-trials", "breast/mbc-her2-numbers", "breast/mbc-her2-pitfalls"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -95,6 +95,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 
 ## 必背數字
 
+![[fig:breast/mbc-her2-numbers]]
+
 - CLEOPATRA 的中位 OS：==57.1 個月==（對照組 ==40.8 個月==）——這是實體腫瘤裡少見的數字，值得記住當作 HER2 標靶治療效力的錨點
 - DESTINY-Breast03 的中位 PFS：T-DXd ==28.8 個月== vs T-DM1 ==6.8 個月==
 - HER2CLIMB 的顱內 PFS：==9.9 vs 4.2 個月==
@@ -143,6 +145,8 @@ HER2 陽性換線時，動的是化療那一半；[[BINV-25]] 與 [[BINV-26]] �
 ---
 
 ## 常見陷阱
+
+![[fig:breast/mbc-her2-pitfalls]]
 
 **把抗 HER2 跟化療一起停掉。**
 最常見的一個。換線換的是化療骨架，trastuzumab 要繼續。[[BINV-25]] 的原句是 “Continue HER2-targeted therapy until progression”，[[BINV-26]] 則寫 “Alternate cytotoxic therapy + HER2-targeted therapy until progression”——兩頁講的是同一件事。
