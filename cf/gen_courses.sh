@@ -71,23 +71,41 @@ for (const f of fs.existsSync(figDir) ? walk(figDir) : []) {
   };
 }
 
-// ---- 素材：ref → 頁碼與標題。來自 snippets/_src，跟臨床筆記同一個來源 --------
-const refPages = {};
-const refTitles = {};
+// ---- 素材：ref → 頁碼與標題 ------------------------------------------------
+//
+// 這份對應**進版控**（courses/refmap.json），不是每次從 snippets/_src 現掃。
+//
+// 原因是 CI 紅了才想到的：_src 是 D1 page_text 的衍生檔、刻意不進版控，所以 CI 上
+// 沒有它——第 9 段「原文對照」的頁碼與標題生不出來，產物就跟 committed 的 courses.js
+// 不一樣，`--check` 直接失敗。生成檔不可以依賴一個不在版控的輸入。
+//
+// 所以 _src 的角色降為「更新這份對應」：本機有 _src 時重建並寫檔，之後一律**只讀
+// refmap**。這樣本機與 CI 讀到的是同一份東西。
+const REFMAP = "courses/refmap.json";
 const srcRoot = "snippets/_src";
-for (const gid of fs.existsSync(srcRoot) ? fs.readdirSync(srcRoot) : []) {
-  const dir = path.join(srcRoot, gid);
-  if (!fs.statSync(dir).isDirectory()) continue;
-  refPages[gid] = {}; refTitles[gid] = {};
-  for (const f of fs.readdirSync(dir)) {
-    if (!f.endsWith(".txt")) continue;
-    const head = fs.readFileSync(path.join(dir, f), "utf8").slice(0, 400);
-    const ref = (/^ref:\s*(.+)$/m.exec(head) || [])[1];
-    const page = (/^page:\s*(\d+)$/m.exec(head) || [])[1];
-    const title = (/^title:\s*(.*)$/m.exec(head) || [])[1] || "";
-    if (ref && page) { refPages[gid][ref.trim()] = Number(page); refTitles[gid][ref.trim()] = title.trim(); }
+if (MODE !== "--check" && fs.existsSync(srcRoot)) {
+  const pages = {}, titles = {};
+  for (const gid of fs.readdirSync(srcRoot)) {
+    const dir = path.join(srcRoot, gid);
+    if (!fs.statSync(dir).isDirectory()) continue;
+    pages[gid] = {}; titles[gid] = {};
+    for (const f of fs.readdirSync(dir)) {
+      if (!f.endsWith(".txt")) continue;
+      const head = fs.readFileSync(path.join(dir, f), "utf8").slice(0, 400);
+      const ref = (/^ref:\s*(.+)$/m.exec(head) || [])[1];
+      const page = (/^page:\s*(\d+)$/m.exec(head) || [])[1];
+      const title = (/^title:\s*(.*)$/m.exec(head) || [])[1] || "";
+      if (ref && page) { pages[gid][ref.trim()] = Number(page); titles[gid][ref.trim()] = title.trim(); }
+    }
+    if (!Object.keys(pages[gid]).length) { delete pages[gid]; delete titles[gid]; }
   }
+  if (Object.keys(pages).length)
+    fs.writeFileSync(REFMAP, JSON.stringify({ pages, titles }, null, 1) + "\n");
 }
+const refmap = fs.existsSync(REFMAP)
+  ? JSON.parse(fs.readFileSync(REFMAP, "utf8"))
+  : { pages: {}, titles: {} };
+const refPages = refmap.pages, refTitles = refmap.titles;
 
 // ---- 課程 ------------------------------------------------------------------
 const modules = [];
