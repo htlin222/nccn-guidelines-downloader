@@ -53,10 +53,18 @@ try:
 except Exception:
     rows = []
 for r in rows:
-    # 頁尾最後一個像 ref 的字串就是這一頁的編號
-    hits = re.findall(r"\b([A-Z]{2,}[A-Z0-9]*-[0-9]+[A-Z]?)\b", r.get("tail") or "")
+    tail = r.get("tail") or ""
+    # 多頁節點的頁尾長這樣：「BINV-Q 4 OF 15」。這一類的 ref 可以是字母結尾（BINV-Q、
+    # BINV-M），所以要用比下面寬的樣式去抓——原本的樣式只認 `-數字`，於是 15 頁的
+    # BINV-Q 一頁都對不上，只能靠 TOC 給的那一個條目，結果每次都只倒出第 1 頁。
+    m = re.search(r"\b([A-Z]{2,}[A-Z0-9]*-[0-9A-Z]+)\s+(\d+)\s+OF\s+(\d+)\s*$", tail)
+    if m:
+        print("%s\t%s\t%s\t%s" % (m.group(1), r["page"], m.group(2), m.group(3)))
+        continue
+    # 單頁節點：頁尾最後一個像 ref 的字串就是這一頁的編號
+    hits = re.findall(r"\b([A-Z]{2,}[A-Z0-9]*-[0-9]+[A-Z]?)\b", tail)
     if hits:
-        print("%s\t%s" % (hits[-1], r["page"]))
+        print("%s\t%s\t1\t1" % (hits[-1], r["page"]))
 PY2
 
 python3 - "$WORK/toc.json" "$KIND" > "$WORK/refs.tsv" <<'PY'
@@ -143,6 +151,37 @@ except Exception:
     echo "title: $title"
     echo "---"
     cat "$WORK/body.txt"
+    # 多頁節點（BINV-Q 是 15 頁、BINV-M 是 10 頁）把第 2 頁之後也接上。
+    #
+    # 少了這一段的代價不是「素材短一點」：BINV-M 的第 1 頁只有 considerations，**所有
+    # regimen 的名稱與劑量都在第 2–10 頁**；BINV-K 的 CDK4/6 eligibility criteria 在
+    # 2–3 of 4。生清單或寫課程的人看到的是一份看起來完整、實際上沒有內容的檔案，而
+    # 檔案本身不會說自己缺了什麼。
+    ptotal=$(awk -F'\t' -v r="$ref" '$1==r{print $4; exit}' "$WORK/refpage.tsv")
+    if [ -n "${ptotal:-}" ] && [ "$ptotal" -gt 1 ] 2>/dev/null; then
+      part=2
+      while [ "$part" -le "$ptotal" ]; do
+        ppage=$(awk -F'\t' -v r="$ref" -v i="$part" '$1==r && $3==i{print $2; exit}' "$WORK/refpage.tsv")
+        if [ -n "$ppage" ]; then
+          wrangler d1 execute nccn-search --remote --json \
+            --command "SELECT body FROM page_text WHERE gid='$GID' AND page=$ppage" 2>/dev/null \
+            | python3 -c "
+import sys, json
+try:
+    r = json.load(sys.stdin)[0]['results']
+    sys.stdout.write(r[0]['body'] if r else '')
+except Exception:
+    pass
+" > "$WORK/part.txt"
+          if [ -s "$WORK/part.txt" ]; then
+            echo ""
+            echo "=== $ref $part OF $ptotal (page $ppage) ==="
+            cat "$WORK/part.txt"
+          fi
+        fi
+        part=$((part+1))
+      done
+    fi
     # 這一頁引用到的註腳頁，整頁附在後面。它們是這一頁的一部分，不是另一份文件。
     for fref in $(grep -oE "\b[A-Z]{2,}[A-Z0-9]*-[0-9]+[A-Z]\b" "$WORK/body.txt" | sort -u); do
       [ "$fref" = "$ref" ] && continue
