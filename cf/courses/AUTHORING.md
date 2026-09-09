@@ -172,6 +172,36 @@ cite:  [{ gid: "breast", refs: ["BINV-6", "BINV-7"], page: 19 }]
 - `.fig-col.fill > *` 的 `flex:1` 會讓內容較高的節點靜靜溢出邊框（PNG 上看得到文字掉出
   白框）。`.keep` 是逃生口，給補充說明那種不該被拉高的格子用。
 
+### 寬表格 `.fig-tbl`
+
+資料密集、需要並排比較的內容用表格，不要硬塞進矩陣的格子裡。
+
+```html
+<table class="fig-tbl fill">          <!-- .fill 讓它吃掉剩餘高度，列高跟著撐開 -->
+  <caption>標題列</caption>
+  <thead><tr>
+    <th class="lab">Line</th>                                   <!-- .lab 靠左 -->
+    <th><div>Overall</div><div class="hsub">(N=73)</div></th>    <!-- 主標 + 小字 -->
+    <th class="alt">6 mg/kg</th>                                 <!-- .alt 用墨色，區隔對照欄 -->
+  </tr></thead>
+  <tbody>                              <!-- 一個 tbody = 一個分組 = 一條斑馬紋 -->
+    <tr><th class="grp" rowspan="3">Race</th><th class="sub">White</th><td>39 (53.4)</td></tr>
+    <tr><th class="sub">Asian</th><td>22 (30.1)</td></tr>
+  </tbody>
+</table>
+```
+
+**斑馬紋掛在 `<tbody>` 上而不是 `<tr>`**，所以顏色是按**分組**交替而不是逐列交替。
+這是那種表讀起來乾淨的關鍵——逐列交替會讓「Race 的三個子項」看起來像三件不相干的事。
+
+`td` 預設置中且 `tabular-nums`（數字才對得齊）；長敘述用 `td.left`。分組標籤 `th.grp`
+靠左粗體，子項 `th.sub` **靠右**貼向它要解釋的那一排數字。
+
+兩個表並排就是把兩個 `.fig-tbl` 放進一個 `.fig-row`。
+
+**圖例只用來解釋資料編碼。** 表頭是什麼顏色不是資訊，替它做圖例只會佔掉版面——
+第一版就犯了這個錯（「Result column ■ / Current NCCN position ■」）。
+
 **節點內容一律包一層 `<div>`，不要放裸文字**——`.fig-node` 是 flex container，裸文字與
 其中的 `<i>`/`<b>` 會各自變成 anonymous flex item，item 之間的空白被丟棄：
 `A germline <i>BRCA1/2</i> PV` 會渲染成 `germlineBRCA1/2PV`。網頁與 PNG 會**一致地錯**，

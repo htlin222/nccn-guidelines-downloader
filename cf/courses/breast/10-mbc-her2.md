@@ -6,7 +6,7 @@ group   = "晚期"
 title   = "轉移性 HER2 陽性乳癌"
 oneline = "THP 打到進展，換 T-DXd，有腦轉移就 CLIMB；換的是化療骨架，抗 HER2 不停"
 refs    = ["BINV-21", "BINV-24", "BINV-25", "BINV-26", "BINV-P", "BINV-Q", "BINV-R", "BINV-A"]
-figures = ["breast/mbc-her2-landscape", "breast/mbc-her2-flow"]
+figures = ["breast/mbc-her2-landscape", "breast/mbc-her2-flow", "breast/mbc-her2-trials"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -85,18 +85,11 @@ nccn    = { gid = "breast", version = "6.2026" }
 
 ## 關鍵試驗
 
-| 試驗                 | 族群                                                                     | 比較                                        | 結果                                                      | 改變了什麼                                                                   |
-| -------------------- | ------------------------------------------------------------------------ | ------------------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| **CLEOPATRA**        | 一線 HER2+ MBC                                                           | docetaxel + trastuzumab **± pertuzumab**    | 中位 OS 40.8 → **57.1 個月**                              | 一線三合一成為標準，也是至今唯一 category 1 preferred 的一線方案             |
-| **DESTINY-Breast03** | 二線，曾用 trastuzumab + 紫杉醇                                          | T-DM1 **vs T-DXd**                          | 中位 PFS 6.8 → **28.8 個月**                              | T-DXd 把 T-DM1 從二線擠下去                                                  |
-| **HER2CLIMB**        | ≥三線（先前用過 trastuzumab、pertuzumab 與 T-DM1），**納入活動性腦轉移** | capecitabine + trastuzumab **± tucatinib**  | 中位 OS 17.4 → **21.9 個月**；顱內 PFS 4.2 → **9.9 個月** | 唯一在活動性腦轉移族群做出結果的第三期試驗——這就是「有腦轉移就 CLIMB」的來源 |
-| **EMILIA**           | 二線                                                                     | capecitabine + lapatinib **vs T-DM1**       | 中位 PFS 6.4 → 9.6；OS 25.1 → 30.9 個月                   | T-DM1 曾經是二線標準，現在退到 T-DXd 之後                                    |
-| **DESTINY-Breast09** | 一線                                                                     | THP **vs T-DXd + pertuzumab**               | PFS 顯著優於 THP                                          | NCCN 6.2026 把它列為一線 other recommended（尚未取代 THP）                   |
-| **monarcHER**        | HR+/HER2+，≥二線                                                         | abemaciclib + fulvestrant + trastuzumab     | PFS 改善                                                  | 第四線以後、僅 HR+ 的 category 2B 選項                                       |
-| **SOPHIA**           | ≥二線                                                                    | 化療 + trastuzumab **vs + margetuximab**    | PFS 小幅改善                                              | 後線的一個選項                                                               |
-| **NALA**             | ≥三線                                                                    | capecitabine + lapatinib **vs + neratinib** | PFS 改善                                                  | 後線的一個選項                                                               |
+![[fig:breast/mbc-her2-trials]]
 
-> 這張表是策展補充，不在 NCCN 原文頁面上。NCCN 只列方案與證據等級，不列試驗。
+這張表回答的是「為什麼這一格是首選」——治療地景圖只說得出位置，說不出證據。
+
+> 整張表是策展補充，不在 NCCN 原文頁面上。NCCN 只列方案與證據等級，不列試驗。
 
 ---
 

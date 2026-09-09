@@ -375,6 +375,136 @@
 	flex: none;
 }
 
+/* ---------- 寬表格 ---------- */
+
+/* 投影片用的資料表（ASCO baseline characteristics 那一種）。
+ *
+ * 斑馬紋掛在 <tbody> 上而不是 <tr>：一個 tbody 就是一個分組（Race、ECOG PS…），
+ * 所以顏色是**按分組**交替而不是逐列交替。這是那種表讀起來乾淨的關鍵——逐列交替會
+ * 讓「Race 的三個子項」看起來像三件不相干的事。
+ *
+ *   <table class="fig-tbl">
+ *     <thead><tr>
+ *       <th class="lab" colspan="2">n (%)</th>
+ *       <th><div>Overall</div><div class="hsub">(N=73)</div></th>
+ *       <th class="alt"><div>6 mg/kg</div><div class="hsub">(n=38)</div></th>
+ *     </tr></thead>
+ *     <tbody>
+ *       <tr><th class="grp" rowspan="3">Race</th><th class="sub">White</th><td>39 (53.4)</td><td>20 (52.6)</td></tr>
+ *       <tr><th class="sub">Asian</th><td>22 (30.1)</td><td>11 (28.9)</td></tr>
+ *     </tbody>
+ *   </table>
+ *
+ * 兩個表並排就是把兩個 .fig-tbl 放進一個 .fig-row。
+ */
+/* 表格是 .fig 的直接子元素時，加 .fill 讓它吃掉剩餘高度、列高跟著平均撐開。
+   不設成預設是因為兩個表並排時它們在 .fig-row 裡，flex:1 會變成分配寬度。 */
+.fig-tbl.fill {
+	flex: 1;
+}
+.fig-tbl {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: var(--fig-fs-sm);
+	line-height: 1.3;
+}
+.fig-tbl thead th {
+	background: var(--fig-brand);
+	color: #fff;
+	font-weight: 700;
+	text-align: center;
+	padding: 7px 10px;
+	vertical-align: bottom;
+}
+/* 對照組欄。只有兩個顏色可用，所以用墨色跟主色分辨，不引第三個色相。 */
+.fig-tbl thead th.alt {
+	background: var(--fig-ink);
+}
+.fig-tbl thead th.lab {
+	text-align: left;
+}
+.fig-tbl thead .hsub {
+	font-weight: 400;
+	font-size: var(--fig-fs-xs);
+	opacity: 0.85;
+}
+/* 一個 tbody = 一個分組 = 一條斑馬紋 */
+.fig-tbl tbody:nth-of-type(odd) {
+	background: var(--fig-wash-2);
+}
+.fig-tbl tbody:nth-of-type(even) {
+	background: var(--fig-paper);
+}
+.fig-tbl tbody th,
+.fig-tbl tbody td {
+	padding: 5px 10px;
+	border-top: 1px solid var(--fig-paper);
+}
+.fig-tbl tbody:nth-of-type(even) th,
+.fig-tbl tbody:nth-of-type(even) td {
+	border-top-color: var(--fig-line-2);
+}
+.fig-tbl tbody tr:first-child th,
+.fig-tbl tbody tr:first-child td {
+	border-top: 0;
+}
+/* 分組標籤：靠左、粗體、貼齊該組第一列 */
+.fig-tbl th.grp {
+	text-align: left;
+	font-weight: 700;
+	vertical-align: top;
+	white-space: nowrap;
+}
+/* 子項：靠右，貼向它要解釋的那一排數字 */
+.fig-tbl th.sub {
+	text-align: right;
+	font-weight: 400;
+	white-space: nowrap;
+}
+.fig-tbl th.sub.dim {
+	font-size: var(--fig-fs-xs);
+	opacity: 0.8;
+}
+/* 數字等寬，欄才對得齊 */
+.fig-tbl td {
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+.fig-tbl td.left {
+	text-align: left;
+	white-space: normal;
+}
+.fig-tbl td.em {
+	font-weight: 700;
+	color: var(--fig-brand-ink);
+}
+.fig-tbl caption {
+	caption-side: top;
+	text-align: left;
+	font-size: var(--fig-fs-xs);
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--fig-brand-ink);
+	padding-bottom: 5px;
+}
+/* dense / tight 也要收表格，否則一張圖裡兩種密度 */
+.fig.dense .fig-tbl thead th {
+	padding: 6px 9px;
+}
+.fig.dense .fig-tbl tbody th,
+.fig.dense .fig-tbl tbody td {
+	padding: 4px 9px;
+}
+.fig.dense.tight .fig-tbl thead th {
+	padding: 5px 8px;
+}
+.fig.dense.tight .fig-tbl tbody th,
+.fig.dense.tight .fig-tbl tbody td {
+	padding: 3px 8px;
+}
+
 /* ---------- 群組 ---------- */
 
 .fig-group {
