@@ -505,6 +505,89 @@
 	padding: 3px 8px;
 }
 
+/* ---------- 時間軸 ---------- */
+
+/* 治療全程的時序。早期癌症最需要這一張——決策矩陣說得出「該給什麼」，說不出
+ * 「什麼時候給、給多久、跟前後哪一步接得上」。
+ *
+ *   <div class="fig-time">
+ *     <div class="fig-tick solid"><b>Diagnosis</b><span>…</span></div>
+ *     <div class="fig-tick"><b>Surgery</b><span>…</span></div>
+ *   </div>
+ *
+ * 軸線畫在 .fig-time 上、圓點畫在每個 tick 上，所以 tick 數目改變不必動任何座標。
+ * 第一個與最後一個 tick 的圓點會落在軸線兩端內側，那是刻意的——軸線代表「病程」，
+ * 不該在第一個里程碑之前就開始。
+ */
+.fig-time {
+	display: flex;
+	position: relative;
+	align-items: stretch;
+}
+.fig-time::before {
+	content: "";
+	position: absolute;
+	left: 6%;
+	right: 6%;
+	top: 13px;
+	height: 2px;
+	background: var(--fig-wash-2);
+}
+.fig-tick {
+	flex: 1;
+	min-width: 0;
+	position: relative;
+	padding: 36px 10px 0;
+	text-align: center;
+}
+.fig-tick::before {
+	content: "";
+	position: absolute;
+	top: 6px;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: var(--fig-paper);
+	border: 2px solid var(--fig-brand);
+	box-sizing: border-box;
+}
+.fig-tick.solid::before {
+	background: var(--fig-brand);
+}
+.fig-tick.ink::before {
+	background: var(--fig-ink);
+	border-color: var(--fig-ink);
+}
+/* 這一步不一定會發生 */
+.fig-tick.maybe::before {
+	border-style: dashed;
+}
+.fig-tick > b {
+	display: block;
+	font-size: var(--fig-fs-sm);
+	font-weight: 700;
+	color: var(--fig-brand-ink);
+	margin-bottom: 3px;
+}
+.fig-tick > u {
+	display: block;
+	text-decoration: none;
+	font-size: var(--fig-fs-xs);
+	font-weight: 700;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: var(--fig-ink-3);
+	margin-bottom: 4px;
+}
+.fig-tick > span {
+	display: block;
+	font-size: var(--fig-fs-xs);
+	line-height: 1.4;
+	color: var(--fig-ink-2);
+}
+
 /* ---------- 數字卡 ---------- */
 
 /* 一格一個要記住的數字，大字在上、說明在下。整張圖排成 2x4 就是一頁 summary slide。

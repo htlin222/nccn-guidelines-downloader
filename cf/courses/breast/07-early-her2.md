@@ -6,7 +6,7 @@ group   = "早期"
 title   = "早期 HER2 陽性"
 oneline = "腫瘤大小與淋巴結決定要不要抗 HER2、要不要加 pertuzumab；做過術前治療的人，決定權交給病理反應"
 refs    = ["BINV-5", "BINV-9", "BINV-16", "BINV-L", "BINV-M", "BINV-A"]
-figures = ["breast/early-her2-landscape", "breast/early-her2-postneo", "breast/early-her2-trials", "breast/early-her2-numbers", "breast/early-her2-pitfalls"]
+figures = ["breast/early-her2-landscape", "breast/early-her2-postneo", "breast/early-her2-trials", "breast/early-her2-numbers", "breast/early-her2-pitfalls", "breast/early-her2-timeline"]
 nccn    = { gid = "breast", version = "6.2026" }
 +++
 
@@ -35,6 +35,8 @@ nccn    = { gid = "breast", version = "6.2026" }
 ---
 
 ## 決策路徑
+
+![[fig:breast/early-her2-timeline]]
 
 ### 先確認 HER2 真的是陽性
 
