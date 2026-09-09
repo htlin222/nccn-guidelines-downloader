@@ -1,0 +1,247 @@
+<!doctype html>
+<!-- fig
+id:    breast/mbc-tnbc-flow
+title: First-line gates and switching in metastatic triple-negative breast cancer
+kind:  flow
+tags:  [breast, tnbc, metastatic, decision]
+cite:  [{ gid: "breast", refs: ["BINV-21", "BINV-27", "BINV-Q", "BINV-R"], page: 40 }]
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>
+      First-line gates and switching in metastatic triple-negative breast cancer
+    </title>
+    <link rel="stylesheet" href="../figure.css" />
+    <style>
+      body {
+        margin: 0;
+        background: #fff;
+      }
+      /* 節點自然高度、成團垂直置中——流程圖的節點文字短，平分欄高會得到一排空盒子。
+     矩陣圖才需要 .fill。留白落在整列上下，是對稱的。 */
+      .flowcol {
+        justify-content: flex-start;
+      }
+      .flowrow {
+        align-items: center;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="fig dense tight">
+      <div class="fig-row">
+        <div class="fig-head fig-grow" style="flex: 0.8">Entry</div>
+        <div style="flex: none; width: 26px"></div>
+        <div class="fig-head fig-grow" style="flex: 1.22">
+          First line　<span
+            style="font-weight: 400; font-size: var(--fig-fs-sm)"
+            >two gates, in this order</span
+          >
+        </div>
+        <div style="flex: none; width: 26px"></div>
+        <div class="fig-head fig-grow" style="flex: 1.3">At progression</div>
+        <div style="flex: none; width: 26px"></div>
+        <div class="fig-head fig-grow" style="flex: 0.72">End of line</div>
+      </div>
+
+      <div class="fig-row fig-grow flowrow">
+        <div class="fig-col fig-grow flowcol" style="flex: 0.8">
+          <div class="fig-node ink stack">
+            <div>Triple-negative</div>
+            <div class="fig-sub">
+              ER-negative, PR-negative, HER2-negative &middot; recurrent
+              unresectable, or stage IV (M1)
+            </div>
+          </div>
+          <div class="fig-node key sm stack">
+            <div>Test before the first line</div>
+            <div class="fig-sub" style="opacity: 1; color: var(--fig-ink-2)">
+              PD-L1 CPS (22C3 antibody) &middot; germline
+              <i>BRCA1/2</i> &middot; HER2 IHC score (0 / 0+ / 1+ / 2+
+              ISH-negative)
+            </div>
+          </div>
+          <div class="fig-node wash sm stack">
+            <div>Bone disease &rarr; bone-modifying agent</div>
+            <div class="fig-sub" style="opacity: 1; color: var(--fig-ink-2)">
+              Denosumab, zoledronic acid or pamidronate (category 1)
+            </div>
+          </div>
+          <div class="fig-foot">
+            Requires expected survival &ge;3 months, adequate renal function,
+            and a dental exam before starting.
+          </div>
+        </div>
+
+        <div class="fig-arrow long"></div>
+
+        <div class="fig-col fig-grow flowcol" style="flex: 1.22">
+          <div class="fig-group">
+            <div class="fig-glabel">
+              Gate 1 &mdash; CPS &ge;10 <i>and</i> a PD-(L)1 candidate?
+            </div>
+            <div class="fig-node solid sm stack">
+              <div>
+                Yes &rarr; chemotherapy + Pembrolizumab, or Sacituzumab
+                govitecan + Pembrolizumab
+              </div>
+              <div class="fig-sub">
+                Category 1, preferred. Applies regardless of germline
+                <i>BRCA1/2</i> status &mdash; this gate is asked first
+              </div>
+            </div>
+          </div>
+          <div class="fig-group dashed">
+            <div class="fig-glabel">
+              Gate 2 &mdash; germline <i>BRCA1/2</i> PV?
+            </div>
+            <div class="fig-col" style="gap: 10px">
+              <div class="fig-node sm stack">
+                <div>Yes &rarr; PARP inhibitor, or platinum</div>
+                <div class="fig-sub">
+                  Olaparib or Talazoparib &middot; carboplatin or cisplatin
+                  &mdash; both category 1, preferred
+                </div>
+              </div>
+              <div class="fig-node sm stack">
+                <div>
+                  No &rarr; Sacituzumab govitecan, or Datopotamab deruxtecan, or
+                  systemic chemotherapy
+                </div>
+                <div class="fig-sub">
+                  The two antibody-drug conjugates are category 1, preferred.
+                  This row is written as &ldquo;CPS &lt;10
+                  <i>or not a candidate for PD-1/PD-L1 inhibitor therapy</i>,
+                  and no germline PV&rdquo;
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="fig-node wash sm">
+            Continue until progression or unacceptable toxicity
+          </div>
+        </div>
+
+        <div class="fig-arrow long"></div>
+
+        <div class="fig-col fig-grow flowcol" style="flex: 1.3">
+          <div class="fig-node left sm stack" style="align-items: flex-start">
+            <div>Switch to <b class="fig-em">another cytotoxic therapy</b></div>
+            <div class="fig-sub">
+              In NCCN wording cytotoxic therapy includes chemotherapy,
+              antibody-drug conjugates and targeted therapy &mdash; the switch
+              is often to an ADC, not to another chemotherapy drug
+            </div>
+          </div>
+          <div class="fig-node left sm stack" style="align-items: flex-start">
+            <div>
+              Germline <i>BRCA1/2</i> PV &rarr; PARP inhibitor　&middot;　Any
+              &rarr; Sacituzumab govitecan
+            </div>
+            <div class="fig-sub">
+              Both category 1, preferred. Sacituzumab govitecan only if not used
+              in a previous line. Otherwise systemic chemotherapy or targeted
+              agents
+            </div>
+          </div>
+          <div class="fig-node left sm stack" style="align-items: flex-start">
+            <div>
+              No germline PV and HER2 IHC 1+ or 2+/ISH-negative &rarr; T-DXd
+            </div>
+            <div class="fig-sub">
+              Other recommended. Still an option in a later line if not used
+              second line. Monitor for ILD / pneumonitis
+            </div>
+          </div>
+          <div
+            class="fig-node key left sm stack"
+            style="align-items: flex-start"
+          >
+            <div>
+              <b class="fig-em">No data</b> support a second PD-1/PD-L1
+              inhibitor after progression on one
+            </div>
+            <div class="fig-sub">
+              But a first one may still be added in the second line or later if
+              none has been used
+            </div>
+          </div>
+        </div>
+
+        <div class="fig-arrow long"></div>
+
+        <div class="fig-col fig-grow flowcol" style="flex: 0.72">
+          <div class="fig-node ink stack">
+            <div>Consider no further cytotoxic therapy</div>
+            <div class="fig-sub">continue supportive and palliative care</div>
+          </div>
+          <div class="fig-node dashed sm stack">
+            <div>Ask again at every reassessment</div>
+            <div
+              class="fig-sub"
+              style="opacity: 1; color: var(--fig-ink-2); line-height: 1.7"
+            >
+              Value of ongoing treatment?<br />Risks vs benefits of another
+              line?<br />Performance status?<br />Patient preference?
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 貫穿全程的四件事。它們不屬於任何一線，放在流程下方一條橫帶，比塞進某一格
+       誠實——塞進某一格會讓讀者以為只有那一線要做。 -->
+      <div class="fig-group plain" style="flex: none">
+        <div class="fig-glabel">Throughout every line</div>
+        <div class="fig-row" style="gap: 12px">
+          <div class="fig-node sm fig-grow stack">
+            <div>Monitor per BINV-R</div>
+            <div class="fig-sub">
+              Unequivocal evidence required. A rising tumour marker alone is
+              almost never enough
+            </div>
+          </div>
+          <div class="fig-node sm fig-grow stack">
+            <div>Sequential single agents preferred</div>
+            <div class="fig-sub">
+              Combinations only for high tumour burden, rapid progression or
+              visceral crisis
+            </div>
+          </div>
+          <div class="fig-node sm fig-grow stack">
+            <div>Third line and beyond: revisit the biomarkers</div>
+            <div class="fig-sub">
+              MSI-H &middot; <i>NTRK1/2/3</i> or <i>RET</i> fusion &middot;
+              TMB-H &ge;10 mut/Mb
+            </div>
+          </div>
+          <div class="fig-node sm fig-grow stack">
+            <div>Brain metastases</div>
+            <div class="fig-sub">
+              Treated per the NCCN CNS guidelines, not on this page
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fig-hline"></div>
+
+      <div class="fig-row" style="align-items: flex-end; gap: 24px">
+        <div class="fig-legend" style="flex: none">
+          <span><i class="ink"></i>Entry / exit</span>
+          <span><i class="solid"></i>Preferred path</span>
+          <span><i></i>Alternative path</span>
+          <span><i class="key"></i>Test result decides</span>
+          <span><i class="wash"></i>Throughout</span>
+        </div>
+        <div class="fig-foot fig-grow" style="text-align: right">
+          Exception to gate 1: HER2 IHC 1+ or 2+/ISH-negative with progression
+          during, or within 6 months of completing, adjuvant chemotherapy
+          &mdash; T-DXd may be considered first line.<br />
+          Regimens: see the treatment landscape figure. Most patients are
+          candidates for multiple lines of systemic therapy.
+        </div>
+      </div>
+    </section>
+  </body>
+</html>

@@ -1,0 +1,141 @@
+<!doctype html>
+<!-- fig
+id:    breast/early-hr-landscape
+title: Adjuvant systemic therapy for early HR-positive, HER2-negative breast cancer
+kind:  matrix
+tags:  [breast, hr, her2-negative, early, adjuvant]
+cite:  [{ gid: "breast", refs: ["BINV-6", "BINV-7", "BINV-8", "BINV-K", "BINV-N"], page: 19 }]
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Adjuvant systemic therapy for early HR-positive, HER2-negative breast cancer</title>
+<link rel="stylesheet" href="../figure.css">
+<style>
+  body{margin:0;background:#fff}
+  /* 矩陣格子多、每格內容三到四條，預設 14px 的欄內間距會讓最擠的一欄溢出 800px。
+     縮到 10px 是唯一動到的版面參數，其餘全部走 figure.css。 */
+
+</style>
+</head>
+<body>
+
+<section class="fig dense tight">
+
+  <div class="fig-row">
+    <div style="flex:none;width:112px"></div>
+    <div class="fig-head fig-grow" style="flex:.62">pT1a (&le;0.5 cm), pN0</div>
+    <div class="fig-head fig-grow" style="flex:1.28">pT1b&ndash;T3 (&gt;0.5 cm), pN0</div>
+    <div class="fig-head fig-grow" style="flex:1.28">pN1mi (&le;2 mm) or pN1 (1&ndash;3 nodes)</div>
+    <div class="fig-head fig-grow" style="flex:.82">pN2 / pN3 (&ge;4 nodes)</div>
+  </div>
+
+  <div class="fig-row fig-grow" style="align-items:stretch">
+    <div class="fig-side"><div>Post-<br>menopausal<br><span style="font-weight:400;font-size:var(--fig-fs-xs)">BINV-6</span></div></div>
+
+    <div class="fig-col fig-grow fill" style="flex:.62">
+      <div class="fig-node dashed sm"><div>Consider endocrine therapy<span class="fig-tag">cat 2B</span></div></div>
+    </div>
+
+    <div class="fig-col fig-grow fill" style="flex:1.28">
+      <div class="fig-node key sm"><div>Chemotherapy candidate? &rarr; strongly consider 21-gene assay<span class="fig-tag">cat 1</span></div></div>
+      <div class="fig-node solid sm"><div>Score &ge;26 &rarr; chemotherapy, then endocrine therapy<span class="fig-tag">cat 1</span></div></div>
+      <div class="fig-node sm"><div>Score &lt;26 &rarr; endocrine therapy<span class="fig-tag">cat 1</span></div></div>
+      <div class="fig-node wash sm">Assay not done, or not a candidate &rarr; endocrine therapy</div>
+    </div>
+
+    <div class="fig-col fig-grow fill" style="flex:1.28">
+      <div class="fig-node sm stack">
+        <div>Same pathway as pT1b&ndash;T3, pN0</div>
+        <div class="fig-sub">BINV-6 puts both in one branch</div>
+      </div>
+      <div class="fig-node key sm stack">
+        <div>21-gene assay in pN1 disease</div>
+        <div class="fig-sub">Postmenopausal: <b class="fig-em">preferred, category 1</b> (BINV-N)</div>
+      </div>
+      <div class="fig-node wash sm stack">
+        <div>70-gene, 50-gene, 12-gene assays</div>
+        <div class="fig-sub">Prognostic only &mdash; not validated to predict chemotherapy benefit</div>
+      </div>
+    </div>
+
+    <div class="fig-col fig-grow fill" style="flex:.82">
+      <div class="fig-node solid sm"><div>Chemotherapy, then endocrine therapy<span class="fig-tag">cat 1</span></div></div>
+      <div class="fig-node sm stack">
+        <div>Select patients may be eligible</div>
+        <div class="fig-sub">Abemaciclib or ribociclib, and/or olaparib if germline <i>BRCA1/2</i> PV</div>
+      </div>
+      <div class="fig-node wash sm">Few assay data with &ge;4 nodes &mdash; decide on clinical factors</div>
+    </div>
+  </div>
+
+  <div class="fig-row fig-grow" style="align-items:stretch">
+    <div class="fig-side"><div>Pre-<br>menopausal<br><span style="font-weight:400;font-size:var(--fig-fs-xs)">BINV-7<br>BINV-8</span></div></div>
+
+    <div class="fig-col fig-grow fill" style="flex:.62">
+      <div class="fig-node dashed sm"><div>Consider endocrine therapy<span class="fig-tag">cat 2B</span></div></div>
+    </div>
+
+    <div class="fig-col fig-grow fill" style="flex:1.28">
+      <div class="fig-node key sm"><div>Chemotherapy candidate? &rarr; strongly consider 21-gene assay<span class="fig-tag">cat 1</span></div></div>
+      <div class="fig-node sm">Score &le;15 &rarr; endocrine therapy &plusmn; OS/A</div>
+      <div class="fig-node solid sm">Score 16&ndash;25 &rarr; chemotherapy, then endocrine therapy &plusmn; OS/A</div>
+      <div class="fig-node solid sm"><div>Score &ge;26 &rarr; chemotherapy, then endocrine therapy &plusmn; OS/A<span class="fig-tag">cat 1</span></div></div>
+    </div>
+
+    <div class="fig-col fig-grow fill" style="flex:1.28">
+      <div class="fig-node key sm stack">
+        <div>Chemotherapy candidate? &rarr; assay <b class="fig-em">for prognosis</b></div>
+        <div class="fig-sub">Premenopausal pN1: 21-gene is <b class="fig-em">other, cat 2A</b> (BINV-N)</div>
+      </div>
+      <div class="fig-node solid sm">Chemotherapy, then endocrine therapy &plusmn; OS/A</div>
+      <div class="fig-node sm"><div>or endocrine therapy&nbsp;<b class="fig-em">+</b>&nbsp;OS/A</div></div>
+      <div class="fig-node wash sm">Not a candidate &rarr; endocrine therapy &plusmn; OS/A</div>
+    </div>
+
+    <div class="fig-col fig-grow fill" style="flex:.82">
+      <div class="fig-node solid sm"><div>Chemotherapy, then endocrine therapy &plusmn; OS/A<span class="fig-tag">cat 1</span></div></div>
+      <div class="fig-node sm stack">
+        <div>Consider abemaciclib or ribociclib</div>
+        <div class="fig-sub">and/or olaparib if germline <i>BRCA1/2</i> PV</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fig-group plain" style="flex:none">
+    <div class="fig-glabel">Alongside the table</div>
+    <div class="fig-row" style="gap:12px">
+      <div class="fig-node sm fig-grow stack">
+        <div>CDK4/6 inhibitor: consider <i>for eligible patients</i></div>
+        <div class="fig-sub" style="opacity:1;color:var(--fig-ink-2)">Criteria on BINV-K. BINV-6/8: abemaciclib or ribociclib; BINV-7: ribociclib. Not written into the pT1a, pN0 box</div>
+      </div>
+      <div class="fig-node sm fig-grow stack">
+        <div>Bisphosphonate for 3&ndash;5 years</div>
+        <div class="fig-sub" style="opacity:1;color:var(--fig-ink-2)">Postmenopausal (natural or induced), high-risk N0 or node-positive</div>
+      </div>
+      <div class="fig-node sm fig-grow stack">
+        <div>Baseline BMD before an aromatase inhibitor</div>
+        <div class="fig-sub" style="opacity:1;color:var(--fig-ink-2)">If at risk (age &gt;65, family history, steroids); DEXA every 1&ndash;2 years</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fig-hline"></div>
+
+  <div class="fig-row" style="align-items:flex-end;gap:24px">
+    <div class="fig-legend" style="flex:none">
+      <span><i class="solid"></i>Chemotherapy in the pathway</span>
+      <span><i></i>Endocrine therapy alone</span>
+      <span><i class="key"></i>Decision point</span>
+      <span><i class="wash"></i>Default / caveat</span>
+    </div>
+    <div class="fig-foot fig-grow" style="text-align:right">
+      OS/A = ovarian suppression or ablation; cat = NCCN category. Score = 21-gene recurrence score.<br>
+      T1b tumours with low-grade histology and no LVI: endocrine monotherapy &mdash; TAILORx did not include them.
+    </div>
+  </div>
+
+</section>
+
+</body>
+</html>

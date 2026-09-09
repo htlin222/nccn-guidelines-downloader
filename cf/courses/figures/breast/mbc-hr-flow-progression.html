@@ -1,0 +1,169 @@
+<!doctype html>
+<!-- fig
+id:    breast/mbc-hr-flow-progression
+title: At progression and end of line in HR-positive, HER2-negative metastatic breast cancer
+kind:  flow
+tags:  [breast, hr, metastatic, decision, progression]
+cite:  [{ gid: "breast", refs: ["BINV-22", "BINV-23", "BINV-R"], page: 35 }]
+note:  這張圖與 mbc-hr-flow-entry 是同一條流程沿階段切開的兩半：進門與第一線在另一張，這一張從第一次進展開始。
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>
+      At progression and end of line in HR-positive, HER2-negative metastatic
+      breast cancer
+    </title>
+    <link rel="stylesheet" href="../figure.css" />
+    <style>
+      body {
+        margin: 0;
+        background: #fff;
+      }
+      /* 節點自然高度、成團垂直置中——流程圖的節點文字短，平分欄高會得到一排空盒子。
+     矩陣圖才需要 .fill。留白落在整列上下，是對稱的。 */
+      .flowcol {
+        justify-content: flex-start;
+      }
+      .flowrow {
+        align-items: center;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="fig dense">
+      <div class="fig-row">
+        <div class="fig-head fig-grow" style="flex: 1.6">
+          At progression &mdash; which track is progressing?
+        </div>
+        <div style="flex: none; width: 44px"></div>
+        <div class="fig-head fig-grow" style="flex: 0.8">End of line</div>
+      </div>
+
+      <div class="fig-row fig-grow flowrow">
+        <div class="fig-col fig-grow flowcol" style="flex: 1.6">
+          <div class="fig-node left sm stack" style="align-items: flex-start">
+            <div>
+              Progression on
+              <b class="fig-em">first-line endocrine</b>　&rarr;　if not
+              endocrine-refractory, consider alternate endocrine therapy
+              &plusmn; targeted therapy, or cytotoxic therapy
+            </div>
+            <div class="fig-sub">
+              ER / PR can be falsely negative and the primary and metastatic
+              sites discordant &mdash; favour endocrine therapy in non-visceral
+              or asymptomatic visceral disease, especially with a long
+              disease-free interval, limited sites, indolent disease, older age
+            </div>
+          </div>
+          <div class="fig-node left sm stack" style="align-items: flex-start">
+            <div>
+              No benefit after
+              <b class="fig-em">up to 3 sequential</b> endocrine regimens,
+              <b class="fig-em">or</b> symptomatic visceral
+              disease　&rarr;　cytotoxic therapy
+            </div>
+            <div class="fig-sub">
+              The switch point onto the cytotoxic track. The two conditions are
+              alternatives, not both required
+            </div>
+          </div>
+          <div class="fig-node left sm stack" style="align-items: flex-start">
+            <div>
+              Progression on
+              <b class="fig-em">first-line cytotoxic</b>　&rarr;　alternate
+              cytotoxic therapy
+            </div>
+            <div class="fig-sub">
+              Cytotoxic therapy includes chemotherapy, antibody-drug conjugates
+              and targeted therapy
+            </div>
+          </div>
+          <div
+            class="fig-node key left sm stack"
+            style="align-items: flex-start"
+          >
+            <div>
+              Know these before each switch: <i>ESR1</i> (ctDNA preferred)
+              &middot; <i>PIK3CA</i> / <i>AKT1</i> / <i>PTEN</i> &middot;
+              germline <i>BRCA1/2</i> &middot; HER2 IHC score
+            </div>
+            <div class="fig-sub">
+              Duration of the initial endocrine response guides whether further
+              endocrine therapy is likely to help
+            </div>
+          </div>
+        </div>
+
+        <div class="fig-arrow long"></div>
+
+        <div class="fig-col fig-grow flowcol" style="flex: 0.8">
+          <div class="fig-node ink stack">
+            <div>Consider no further cytotoxic therapy</div>
+            <div class="fig-sub">continue supportive and palliative care</div>
+          </div>
+          <div class="fig-node dashed sm stack">
+            <div>Ask again at every reassessment</div>
+            <div class="fig-sub strong" style="line-height: 1.7">
+              Value of ongoing treatment?<br />Risks vs benefits of another
+              line?<br />Performance status?<br />Patient preference?
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 貫穿全程的四件事。它們不屬於任何一線，放在流程下方一條橫帶，比塞進某一格
+       誠實。兩張圖都帶著它，因為兩張圖各自會被貼到一張投影片上。 -->
+      <div class="fig-group plain" style="flex: none">
+        <div class="fig-glabel">Throughout every line</div>
+        <div class="fig-row" style="gap: 12px">
+          <div class="fig-node sm fig-grow stack">
+            <div>Monitor per BINV-R</div>
+            <div class="fig-sub">
+              Unequivocal evidence required. A rising tumour marker alone is
+              almost never enough
+            </div>
+          </div>
+          <div class="fig-node sm fig-grow stack">
+            <div>Bone-modifying agent if bone disease</div>
+            <div class="fig-sub">
+              With calcium and vitamin D. Zoledronic acid every 12 weeks
+            </div>
+          </div>
+          <div class="fig-node sm fig-grow stack">
+            <div>Bone density if on an aromatase inhibitor</div>
+            <div class="fig-sub">
+              At risk of osteoporosis: age &gt;65, family history, chronic
+              steroids
+            </div>
+          </div>
+          <div class="fig-node sm fig-grow stack">
+            <div>Germline <i>BRCA1/2</i> in all</div>
+            <div class="fig-sub">
+              Recurrent or metastatic disease, any subtype
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fig-hline"></div>
+
+      <div class="fig-row" style="align-items: flex-end; gap: 24px">
+        <div class="fig-legend" style="flex: none">
+          <span><i class="ink"></i>Exit</span>
+          <span><i></i>Alternative path</span>
+          <span><i class="key"></i>Test result decides</span>
+          <span>Dashed = ask at every reassessment</span>
+        </div>
+        <div class="fig-foot fig-grow" style="text-align: right">
+          Entry, the visceral-crisis question and the first-line choice are a
+          separate figure. It is acceptable to switch a patient started on
+          cytotoxic therapy back to endocrine-based therapy once disease
+          stabilises or responds.<br />
+          Regimens: see the treatment landscape figures. Most patients are
+          candidates for multiple lines of systemic therapy.
+        </div>
+      </div>
+    </section>
+  </body>
+</html>

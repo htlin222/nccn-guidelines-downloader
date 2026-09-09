@@ -1,0 +1,216 @@
+<!doctype html>
+<!-- fig
+id:    breast/mbc-tnbc-landscape
+title: Treatment landscape of metastatic triple-negative breast cancer
+kind:  matrix
+tags:  [breast, tnbc, metastatic, landscape]
+cite:  [{ gid: "breast", refs: ["BINV-Q", "BINV-27"], page: 92 }]
+note:  節點內小字為對應關鍵試驗，屬策展補充，不在 NCCN 原文頁面上——人審時要單獨看這一欄
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>
+      Treatment landscape of metastatic triple-negative breast cancer
+    </title>
+    <link rel="stylesheet" href="../figure.css" />
+    <style>
+      body {
+        margin: 0;
+        background: #fff;
+      }
+      /* 第一線分三層、第二三線不分層，所以下面兩列是橫帶而不是矩陣格。收緊 gap 讓
+     四列加圖例剛好落在 800px 內；字級不動。 */
+    </style>
+  </head>
+  <body>
+    <section class="fig dense tight">
+      <div class="fig-row">
+        <div style="flex: none; width: 112px"></div>
+        <div class="fig-head fig-grow" style="flex: 1">
+          PD-L1 CPS &ge;10　<span
+            style="font-weight: 400; font-size: var(--fig-fs-sm)"
+            >regardless of germline <i>BRCA1/2</i></span
+          >
+        </div>
+        <div class="fig-head fig-grow" style="flex: 1">
+          CPS &lt;10 or not a PD-(L)1 candidate　<span
+            style="font-weight: 400; font-size: var(--fig-fs-sm)"
+            >and no germline <i>BRCA1/2</i> PV</span
+          >
+        </div>
+        <div class="fig-head fig-grow" style="flex: 0.86">
+          CPS &lt;10　<span
+            style="font-weight: 400; font-size: var(--fig-fs-sm)"
+            >and germline <i>BRCA1/2</i> PV</span
+          >
+        </div>
+      </div>
+
+      <div class="fig-row fig-grow" style="align-items: stretch">
+        <div class="fig-side solid">First line</div>
+
+        <div class="fig-col fig-grow fill" style="flex: 1">
+          <div class="fig-node solid stack">
+            <div>
+              Chemotherapy + Pembrolizumab<span class="fig-tag"
+                >cat 1 &middot; preferred</span
+              >
+            </div>
+            <div class="fig-sub">
+              Albumin-bound paclitaxel, carboplatin/gemcitabine or paclitaxel
+              &mdash; KEYNOTE-355
+            </div>
+          </div>
+          <div class="fig-node solid stack">
+            <div>
+              Sacituzumab govitecan + Pembrolizumab<span class="fig-tag"
+                >cat 1 &middot; preferred</span
+              >
+            </div>
+            <div class="fig-sub">ASCENT-04</div>
+          </div>
+          <div class="fig-node wash sm keep">
+            <div>
+              A germline <i>BRCA1/2</i> PV does not move a patient out of this
+              column
+            </div>
+          </div>
+        </div>
+
+        <div class="fig-col fig-grow fill" style="flex: 1">
+          <div class="fig-node solid stack">
+            <div>
+              Sacituzumab govitecan<span class="fig-tag"
+                >cat 1 &middot; preferred</span
+              >
+            </div>
+            <div class="fig-sub">ASCENT</div>
+          </div>
+          <div class="fig-node solid stack">
+            <div>
+              Datopotamab deruxtecan<span class="fig-tag"
+                >cat 1 &middot; preferred</span
+              >
+            </div>
+            <div class="fig-sub">TROPION-Breast02</div>
+          </div>
+          <div class="fig-node stack">
+            <div>Systemic chemotherapy</div>
+            <div class="fig-sub">Sequential single agents preferred</div>
+          </div>
+        </div>
+
+        <div class="fig-col fig-grow fill" style="flex: 0.86">
+          <div class="fig-node solid stack">
+            <div>
+              PARP inhibitor<span class="fig-tag"
+                >cat 1 &middot; preferred</span
+              >
+            </div>
+            <div class="fig-sub">
+              Olaparib or Talazoparib &mdash; OlympiAD &middot; EMBRACA
+            </div>
+          </div>
+          <div class="fig-node solid stack">
+            <div>
+              Platinum<span class="fig-tag">cat 1 &middot; preferred</span>
+            </div>
+            <div class="fig-sub">Carboplatin or Cisplatin &mdash; TNT</div>
+          </div>
+          <div class="fig-node wash sm keep">
+            <div>
+              Both conditions required: CPS &lt;10 <b>and</b> a germline PV
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fig-row" style="align-items: stretch">
+        <div class="fig-side">Exception</div>
+        <div class="fig-node wash sm fig-grow stack">
+          <div>
+            HER2 IHC 1+ or 2+/ISH-negative with progression during, or within 6
+            months of completing, adjuvant chemotherapy &rarr; T-DXd may be
+            considered as first-line therapy
+          </div>
+        </div>
+      </div>
+
+      <div class="fig-row" style="align-items: stretch">
+        <div class="fig-side">Second line</div>
+        <div class="fig-node sm fig-grow stack">
+          <div>
+            Germline <i>BRCA1/2</i> PV &rarr; PARP inhibitor<span
+              class="fig-tag"
+              >cat 1 &middot; preferred</span
+            >
+          </div>
+          <div class="fig-sub">If not used first line</div>
+        </div>
+        <div class="fig-node sm fig-grow stack">
+          <div>
+            Any &rarr; Sacituzumab govitecan<span class="fig-tag"
+              >cat 1 &middot; preferred</span
+            >
+          </div>
+          <div class="fig-sub">
+            If not used in a previous line &middot; or systemic chemotherapy, or
+            targeted agents
+          </div>
+        </div>
+        <div class="fig-node sm fig-grow stack">
+          <div>
+            No germline PV and HER2 IHC 1+ or 2+/ISH-negative &rarr; T-DXd<span
+              class="fig-tag"
+              >other rec</span
+            >
+          </div>
+          <div class="fig-sub">
+            DESTINY-Breast04 &middot; monitor for ILD / pneumonitis
+          </div>
+        </div>
+      </div>
+
+      <div class="fig-row" style="align-items: stretch">
+        <div class="fig-side">Third line<br />and beyond</div>
+        <div class="fig-node sm fig-grow stack">
+          <div>
+            Biomarker positive &rarr; targeted agents and emerging biomarker
+            options
+          </div>
+          <div class="fig-sub">
+            MSI-H &middot; <i>NTRK1/2/3</i> or <i>RET</i> gene fusion &middot;
+            TMB-H &ge;10 mut/Mb
+          </div>
+        </div>
+        <div class="fig-node sm fig-grow stack">
+          <div>Any &rarr; systemic chemotherapy</div>
+          <div class="fig-sub">
+            Combinations only for high tumour burden, rapidly progressing
+            disease or visceral crisis
+          </div>
+        </div>
+      </div>
+
+      <div class="fig-hline"></div>
+
+      <div class="fig-row" style="align-items: flex-end; gap: 24px">
+        <div class="fig-legend" style="flex: none">
+          <span><i class="solid"></i>Preferred</span>
+          <span><i></i>Other option</span>
+          <span><i class="wash"></i>Note</span>
+          <span>cat = NCCN category</span>
+        </div>
+        <div class="fig-foot fig-grow" style="text-align: right">
+          PD-L1 is assessed with the 22C3 antibody; the threshold for positivity
+          is a combined positive score (CPS) &ge;10. Trial names are editorial
+          annotation, not part of the NCCN page.<br />
+          Assess germline <i>BRCA1/2</i> in all recurrent or metastatic disease.
+          No data support a second PD-1/PD-L1 inhibitor after progression on
+          one. For brain metastases see NCCN CNS guidelines.
+        </div>
+      </div>
+    </section>
+  </body>
+</html>

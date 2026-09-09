@@ -1,0 +1,174 @@
+<!doctype html>
+<!-- fig
+id:    breast/mbc-hr-flow-entry
+title: Entry and first line in HR-positive, HER2-negative metastatic breast cancer
+kind:  flow
+tags:  [breast, hr, metastatic, decision, first-line]
+cite:  [{ gid: "breast", refs: ["BINV-21", "BINV-22", "BINV-R"], page: 35 }]
+note:  這張圖與 mbc-hr-flow-progression 是同一條流程沿階段切開的兩半：這一張到第一線為止，換線與終點在另一張。
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>
+      Entry and first line in HR-positive, HER2-negative metastatic breast
+      cancer
+    </title>
+    <link rel="stylesheet" href="../figure.css" />
+    <style>
+      body {
+        margin: 0;
+        background: #fff;
+      }
+      /* 節點自然高度、成團垂直置中——流程圖的節點文字短，平分欄高會得到一排空盒子。
+     矩陣圖才需要 .fill。留白落在整列上下，是對稱的。 */
+      .flowcol {
+        justify-content: flex-start;
+      }
+      .flowrow {
+        align-items: center;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="fig dense">
+      <div class="fig-row">
+        <div class="fig-head fig-grow" style="flex: 1">Entry</div>
+        <div style="flex: none; width: 44px"></div>
+        <div class="fig-head fig-grow" style="flex: 1.5">
+          First line　<span
+            style="font-weight: 400; font-size: var(--fig-fs-sm)"
+            >is this a visceral crisis?</span
+          >
+        </div>
+      </div>
+
+      <div class="fig-row fig-grow flowrow">
+        <div class="fig-col fig-grow flowcol" style="flex: 1">
+          <div class="fig-node ink stack">
+            <div>HR-positive, HER2-negative</div>
+            <div class="fig-sub">recurrent unresectable, or stage IV (M1)</div>
+          </div>
+          <div class="fig-node key sm stack">
+            <div>Confirm menopausal status</div>
+            <div class="fig-sub strong">
+              Serum estradiol before starting. If pre- or perimenopausal, start
+              ovarian suppression with or before endocrine therapy
+            </div>
+          </div>
+          <div class="fig-node wash sm stack">
+            <div>Bone disease &rarr; bone-modifying agent</div>
+            <div class="fig-sub strong">
+              Denosumab, zoledronic acid or pamidronate (category 1)
+            </div>
+          </div>
+          <div class="fig-foot">
+            Requires expected survival &ge;3 months, adequate renal function,
+            and a dental exam before starting.
+          </div>
+        </div>
+
+        <div class="fig-arrow long"></div>
+
+        <div class="fig-col fig-grow flowcol" style="flex: 1.5">
+          <div class="fig-group">
+            <div class="fig-glabel">No visceral crisis</div>
+            <div class="fig-col" style="gap: 10px">
+              <div class="fig-node solid sm stack">
+                <div>
+                  No endocrine therapy within 1 year &rarr; endocrine therapy +
+                  CDK4/6 inhibitor
+                </div>
+                <div class="fig-sub">
+                  If premenopausal, consider ovarian ablation or suppression
+                </div>
+              </div>
+              <div class="fig-node sm stack">
+                <div>Endocrine therapy within 1 year &rarr; four options</div>
+                <div class="fig-sub">
+                  Switch endocrine therapy + CDK4/6 inhibitor &middot;
+                  <i>PIK3CA</i> mutation &rarr;
+                  Fulvestrant/Inavolisib/Palbociclib &middot;
+                  <i>ESR1</i> mutation &rarr; <i>ESR1</i>-targeted therapy
+                  &middot; Cytotoxic therapy
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="fig-group dashed">
+            <div class="fig-glabel">Visceral crisis</div>
+            <div class="fig-node sm stack">
+              <div>Cytotoxic therapy</div>
+              <div class="fig-sub">
+                Endocrine therapy with a CDK4/6 inhibitor, or with a CDK4/6
+                inhibitor and a PI3K inhibitor, may still be considered in
+                certain circumstances
+              </div>
+            </div>
+          </div>
+          <div class="fig-node wash sm stack">
+            <div>Continue until progression or unacceptable toxicity</div>
+            <div class="fig-sub strong">
+              It is acceptable to switch to endocrine-based therapy once disease
+              stabilises or responds
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 貫穿全程的四件事。它們不屬於任何一線，放在流程下方一條橫帶，比塞進某一格
+       誠實——塞進某一格會讓讀者以為只有那一線要做。兩張圖都帶著它，因為兩張圖各自
+       會被貼到一張投影片上。 -->
+      <div class="fig-group plain" style="flex: none">
+        <div class="fig-glabel">Throughout every line</div>
+        <div class="fig-row" style="gap: 12px">
+          <div class="fig-node sm fig-grow stack">
+            <div>Monitor per BINV-R</div>
+            <div class="fig-sub">
+              Unequivocal evidence required. A rising tumour marker alone is
+              almost never enough
+            </div>
+          </div>
+          <div class="fig-node sm fig-grow stack">
+            <div>Bone-modifying agent if bone disease</div>
+            <div class="fig-sub">
+              With calcium and vitamin D. Zoledronic acid every 12 weeks
+            </div>
+          </div>
+          <div class="fig-node sm fig-grow stack">
+            <div>Bone density if on an aromatase inhibitor</div>
+            <div class="fig-sub">
+              At risk of osteoporosis: age &gt;65, family history, chronic
+              steroids
+            </div>
+          </div>
+          <div class="fig-node sm fig-grow stack">
+            <div>Germline <i>BRCA1/2</i> in all</div>
+            <div class="fig-sub">
+              Recurrent or metastatic disease, any subtype
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fig-hline"></div>
+
+      <div class="fig-row" style="align-items: flex-end; gap: 24px">
+        <div class="fig-legend" style="flex: none">
+          <span><i class="ink"></i>Entry</span>
+          <span><i class="solid"></i>Preferred path</span>
+          <span><i></i>Alternative path</span>
+          <span><i class="key"></i>Test result decides</span>
+          <span><i class="wash"></i>Throughout</span>
+        </div>
+        <div class="fig-foot fig-grow" style="text-align: right">
+          Visceral crisis is severe organ dysfunction requiring the most rapidly
+          effective therapy &mdash; not the mere presence of visceral
+          metastases.<br />
+          Regimens: see the treatment landscape figures. What happens at
+          progression, and when to stop, is a separate figure.
+        </div>
+      </div>
+    </section>
+  </body>
+</html>

@@ -1,0 +1,218 @@
+<!doctype html>
+<!-- fig
+id:    breast/special-preg-flow
+title: Breast cancer during pregnancy — treatment timing by trimester
+kind:  flow
+tags:  [breast, special, pregnancy, trimester]
+cite:  [{ gid: "breast", refs: ["PREG-1", "PREG-2"], page: 111 }]
+note:  臨床上最容易記錯的一張。三列就是三個孕期，橫帶是不分孕期都成立的規則。
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>
+      Breast cancer during pregnancy — treatment timing by trimester
+    </title>
+    <link rel="stylesheet" href="../figure.css" />
+    <style>
+      body {
+        margin: 0;
+        background: #fff;
+      }
+      /* .fig-node 是 row 方向的 flex container：多行內容包一層 div，節點才只有一個
+     flex item，否則裸文字與 <b> 會被各自排成一欄。 */
+      .cell {
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        text-align: left;
+        line-height: 1.34;
+      }
+      .cell > div {
+        width: 100%;
+      }
+      .tri {
+        align-items: center;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="fig dense tight">
+      <div class="fig-node wash sm cell" style="flex: none">
+        <div>
+          <b>Entry</b>　Confirmed breast cancer during pregnancy, no distant
+          metastases on staging.　<b>Staging if indicated:</b> chest x-ray with
+          abdominal shielding &middot; abdominal ultrasound for liver metastases
+          &middot; non-contrast spine MRI if indicated for bone metastases.　<b
+            class="fig-em"
+            >CT, nuclear imaging (bone scan or PET/CT) and contrast-enhanced MRI
+            are contraindicated during pregnancy.</b
+          >
+        </div>
+      </div>
+
+      <div class="fig-row">
+        <div class="fig-head fig-grow" style="flex: 0.8">
+          Trimester at diagnosis
+        </div>
+        <div style="flex: none; width: 26px"></div>
+        <div class="fig-head fig-grow" style="flex: 1.2">Primary treatment</div>
+        <div style="flex: none; width: 26px"></div>
+        <div class="fig-head fig-grow" style="flex: 1.2">
+          Chemotherapy timing
+        </div>
+        <div style="flex: none; width: 26px"></div>
+        <div class="fig-head fig-grow" style="flex: 0.9">After delivery</div>
+      </div>
+
+      <div class="fig-col fig-grow fill">
+        <div class="fig-row">
+          <div class="fig-node solid cell tri fig-grow" style="flex: 0.8">
+            <div>First trimester</div>
+          </div>
+          <div class="fig-arrow"></div>
+          <div class="fig-node sm cell fig-grow" style="flex: 1.2">
+            <div>
+              <b>Discuss termination</b> (non-therapeutic).<br />If continuing
+              the pregnancy: <b>mastectomy + axillary staging</b><br /><span
+                style="font-size: var(--fig-fs-xs); color: var(--fig-ink-2)"
+                >Mastectomy may be preferred at this point &mdash; early BCS can
+                preclude timely RT</span
+              >
+            </div>
+          </div>
+          <div class="fig-arrow"></div>
+          <div class="fig-node sm cell fig-grow" style="flex: 1.2">
+            <div>
+              <b class="fig-em"
+                >Begin adjuvant chemotherapy in the second trimester</b
+              ><br /><span
+                style="font-size: var(--fig-fs-xs); color: var(--fig-ink-2)"
+                >If late first trimester, preoperative chemotherapy in the
+                second trimester may be considered</span
+              >
+            </div>
+          </div>
+          <div class="fig-arrow"></div>
+          <div class="fig-node wash sm cell fig-grow" style="flex: 0.9">
+            <div>
+              &plusmn; RT postpartum<br />&plusmn; adjuvant endocrine therapy
+              postpartum
+            </div>
+          </div>
+        </div>
+
+        <div class="fig-row">
+          <div class="fig-node solid cell tri fig-grow" style="flex: 0.8">
+            <div>Second trimester or early third trimester</div>
+          </div>
+          <div class="fig-arrow"></div>
+          <div class="fig-node sm cell fig-grow" style="flex: 1.2">
+            <div>
+              Mastectomy or BCS + axillary staging<br /><b>or</b> preoperative
+              chemotherapy, then mastectomy or BCS + axillary staging
+            </div>
+          </div>
+          <div class="fig-arrow"></div>
+          <div class="fig-node sm cell fig-grow" style="flex: 1.2">
+            <div>
+              Chemotherapy
+              <b class="fig-em">may be given during the pregnancy</b><br /><span
+                style="font-size: var(--fig-fs-xs); color: var(--fig-ink-2)"
+                >Anthracycline, cyclophosphamide and taxanes appear to be safe
+                in the second and third trimesters</span
+              >
+            </div>
+          </div>
+          <div class="fig-arrow"></div>
+          <div class="fig-node wash sm cell fig-grow" style="flex: 0.9">
+            <div>
+              &plusmn; RT postpartum<br />&plusmn; adjuvant endocrine therapy
+              postpartum
+            </div>
+          </div>
+        </div>
+
+        <div class="fig-row">
+          <div class="fig-node solid cell tri fig-grow" style="flex: 0.8">
+            <div>Late third trimester</div>
+          </div>
+          <div class="fig-arrow"></div>
+          <div class="fig-node sm cell fig-grow" style="flex: 1.2">
+            <div>Mastectomy or BCS + axillary staging</div>
+          </div>
+          <div class="fig-arrow"></div>
+          <div class="fig-node sm cell fig-grow" style="flex: 1.2">
+            <div>
+              Adjuvant chemotherapy<br /><span
+                style="font-size: var(--fig-fs-xs); color: var(--fig-ink-2)"
+                ><b class="fig-em">Avoid chemotherapy after 35 weeks</b> so
+                maternal bone marrow can recover before delivery</span
+              >
+            </div>
+          </div>
+          <div class="fig-arrow"></div>
+          <div class="fig-node wash sm cell fig-grow" style="flex: 0.9">
+            <div>
+              &plusmn; RT postpartum<br />&plusmn; adjuvant endocrine therapy
+              postpartum
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 不分孕期都成立的規則。塞進某一列會讓讀者以為只有那一個孕期要遵守。 -->
+      <div class="fig-group plain" style="flex: none">
+        <div class="fig-glabel">Holds in every trimester</div>
+        <div class="fig-row" style="gap: 10px">
+          <div class="fig-node key sm cell fig-grow">
+            <div>
+              <b class="fig-em">No chemotherapy in the first trimester.</b> No
+              RT in any trimester &mdash; always deferred to postpartum
+            </div>
+          </div>
+          <div class="fig-node sm cell fig-grow">
+            <div>
+              <b>Safe in the 2nd&ndash;3rd trimesters:</b> anthracycline,
+              cyclophosphamide, taxanes. AC every 3 weeks preferred; weekly
+              paclitaxel preferred; standard doses by actual weight
+            </div>
+          </div>
+          <div class="fig-node sm cell fig-grow">
+            <div>
+              <b>Contraindicated:</b> anti-HER2 agents &middot; CDK4/6
+              inhibitors &middot; ADCs &middot; endocrine therapy &middot; PARP
+              inhibitors &middot; immune checkpoint inhibitors
+            </div>
+          </div>
+          <div class="fig-node sm cell fig-grow">
+            <div>
+              <b>Supportive care:</b> ondansetron and metoclopramide safe; avoid
+              NK1 inhibitors; prefer methylprednisolone, prednisolone or
+              hydrocortisone; G-CSF with caution
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fig-hline"></div>
+
+      <div class="fig-row" style="align-items: flex-end; gap: 24px">
+        <div class="fig-legend" style="flex: none">
+          <span><i class="solid"></i>Trimester at diagnosis</span>
+          <span><i></i>Action</span>
+          <span><i class="wash"></i>Deferred to postpartum</span>
+          <span><i class="key"></i>Absolute rule</span>
+        </div>
+        <div class="fig-foot fig-grow" style="text-align: right">
+          Fetal ultrasound before systemic therapy to exclude pre-existing
+          abnormalities. Coordinate timing with the obstetrics team.<br />
+          Intervals of 12&ndash;16 weeks between surgery, RT and chemotherapy
+          are considered acceptable. Survival after BCS equals mastectomy in
+          pregnancy-associated disease.
+        </div>
+      </div>
+    </section>
+  </body>
+</html>

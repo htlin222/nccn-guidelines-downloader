@@ -1,0 +1,150 @@
+<!doctype html>
+<!-- fig
+id:    breast/dcis-flow
+title: DCIS from diagnosis to surveillance
+kind:  flow
+tags:  [breast, dcis, workup, surgery, surveillance]
+cite:  [{ gid: "breast", refs: ["DCIS-1", "DCIS-2", "BINV-F", "BINV-G"], page: 12 }]
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DCIS from diagnosis to surveillance</title>
+<link rel="stylesheet" href="../figure.css">
+<style>
+  body{margin:0;background:#fff}
+
+  /* 節點自然高度、成團置中——流程圖不平分欄高。 */
+  .flowcol{justify-content:center}
+</style>
+</head>
+<body>
+
+<section class="fig dense tight">
+
+  <div class="fig-row">
+    <div class="fig-head fig-grow" style="flex:1">Diagnosis and workup</div>
+    <div style="flex:none;width:44px"></div>
+    <div class="fig-head fig-grow" style="flex:1.22">Primary treatment</div>
+    <div style="flex:none;width:44px"></div>
+    <div class="fig-head fig-grow" style="flex:1.02">Postsurgical risk reduction</div>
+    <div style="flex:none;width:44px"></div>
+    <div class="fig-head fig-grow" style="flex:.86">Surveillance</div>
+  </div>
+
+  <div class="fig-row fig-grow" style="align-items:center">
+
+    <div class="fig-col fig-grow flowcol" style="flex:1">
+      <div class="fig-node ink stack">
+        <div>DCIS &mdash; Tis, N0, M0</div>
+        <div class="fig-sub">also encapsulated or solid papillary carcinoma</div>
+      </div>
+      <div class="fig-node left sm stack" style="align-items:flex-start">
+        <div>History and physical &middot; bilateral diagnostic mammogram &middot; pathology review</div>
+        <div class="fig-sub">Grade for DCIS is <b class="fig-em">nuclear grade</b>, not the Nottingham score used for invasive cancer</div>
+      </div>
+      <div class="fig-node solid left sm stack" style="align-items:flex-start">
+        <div>Determine tumour <b>ER</b> status</div>
+        <div class="fig-sub">the only biomarker on this page &mdash; no PR, no HER2</div>
+      </div>
+      <div class="fig-node left sm stack" style="align-items:flex-start">
+        <div>Genetic counselling if at hereditary risk &middot; breast MRI as indicated &middot; assess for distress</div>
+        <div class="fig-sub">MRI has not been shown to increase the likelihood of negative margins or to decrease conversion to mastectomy</div>
+      </div>
+    </div>
+
+    <div class="fig-arrow long"></div>
+
+    <div class="fig-col fig-grow flowcol" style="flex:1.22">
+      <div class="fig-group">
+        <div class="fig-glabel">BCS without lymph node surgery</div>
+        <div class="fig-col" style="gap:9px">
+          <div class="fig-node solid sm"><div>Whole breast RT &plusmn; boost to the tumour bed<span class="fig-tag">category 1</span></div></div>
+          <div class="fig-node sm">Accelerated partial breast irradiation / partial breast irradiation</div>
+          <div class="fig-node dashed sm stack">
+            <div>No RT<span class="fig-tag">category 2B</span></div>
+            <div class="fig-sub" style="opacity:1;color:var(--fig-ink-2)">consider omission with endocrine therapy alone only if all four RTOG 9804 criteria are met</div>
+          </div>
+        </div>
+      </div>
+      <div class="fig-group">
+        <div class="fig-glabel">Or</div>
+        <div class="fig-node sm">Total mastectomy with sentinel lymph node biopsy &plusmn; reconstruction</div>
+      </div>
+      <div class="fig-node wash sm stack">
+        <div>Margins: re-resect to achieve negative margins</div>
+        <div class="fig-sub" style="opacity:1;color:var(--fig-ink-2)">Total mastectomy if adequate margins cannot be achieved with BCS</div>
+      </div>
+    </div>
+
+    <div class="fig-arrow long"></div>
+
+    <div class="fig-col fig-grow flowcol" style="flex:1.02">
+      <div class="fig-node key left sm stack" style="align-items:flex-start">
+        <div>ER-positive &rarr; consider endocrine therapy for <b class="fig-em">5 years</b>, for the ipsilateral breast</div>
+        <div class="fig-sub">after BCS and RT (category 1), or after excision alone</div>
+      </div>
+      <div class="fig-node left sm stack" style="align-items:flex-start">
+        <div>Premenopausal: tamoxifen. Postmenopausal: tamoxifen or an aromatase inhibitor</div>
+        <div class="fig-sub">Some advantage for the AI under 60 years or where thromboembolism is a concern. Low-dose tamoxifen is an option</div>
+      </div>
+      <div class="fig-node left sm stack" style="align-items:flex-start">
+        <div>Contralateral breast: counselling about risk reduction</div>
+      </div>
+      <div class="fig-node wash left sm stack" style="align-items:flex-start">
+        <div>A survival advantage has not been demonstrated</div>
+        <div class="fig-sub" style="opacity:1;color:var(--fig-ink-2)">so risks and benefits are weighed for the individual patient</div>
+      </div>
+    </div>
+
+    <div class="fig-arrow long"></div>
+
+    <div class="fig-col fig-grow flowcol" style="flex:.86">
+      <div class="fig-node ink stack">
+        <div>Interval history and physical</div>
+        <div class="fig-sub">every 6&ndash;12 months for 5 years, then annually</div>
+      </div>
+      <div class="fig-node sm stack">
+        <div>First mammogram at 6&ndash;12 months</div>
+        <div class="fig-sub">after the end of RT if given, or after BCS if no RT (category 2B); annually thereafter</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fig-group plain" style="flex:none">
+    <div class="fig-glabel">Three things that can redirect the whole path</div>
+    <div class="fig-row" style="gap:12px">
+      <div class="fig-node sm fig-grow stack">
+        <div>Invasion found at mastectomy or re-excision</div>
+        <div class="fig-sub">manage as clinical stage I or stage II disease &mdash; a different guideline page from that point on</div>
+      </div>
+      <div class="fig-node sm fig-grow stack">
+        <div>Mastectomy is mandated</div>
+        <div class="fig-sub">by diffuse suspicious or malignant-appearing microcalcifications, multicentric pure DCIS, or margins that cannot be cleared after re-excision</div>
+      </div>
+      <div class="fig-node sm fig-grow stack">
+        <div>The axilla is not touched</div>
+        <div class="fig-sub">no surgical axillary staging for biopsy-determined pure DCIS, unless invasion or nodal metastasis is suggested clinically, radiographically or pathologically</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fig-hline"></div>
+
+  <div class="fig-row" style="align-items:flex-end;gap:24px">
+    <div class="fig-legend" style="flex:none">
+      <span><i class="ink"></i>Entry / exit</span>
+      <span><i class="solid"></i>Category 1 or the decisive step</span>
+      <span><i class="key"></i>Conditional on ER</span>
+      <span><i class="wash"></i>Caveat</span>
+    </div>
+    <div class="fig-foot fig-grow" style="text-align:right">
+      RTOG 9804 criteria: screen-detected, grade 1&ndash;2, &le;2.5 cm, margins &ge;3 mm. Margin target after BCS is at least 2 mm; routinely wider is not supported.<br>
+      Whole breast RT reduces ipsilateral breast tumour recurrence by 50&ndash;70%, and about half of the recurrences are invasive.
+    </div>
+  </div>
+
+</section>
+
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!doctype html>
+<!-- fig
+id:    breast/staging-tnm-table
+title: AJCC TNM for breast cancer, read as four scales
+kind:  table
+tags:  [breast, staging, ajcc, tnm]
+cite:  [{ gid: "breast", refs: ["ST-1", "ST-2", "ST-3"], page: 115 }]
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AJCC TNM for breast cancer, read as four scales</title>
+<link rel="stylesheet" href="../figure.css">
+<style>
+  body{margin:0;background:#fff}
+
+  .fig-node.left.sm{padding:6px 11px;min-height:0}
+</style>
+</head>
+<body>
+
+<section class="fig dense tight">
+
+  <div class="fig-row">
+    <div class="fig-head fig-grow" style="flex:1"><span>T &mdash; size of the <i>invasive</i> component</span></div>
+    <div class="fig-head fig-grow" style="flex:1.02">cN &mdash; which station, and is it mobile</div>
+    <div class="fig-head fig-grow" style="flex:1.06">pN &mdash; how many nodes</div>
+    <div class="fig-head fig-grow" style="flex:.8">M &mdash; and the same 0.2 mm</div>
+  </div>
+
+  <div class="fig-row fig-grow" style="align-items:stretch">
+
+    <div class="fig-col fig-grow" style="flex:1;gap:7px">
+      <div class="fig-node left sm"><div><b class="fig-em">T1mi</b>&ensp;&le;1 mm</div></div>
+      <div class="fig-node left sm"><div><b class="fig-em">T1a</b>&ensp;&gt;1 to &le;5 mm</div></div>
+      <div class="fig-node left sm"><div><b class="fig-em">T1b</b>&ensp;&gt;5 to &le;10 mm</div></div>
+      <div class="fig-node left sm"><div><b class="fig-em">T1c</b>&ensp;&gt;10 to &le;20 mm</div></div>
+      <div class="fig-node solid left sm"><div><b>T2</b>&ensp;&gt;20 to &le;50 mm</div></div>
+      <div class="fig-node solid left sm"><div><b>T3</b>&ensp;&gt;50 mm</div></div>
+      <div class="fig-node key left sm stack" style="align-items:flex-start">
+        <div><b>T4</b>&ensp;any size, direct extension &mdash; size stops mattering</div>
+        <div class="fig-sub">a chest wall &middot; b ulceration, macroscopic satellite nodules or oedema (peau d&rsquo;orange) &middot; c both &middot; d inflammatory carcinoma</div>
+      </div>
+      <div class="fig-node wash left sm stack" style="align-items:flex-start">
+        <div>Tis (DCIS) &middot; Tis (Paget) &middot; T0 &middot; TX</div>
+        <div class="fig-sub" style="opacity:1;color:var(--fig-ink-2)">Paget without invasive carcinoma or DCIS in the underlying parenchyma</div>
+      </div>
+    </div>
+
+    <div class="fig-col fig-grow" style="flex:1.02;gap:7px">
+      <div class="fig-node left sm"><div><b class="fig-em">cN0</b>&ensp;none by imaging or examination</div></div>
+      <div class="fig-node left sm"><div><b class="fig-em">cN1</b>&ensp;movable ipsilateral level I, II axillary</div></div>
+      <div class="fig-node left sm"><div><b class="fig-em">cN2a</b>&ensp;level I, II fixed to one another or to other structures</div></div>
+      <div class="fig-node left sm"><div><b class="fig-em">cN2b</b>&ensp;internal mammary only, axilla negative</div></div>
+      <div class="fig-node left sm"><div><b class="fig-em">cN3a</b>&ensp;infraclavicular (level III axillary)</div></div>
+      <div class="fig-node left sm"><div><b class="fig-em">cN3b</b>&ensp;internal mammary <i>and</i> axillary</div></div>
+      <div class="fig-node left sm"><div><b class="fig-em">cN3c</b>&ensp;supraclavicular</div></div>
+      <div class="fig-node wash left sm stack" style="align-items:flex-start">
+        <div>cN1mi &middot; cNX</div>
+        <div class="fig-sub" style="opacity:1;color:var(--fig-ink-2)">cN1mi is rarely used &mdash; mainly a sentinel node biopsy done before resection. cNX is for nodes already removed</div>
+      </div>
+    </div>
+
+    <div class="fig-col fig-grow" style="flex:1.06;gap:7px">
+      <div class="fig-node left sm"><div><b class="fig-em">pN0</b>&ensp;none identified, or ITCs only</div></div>
+      <div class="fig-node key left sm"><div><b>pN0(i+)</b>&ensp;ITC clusters &le;<b class="fig-em">0.2 mm</b> &mdash; still pN0</div></div>
+      <div class="fig-node key left sm"><div><b>pN1mi</b>&ensp;&gt;<b class="fig-em">0.2</b> to &le;<b class="fig-em">2.0 mm</b>, about 200 cells</div></div>
+      <div class="fig-node solid left sm"><div><b>pN1a</b>&ensp;1&ndash;3 axillary nodes, at least one &gt;2.0 mm</div></div>
+      <div class="fig-node left sm"><div><b class="fig-em">pN1b</b>&ensp;internal mammary sentinel nodes, ITCs excluded</div></div>
+      <div class="fig-node solid left sm"><div><b>pN2a</b>&ensp;4&ndash;9 axillary nodes</div></div>
+      <div class="fig-node solid left sm"><div><b>pN3a</b>&ensp;&ge;10 axillary nodes, or infraclavicular</div></div>
+      <div class="fig-node wash left sm stack" style="align-items:flex-start">
+        <div>pN2b &middot; pN3b &middot; pN3c</div>
+        <div class="fig-sub" style="opacity:1;color:var(--fig-ink-2)">the internal mammary and supraclavicular combinations &mdash; pN3c is supraclavicular</div>
+      </div>
+    </div>
+
+    <div class="fig-col fig-grow" style="flex:.8;gap:7px">
+      <div class="fig-node left sm"><div><b class="fig-em">M0</b>&ensp;no clinical or radiographic distant disease</div></div>
+      <div class="fig-node key left sm stack" style="align-items:flex-start">
+        <div><b>cM0(i+)</b>&ensp;deposits &le;<b class="fig-em">0.2 mm</b></div>
+        <div class="fig-sub">found microscopically or molecularly in blood, marrow or non-regional nodal tissue, without symptoms or signs</div>
+      </div>
+      <div class="fig-node solid left sm"><div><b>cM1</b>&ensp;detected clinically or radiographically</div></div>
+      <div class="fig-node solid left sm stack" style="align-items:flex-start">
+        <div><b>pM1</b>&ensp;histologically proven</div>
+        <div class="fig-sub">in distant organs, or in non-regional nodes &gt;0.2 mm</div>
+      </div>
+      <div class="fig-node wash left sm stack" style="align-items:flex-start">
+        <div>Which stage table?</div>
+        <div class="fig-sub" style="opacity:1;color:var(--fig-ink-2)">Clinical prognostic stage &mdash; all patients.<br>Pathological prognostic stage &mdash; surgery first only.<br>Anatomic stage group &mdash; only where biomarker testing is not routine.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fig-group plain" style="flex:none">
+    <div class="fig-glabel">Rules that are easy to lose</div>
+    <div class="fig-row" style="gap:12px">
+      <div class="fig-node sm fig-grow stack">
+        <div>Round to the nearest millimetre &mdash; with one exception</div>
+        <div class="fig-sub">1.0&ndash;1.4 mm rounds <b class="fig-em">up</b> to 2 mm, so it is not called microinvasive (T1mi). Note the source contradicts itself &mdash; the T1a line reads &ldquo;&gt;1.0&ndash;1.9 mm&rdquo;</div>
+      </div>
+      <div class="fig-node sm fig-grow stack">
+        <div>What does not qualify as T4</div>
+        <div class="fig-sub">Invasion of the dermis alone; invasion of or adherence to pectoralis muscle without invasion of chest wall structures</div>
+      </div>
+      <div class="fig-node sm fig-grow stack">
+        <div>Suffixes and one deletion</div>
+        <div class="fig-sub">(sn) and (f) mark confirmation by sentinel node biopsy or needle biopsy. LCIS is benign and was removed from TNM in AJCC 8th edition</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fig-hline"></div>
+
+  <div class="fig-row" style="align-items:flex-end;gap:24px">
+    <div class="fig-legend" style="flex:none">
+      <span><i class="solid"></i>Common in clinic</span>
+      <span><i class="key"></i>Volume threshold</span>
+      <span><i></i>Other category</span>
+      <span><i class="wash"></i>Footnote territory</span>
+    </div>
+    <div class="fig-foot fig-grow" style="text-align:right">
+      T is defined identically whether clinical or pathological, and is based on the largest contiguous dimension of the invasive focus &mdash; satellite foci are not added.<br>
+      AJCC Cancer Staging Manual, 8th edition. ITC = isolated tumour cells.
+    </div>
+  </div>
+
+</section>
+
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!doctype html>
+<!-- fig
+id:    breast/subtypes-her2-framework
+title: How a HER2 result is read, and why the negative side is reported in four layers
+kind:  framework
+tags:  [breast, her2, biomarker, pathology]
+cite:  [{ gid: "breast", refs: ["BINV-A"], page: 42 }]
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>How a HER2 result is read, and why the negative side is reported in four layers</title>
+<link rel="stylesheet" href="../figure.css">
+<style>
+  body{margin:0;background:#fff}
+  /* 流程列的節點是自然高度、成團置中；平分欄高會在 IHC 那一欄產生五個空盒子。 */
+  .flowcol{justify-content:center}
+</style>
+</head>
+<body>
+
+<section class="fig">
+
+  <div class="fig-row">
+    <div class="fig-head fig-grow" style="flex:.95">Test</div>
+    <div style="flex:none;width:44px"></div>
+    <div class="fig-head fig-grow" style="flex:1.15">IHC score &mdash; report the pattern, not just the number</div>
+    <div style="flex:none;width:44px"></div>
+    <div class="fig-head fig-grow" style="flex:.72">Reflex ISH</div>
+    <div style="flex:none;width:44px"></div>
+    <div class="fig-head fig-grow" style="flex:.72">Status</div>
+  </div>
+
+  <div class="fig-row fig-grow" style="align-items:center">
+
+    <div class="fig-col fig-grow flowcol" style="flex:.95">
+      <div class="fig-node ink stack">
+        <div>Every new primary and every newly metastatic breast cancer</div>
+        <div class="fig-sub">Methodology per the ASCO/CAP HER2 testing guideline</div>
+      </div>
+      <div class="fig-node wash sm stack">
+        <div>The laboratory must take part in a HER2 quality-assurance accreditation programme</div>
+        <div class="fig-sub" style="opacity:1;color:var(--fig-ink-2)">Otherwise send the specimen to an accredited laboratory</div>
+      </div>
+    </div>
+
+    <div class="fig-arrow long"></div>
+
+    <div class="fig-col fig-grow flowcol" style="flex:1.15">
+      <div class="fig-node left sm stack" style="align-items:flex-start">
+        <div>IHC <b class="fig-em">0 / absent</b> membrane staining</div>
+      </div>
+      <div class="fig-node left sm stack" style="align-items:flex-start">
+        <div>IHC <b class="fig-em">0+ / with</b> membrane staining</div>
+        <div class="fig-sub">faint, partial membrane staining in &le;10%</div>
+      </div>
+      <div class="fig-node left sm"><div>IHC <b class="fig-em">1+</b></div></div>
+      <div class="fig-node key left sm stack" style="align-items:flex-start">
+        <div>IHC <b class="fig-em">2+</b><span class="fig-tag">reflex to ISH</span></div>
+      </div>
+      <div class="fig-node solid left sm"><div>IHC <b>3+</b></div></div>
+    </div>
+
+    <div class="fig-arrow long"></div>
+
+    <div class="fig-col fig-grow flowcol" style="flex:.72">
+      <div class="fig-node sm">ISH negative</div>
+      <div class="fig-node solid sm">ISH positive</div>
+    </div>
+
+    <div class="fig-arrow long"></div>
+
+    <div class="fig-col fig-grow flowcol" style="flex:.72">
+      <div class="fig-node ink stack">
+        <div>HER2-negative</div>
+        <div class="fig-sub">0 / 0+ / 1+ / 2+ ISH-negative</div>
+      </div>
+      <div class="fig-node solid stack">
+        <div>HER2-positive</div>
+        <div class="fig-sub">IHC 3+ or ISH-positive</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fig-group plain" style="flex:none">
+    <div class="fig-glabel">Why the negative side is split into four layers</div>
+    <div class="fig-row" style="gap:12px">
+      <div class="fig-node sm fig-grow stack">
+        <div>Report the staining pattern of an IHC 0</div>
+        <div class="fig-sub">0/absent or 0+/with membrane staining, per the current CAP Breast Cancer Biomarker Reporting Protocol</div>
+      </div>
+      <div class="fig-node sm fig-grow stack">
+        <div>Re-examine any IHC 0 at high power</div>
+        <div class="fig-sub">The distinction between 0/absent, 0+, 1+ and 2+/ISH-negative is currently clinically relevant</div>
+      </div>
+      <div class="fig-node sm fig-grow stack">
+        <div>Because the treatment exists</div>
+        <div class="fig-sub">Patients with metastatic disease may be eligible for therapy targeting non-amplified levels of HER2 expression &mdash; on primary or metastatic samples</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fig-group dashed" style="flex:none">
+    <div class="fig-glabel">Go back &mdash; re-review or retest</div>
+    <div class="fig-row" style="gap:12px">
+      <div class="fig-node sm fig-grow stack">
+        <div>Morphology disagrees with a positive result</div>
+        <div class="fig-sub">Grade 1 (any histologic type), pure mucinous, pure tubular or pure cribriform carcinoma testing HER2-positive &rarr; re-review the pathology, consider repeat or consultative testing</div>
+      </div>
+      <div class="fig-node sm fig-grow stack">
+        <div>A negative result may not be the answer</div>
+        <div class="fig-sub">Suboptimal initial sample &middot; expected testing error &middot; a later sample with higher-grade, morphologically distinct cancer &middot; to rule out heterogeneity in a high-grade cancer &middot; or if it aids clinical decision-making</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fig-hline"></div>
+
+  <div class="fig-row" style="align-items:flex-end;gap:24px">
+    <div class="fig-legend" style="flex:none">
+      <span><i class="solid"></i>HER2-positive</span>
+      <span><i class="ink"></i>Entry / status</span>
+      <span><i class="key"></i>Triggers reflex testing</span>
+      <span><i class="wash"></i>Rule that applies throughout</span>
+    </div>
+    <div class="fig-foot fig-grow" style="text-align:right">
+      NCCN endorses the ASCO/CAP HER2 testing guideline. ISH = in situ hybridisation; CAP = College of American Pathologists.
+    </div>
+  </div>
+
+</section>
+
+</body>
+</html>

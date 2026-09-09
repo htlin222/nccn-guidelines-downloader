@@ -1,0 +1,136 @@
+<!doctype html>
+<!-- fig
+id:    breast/early-hr-assay
+title: When to order a gene expression assay in early HR-positive, HER2-negative breast cancer
+kind:  flow
+tags:  [breast, hr, early, gene-expression-assay]
+cite:  [{ gid: "breast", refs: ["BINV-6", "BINV-7", "BINV-8", "BINV-N"], page: 81 }]
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>When to order a gene expression assay in early HR-positive, HER2-negative breast cancer</title>
+<link rel="stylesheet" href="../figure.css">
+<style>
+  body{margin:0;background:#fff}
+  /* 流程圖的節點文字短，欄內不平分高度——平分會得到一堆空盒子並在中間開洞。
+     節點自然高度，整列成團置中，留白對稱落在上下。 */
+  .flowcol{justify-content:flex-start}
+  .flowrow{align-items:center}
+</style>
+</head>
+<body>
+
+<section class="fig dense">
+
+  <div class="fig-row">
+    <div class="fig-head fig-grow" style="flex:.92">Entry</div>
+    <div style="flex:none;width:44px"></div>
+    <div class="fig-head fig-grow" style="flex:.72">Nodal status</div>
+    <div style="flex:none;width:44px"></div>
+    <div class="fig-head fig-grow" style="flex:1.4">What NCCN says to order</div>
+    <div style="flex:none;width:44px"></div>
+    <div class="fig-head fig-grow" style="flex:1.06">Which assay, and what it answers</div>
+  </div>
+
+  <div class="fig-group plain" style="flex:none">
+    <div class="fig-glabel">Settled before the flow starts</div>
+    <div class="fig-row" style="gap:12px">
+      <div class="fig-node sm fig-grow"><div>ER 1%&ndash;100% is ER-positive; ER-low-positive (1%&ndash;10%) has limited efficacy data</div></div>
+      <div class="fig-node sm fig-grow"><div>Menopausal status picks the page: BINV-6 postmenopausal, BINV-7 premenopausal pN0, BINV-8 premenopausal pN+</div></div>
+      <div class="fig-node sm fig-grow"><div>After chemotherapy or on tamoxifen, 12 months of amenorrhoea alone does <b class="fig-em">not</b> establish menopause</div></div>
+    </div>
+  </div>
+
+  <div class="fig-row fig-grow flowrow">
+
+    <div class="fig-col fig-grow flowcol" style="flex:.92">
+      <div class="fig-node ink stack">
+        <div>HR-positive, HER2-negative</div>
+        <div class="fig-sub">resected pT1&ndash;3, M0</div>
+      </div>
+      <div class="fig-node key stack">
+        <div>Is this patient a <b class="fig-em">candidate for chemotherapy</b>?</div>
+        <div class="fig-sub">Every page asks this <i>before</i> the assay</div>
+      </div>
+      <div class="fig-node wash sm stack">
+        <div>No &rarr; endocrine therapy</div>
+        <div class="fig-sub" style="opacity:1;color:var(--fig-ink-2)">A score would not change management</div>
+      </div>
+    </div>
+
+    <div class="fig-arrow long"></div>
+
+    <div class="fig-col fig-grow flowcol" style="flex:.72">
+      <div class="fig-node key sm">pN0</div>
+      <div class="fig-node key sm"><div>pN1mi (&le;2 mm)<br>or pN1 (1&ndash;3 nodes)</div></div>
+      <div class="fig-node key sm"><div>pN2 / pN3<br>&ge;4 ipsilateral nodes &gt;2 mm</div></div>
+    </div>
+
+    <div class="fig-arrow long"></div>
+
+    <div class="fig-col fig-grow flowcol" style="flex:1.4">
+      <div class="fig-node solid left sm stack" style="align-items:flex-start">
+        <div>Strongly consider the 21-gene RT-PCR assay<span class="fig-tag">cat 1</span></div>
+        <div class="fig-sub">Same wording pre- and postmenopausal (BINV-6, BINV-7)</div>
+      </div>
+      <div class="fig-node left sm stack" style="align-items:flex-start">
+        <div>Postmenopausal: strongly consider the 21-gene assay<span class="fig-tag">cat 1</span></div>
+        <div class="fig-sub">Premenopausal: <b class="fig-em">consider an assay to assess prognosis</b> &mdash; the wording on BINV-8 is weaker, and it is about prognosis, not chemotherapy benefit</div>
+      </div>
+      <div class="fig-node dashed left sm stack" style="align-items:flex-start">
+        <div>No assay-driven pathway</div>
+        <div class="fig-sub">Few data with &ge;4 nodes; base the chemotherapy decision on clinical factors</div>
+      </div>
+    </div>
+
+    <div class="fig-arrow long"></div>
+
+    <div class="fig-col fig-grow flowcol" style="flex:1.06">
+      <div class="fig-node solid sm stack">
+        <div>21-gene &mdash; Oncotype Dx<span class="fig-tag">preferred</span></div>
+        <div class="fig-sub">Predictive <b>and</b> prognostic. Category 1 for pN0; for pN1, category 1 postmenopausal and 2A premenopausal</div>
+      </div>
+      <div class="fig-node sm stack">
+        <div>70-gene &mdash; MammaPrint<span class="fig-tag">other &middot; cat 1</span></div>
+        <div class="fig-sub">Prognostic; predictive value not determined</div>
+      </div>
+      <div class="fig-node sm stack">
+        <div>50-gene Prosigna &middot; 12-gene EndoPredict<span class="fig-tag">other &middot; cat 2A</span></div>
+        <div class="fig-sub">Prognostic; predictive value not determined</div>
+      </div>
+      <div class="fig-node sm stack">
+        <div>Breast Cancer Index<span class="fig-tag">other &middot; cat 2A</span></div>
+        <div class="fig-sub">Answers a different question: benefit of <b class="fig-em">extended</b> endocrine therapy</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fig-group plain" style="flex:none">
+    <div class="fig-glabel">Written in the footnotes, not the boxes</div>
+    <div class="fig-row" style="gap:12px">
+      <div class="fig-node sm fig-grow"><div>T1b, low-grade histology, no LVI &rarr; endocrine monotherapy. TAILORx did not include such tumours</div></div>
+      <div class="fig-node sm fig-grow"><div>Assays other than the 21-gene assay have <b class="fig-em">not been validated</b> to predict response to chemotherapy</div></div>
+      <div class="fig-node sm fig-grow"><div>Gene expression assays complement T, N, M and biomarkers &mdash; they are <b class="fig-em">not required for staging</b></div></div>
+    </div>
+  </div>
+
+  <div class="fig-hline"></div>
+
+  <div class="fig-row" style="align-items:flex-end;gap:24px">
+    <div class="fig-legend" style="flex:none">
+      <span><i class="ink"></i>Entry</span>
+      <span><i class="key"></i>Decision point</span>
+      <span><i class="solid"></i>Preferred / category 1</span>
+      <span><i></i>Other option</span>
+      <span><i class="wash"></i>Assay not indicated</span>
+    </div>
+    <div class="fig-foot fig-grow" style="text-align:right">
+      cat = NCCN category. The recurrence-score cut-points differ by menopausal status &mdash; see the treatment landscape figure.
+    </div>
+  </div>
+
+</section>
+
+</body>
+</html>

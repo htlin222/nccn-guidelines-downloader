@@ -1,0 +1,213 @@
+<!doctype html>
+<!-- fig
+id:    breast/survivorship-recurrence-flow
+title: Management of local and regional recurrence of invasive breast cancer
+kind:  flow
+tags:  [breast, recurrence, locoregional, survivorship]
+cite:  [{ gid: "breast", refs: ["BINV-18", "BINV-19", "BINV-20", "BINV-28"], page: 32 }]
+note:  結尾七條路徑都相同；開頭的「先全身治療」則寫在需要手術的那六條上——supra/infraclavicular 與 internal mammary 那一條 BINV-20 直接列放療。中間的分岔只由「先前做過什麼」決定。
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>
+      Management of local and regional recurrence of invasive breast cancer
+    </title>
+    <link rel="stylesheet" href="../figure.css" />
+    <style>
+      body {
+        margin: 0;
+        background: #fff;
+      }
+      /* .fig-node 是 row 方向的 flex container：多行內容包一層 div，節點才只有一個
+     flex item，否則裸文字與 <b> 會被各自排成一欄。 */
+      .cell {
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        text-align: left;
+        line-height: 1.34;
+      }
+      .cell > div {
+        width: 100%;
+      }
+      .mid {
+        align-items: center;
+        text-align: center;
+      }
+
+      .subhead {
+        font-size: var(--fig-fs-xs);
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        color: var(--fig-brand-ink);
+        text-align: center;
+        padding: 2px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="fig">
+      <div class="fig-row" style="flex: none">
+        <div class="fig-node ink cell mid" style="flex: 0.95">
+          <div>
+            Local or regional recurrence<br /><span
+              class="fig-sub"
+              style="opacity: 0.85"
+              >no distant metastases</span
+            >
+          </div>
+        </div>
+        <div class="fig-arrow"></div>
+        <div class="fig-node wash sm cell fig-grow">
+          <div>
+            <b>Workup first</b>　Biopsy
+            <b class="fig-em">at least the first recurrence</b> and re-test
+            ER/PR and HER2; multigene panel testing, somatic and germline.
+            Systemic staging: chest CT, abdomen &plusmn; pelvis CT or MRI, brain
+            or spine MRI if symptomatic, bone scan or sodium fluoride PET/CT
+            (category 2B)
+          </div>
+        </div>
+      </div>
+
+      <div class="fig-node solid cell mid" style="flex: none">
+        <div>
+          <b>Step 1 before local treatment</b>　Consider appropriate systemic
+          therapy to best response, if indicated　&mdash;　stated on every path
+          below <i>except</i> supra-/infraclavicular and internal mammary
+          recurrence, where NCCN lists RT directly
+        </div>
+      </div>
+
+      <div class="fig-row fig-grow" style="align-items: stretch">
+        <div class="fig-group fig-grow" style="flex: 1.12">
+          <div class="fig-glabel">
+            Local recurrence &mdash; in-breast or chest wall
+          </div>
+          <div class="fig-col" style="height: 100%; gap: 8px">
+            <div class="fig-row" style="gap: 8px">
+              <div style="flex: none; width: 96px"></div>
+              <div class="subhead fig-grow">No prior RT</div>
+              <div class="subhead fig-grow">Prior RT</div>
+            </div>
+            <div class="fig-row fig-grow" style="gap: 8px">
+              <div class="fig-side" style="width: 96px; flex: none">
+                Prior<br />BCS
+              </div>
+              <div class="fig-node sm cell fig-grow">
+                <div>
+                  Repeat BCS <b>or</b> mastectomy<br />+ consider surgical
+                  axillary staging<br />+ RT after BCS, and after mastectomy if
+                  indicated
+                </div>
+              </div>
+              <div class="fig-node sm cell fig-grow">
+                <div>
+                  <b>Total mastectomy</b><br />+ consider surgical axillary
+                  staging<br />+ repeat RT if feasible and indicated
+                </div>
+              </div>
+            </div>
+            <div class="fig-row fig-grow" style="gap: 8px">
+              <div class="fig-side" style="width: 96px; flex: none">
+                Prior<br />mastectomy
+              </div>
+              <div class="fig-node sm cell fig-grow">
+                <div>
+                  Surgical resection <b>if feasible</b><br />+ consider surgical
+                  axillary staging<br />+ PMRT
+                </div>
+              </div>
+              <div class="fig-node sm cell fig-grow">
+                <div>
+                  Surgical resection <b>if feasible</b><br />+ consider surgical
+                  axillary staging<br />+ repeat RT if feasible and indicated
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fig-group fig-grow" style="flex: 1">
+          <div class="fig-glabel">Regional &plusmn; local recurrence</div>
+          <div class="fig-col" style="height: 100%; gap: 8px">
+            <div class="fig-row fig-grow" style="gap: 8px">
+              <div
+                class="fig-node key sm cell mid"
+                style="flex: none; width: 180px"
+              >
+                <div>Axillary,<br />prior SLNB only</div>
+              </div>
+              <div class="fig-node sm cell fig-grow">
+                <div>
+                  Surgical resection if feasible <b>with ALND</b> + RT if
+                  feasible
+                </div>
+              </div>
+            </div>
+            <div class="fig-row fig-grow" style="gap: 8px">
+              <div
+                class="fig-node key sm cell mid"
+                style="flex: none; width: 180px"
+              >
+                <div>Axillary,<br />prior ALND</div>
+              </div>
+              <div class="fig-node sm cell fig-grow">
+                <div>
+                  Surgical resection of <b>gross disease</b> &plusmn; ALND if
+                  feasible + RT if feasible
+                </div>
+              </div>
+            </div>
+            <div class="fig-row fig-grow" style="gap: 8px">
+              <div
+                class="fig-node key sm cell mid"
+                style="flex: none; width: 180px"
+              >
+                <div>Supra- or infra-clavicular,<br />internal mammary</div>
+              </div>
+              <div class="fig-node sm cell fig-grow">
+                <div>
+                  <b>No prior RT</b> &rarr; RT, comprehensive or localized<br /><b
+                    >Prior RT</b
+                  >
+                  &rarr; repeat RT if feasible
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fig-node ink cell mid" style="flex: none">
+        <div>
+          <b>Then, for every path</b>　Consider appropriate adjuvant systemic
+          therapy as clinically indicated　&middot;　supportive
+          care　&middot;　Principles of Survivorship
+        </div>
+      </div>
+
+      <div class="fig-hline"></div>
+
+      <div class="fig-row" style="align-items: flex-end; gap: 24px">
+        <div class="fig-legend" style="flex: none">
+          <span><i class="ink"></i>Entry / exit</span>
+          <span><i class="solid"></i>Before local treatment</span>
+          <span><i class="key"></i>Prior treatment</span>
+          <span><i></i>Local-regional treatment</span>
+        </div>
+        <div class="fig-foot fig-grow" style="text-align: right">
+          A multidisciplinary approach is especially important here.
+          <b>Repeat SLNB</b> may be considered but its accuracy is unproven;
+          after prior ALND or mastectomy, repeat SLNB with lymphoscintigraphy
+          may be considered rather than ALND.<br />
+          <b>Repeat BCS &plusmn; APBI/PBI</b> may be considered in selected
+          patients who decline mastectomy and meet consensus criteria &mdash;
+          data are limited. Any <b>repeat RT</b> must account for the prior dose
+          and the late normal-tissue toxicity of the sum.
+        </div>
+      </div>
+    </section>
+  </body>
+</html>

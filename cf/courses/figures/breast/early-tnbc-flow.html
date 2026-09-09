@@ -1,0 +1,134 @@
+<!doctype html>
+<!-- fig
+id:    breast/early-tnbc-flow
+title: The first fork in early triple-negative breast cancer — preoperative therapy or upfront surgery
+kind:  flow
+tags:  [breast, tnbc, early, preoperative, adjuvant]
+cite:  [{ gid: "breast", refs: ["BINV-L", "BINV-10", "BINV-16"], page: 23 }]
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The first fork in early triple-negative breast cancer — preoperative therapy or upfront surgery</title>
+<link rel="stylesheet" href="../figure.css">
+<style>
+  body{margin:0;background:#fff}
+  .flowcol{justify-content:flex-start}
+  .flowrow{align-items:center}
+  /* 群組內每一列都是「分層 → 治療」的一對，用列而不是欄，配對關係才不會靠對齊維持。 */
+  .pair{align-items:center;gap:0}
+</style>
+</head>
+<body>
+
+<section class="fig dense tight">
+
+  <div class="fig-row">
+    <div class="fig-head fig-grow" style="flex:.78">The first fork</div>
+    <div style="flex:none;width:44px"></div>
+    <div class="fig-head fig-grow" style="flex:2.6">What is assessed, and what follows from it</div>
+  </div>
+
+  <div class="fig-row fig-grow flowrow">
+
+    <div class="fig-col fig-grow flowcol" style="flex:.78">
+      <div class="fig-node ink stack">
+        <div>Triple-negative</div>
+        <div class="fig-sub">HR-negative, HER2-negative, M0</div>
+      </div>
+      <div class="fig-node key sm stack">
+        <div>Operable and <b class="fig-em">&ge;cT2 or &ge;cN1</b></div>
+        <div class="fig-sub">Preoperative systemic therapy is <b class="fig-em">preferred</b> &rarr; route A</div>
+      </div>
+      <div class="fig-node sm stack">
+        <div>Operable, <b class="fig-em">cT1c and cN0</b></div>
+        <div class="fig-sub">Preoperative therapy <i>can be considered</i> &mdash; either route</div>
+      </div>
+      <div class="fig-node wash sm stack">
+        <div>Inoperable &rarr; route A</div>
+        <div class="fig-sub" style="opacity:1;color:var(--fig-ink-2)">IBC, bulky or matted cN2, cN3, cT4</div>
+      </div>
+      <div class="fig-foot">Response gives prognostic information at an individual patient level &mdash; NCCN names TNBC and HER2-positive disease specifically.</div>
+    </div>
+
+    <div class="fig-arrow long"></div>
+
+    <div class="fig-col fig-grow flowcol" style="flex:2.6">
+
+      <div class="fig-group">
+        <div class="fig-glabel">Route A &middot; preoperative systemic therapy &rarr; surgery</div>
+        <div class="fig-col" style="gap:10px">
+          <div class="fig-row pair">
+            <div class="fig-node key sm fig-grow" style="flex:.55">ypT0N0 or pCR</div>
+            <div class="fig-arrow"></div>
+            <div class="fig-node left sm fig-grow" style="flex:1"><div>For high risk: adjuvant pembrolizumab &mdash; <b class="fig-em">only if a pembrolizumab-containing regimen was given preoperatively</b></div></div>
+          </div>
+          <div class="fig-row pair">
+            <div class="fig-node key sm fig-grow stack" style="flex:.55"><div>ypT1&ndash;4,N0 or ypN&ge;1</div><div class="fig-sub">residual disease</div></div>
+            <div class="fig-arrow"></div>
+            <div class="fig-col fig-grow" style="flex:1;gap:6px">
+              <div class="fig-node solid left sm"><div>Adjuvant pembrolizumab, if given preoperatively<span class="fig-tag">cat 1</span></div></div>
+              <div class="fig-node left sm"><div><b class="fig-em">and/or</b> adjuvant capecitabine, 6&ndash;8 cycles</div></div>
+              <div class="fig-node solid left sm"><div><b>and/or</b> adjuvant olaparib for 1 year if germline <i>BRCA1/2</i> PV<span class="fig-tag">cat 1</span></div></div>
+              <div class="fig-node wash left sm"><div>No data on sequencing or combining these three; sequential or combined use may be considered</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fig-group">
+        <div class="fig-glabel">Route B &middot; upfront surgery</div>
+        <div class="fig-col" style="gap:10px">
+          <div class="fig-row pair">
+            <div class="fig-node key sm fig-grow" style="flex:.55">pT1a (&le;0.5 cm), pN0</div>
+            <div class="fig-arrow"></div>
+            <div class="fig-node ink left sm fig-grow stack" style="flex:1;align-items:flex-start">
+              <div>No adjuvant therapy</div>
+              <div class="fig-sub">Select patients with high-risk features (eg, young, high-grade histology): chemotherapy may be considered &mdash; category 2B</div>
+            </div>
+          </div>
+          <div class="fig-row pair">
+            <div class="fig-node key sm fig-grow" style="flex:.55">pT1a with pN1mi, or pT1b (0.6&ndash;1.0 cm)</div>
+            <div class="fig-arrow"></div>
+            <div class="fig-node left sm fig-grow" style="flex:1"><div><b class="fig-em">Consider</b> adjuvant chemotherapy, and olaparib if germline <i>BRCA1/2</i> PV</div></div>
+          </div>
+          <div class="fig-row pair">
+            <div class="fig-node key sm fig-grow" style="flex:.55">pT1c&ndash;pT3 (&gt;1 cm), or pN+</div>
+            <div class="fig-arrow"></div>
+            <div class="fig-node solid left sm fig-grow stack" style="flex:1;align-items:flex-start"><div>Adjuvant chemotherapy<span class="fig-tag">cat 1</span></div><div class="fig-sub">and adjuvant olaparib if germline <i>BRCA1/2</i> PV</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="fig-group plain" style="flex:none">
+    <div class="fig-glabel">Whichever route</div>
+    <div class="fig-row" style="gap:12px">
+      <div class="fig-node sm fig-grow"><div>Olaparib is given <b class="fig-em">after completion of radiotherapy</b></div></div>
+      <div class="fig-node sm fig-grow"><div>With checkpoint inhibitors: screen for and manage immune-related toxicities and endocrine dysfunction</div></div>
+      <div class="fig-node sm fig-grow"><div>Regular cardiac monitoring on anthracyclines; consider cryotherapy or glove constriction against taxane neuropathy</div></div>
+    </div>
+  </div>
+
+  <div class="fig-hline"></div>
+
+  <div class="fig-row" style="align-items:flex-end;gap:24px">
+    <div class="fig-legend" style="flex:none">
+      <span><i class="ink"></i>Entry / no therapy</span>
+      <span><i class="key"></i>Stratifier</span>
+      <span><i class="solid"></i>Category 1</span>
+      <span><i></i>Consider</span>
+      <span><i class="wash"></i>Caveat</span>
+    </div>
+    <div class="fig-foot fig-grow" style="text-align:right">
+      cat = NCCN category; PV = pathogenic variant. Residual DCIS (ypTis) is excluded from the route A recommendations.<br>
+      Favorable histologies (pure tubular, mucinous, cribriform, adenoid cystic and others) follow a separate page &mdash; see the landscape figure.
+    </div>
+  </div>
+
+</section>
+
+</body>
+</html>
