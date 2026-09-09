@@ -1,0 +1,152 @@
+# 待臨床人審
+
+乳癌 13 課寫完並經過三輪對抗性審查（共 56 處修正）之後，剩下這些**機械檢查與模型審查
+都解決不了**的項目。它們分三類：需要有人翻實體 PDF 拍板的、素材本身缺頁的、以及 NCCN
+原文自己的問題。
+
+`review` 欄位維持 NULL 直到這一頁被走過一遍——機械四關與對抗性審查都還是模型。
+
+---
+
+## 1. 會改變治療決策，必須拍板
+
+### 1.1 `BINV-7` 的 recurrence score 分段對應　⚠️ 最重要
+
+**它決定停經前、pT1–3 pN0、RS 16–25 的病人要不要化療。**
+
+`page_text` 抽出來的是 5 個標籤（Not a candidate、Not done、≤15、16–25、≥26）對 4 個
+outcome 區塊，其中**兩個區塊逐字元相同**，而且區塊出現的順序是
+`[chemo (category 1)]`、`[ET]`、`[chemo，無 category]`——**不是標籤順序**。所以
+「≤15 是純內分泌那一層」與「category 1 落在 ≥26 而不是 16–25」兩件事，都**無法從文字
+重建**。
+
+- 支持目前寫法：`BINV-6`（停經後）明確寫 `Recurrence score ≥26 → Adjuvant chemotherapy
+followed by endocrine therapy (category 1)`
+- 不支持：註腳 `qq` 同時掛在 ≤15 與 16–25 兩個標籤上，所以它分不開這兩層
+
+課程 `06-early-hr.md` 與兩張圖都對這個對應下了斷言。**請對著 PDF 第 20 頁核一次。**
+
+### 1.2 殘餘 DCIS（ypTis）的排除範圍
+
+`BINV-16` 的註腳 `bbb` 在素材裡只掛在 _ado-trastuzumab emtansine_ 與 _adjuvant
+capecitabine_ 兩個藥名上，但課程在**四個地方**（`07`、`08`、`early-her2-postneo.html`、
+`early-tnbc-flow.html`）把它當成整頁通用的排除條件。
+
+要分辨，需要看 PDF 上註腳標記實際落在哪個格子——純文字沒有版面資訊。
+
+### 1.3 `BINV-G` 的「Any reason precluding whole breast RT + boost」層級
+
+`page_text` 裡它排在 multicentric 子清單的末尾。`04-locoregional.md` 把它當**頂層絕對
+禁忌**。兩種讀法臨床意義差很多：前者只在多中心病灶時成立。
+
+### 1.4 `PREG-1` 三孕期 × 治療盒的對應
+
+兩位撰稿者獨立重建的結果一致，課程本文也刻意不宣稱哪個治療屬於哪個子分支。但有一條
+線索對不上：最後一個治療盒印的是 `Mastectomy^c`，而註腳 c 講的是「若為晚期第一孕期，
+可考慮第二孕期給術前化療」——掛在晚期第三孕期說不通。要百分之百確定得看 PDF 第 111 頁
+的原圖。
+
+### 1.5 `ST-1` 的腫瘤大小進位規則（NCCN 原文自相矛盾）
+
+- 本文：「1.0–1.4 mm 進位成 2 mm」
+- 同一頁 T1a 那行的括號：「round any measurement **>1.0–1.9 mm** to 2 mm」
+
+兩種讀法在 1.5–1.9 mm 這一段給出不同敘述。課程原本靜靜挑了本文版並寫成必背數字，
+**現已改成揭露衝突**。仍需有人確認這是 NCCN 印錯、還是 `page_text` 抽取問題。
+
+---
+
+## 2. 從純文字重建的對應（風險較低，但仍是推論）
+
+| 位置                   | 推了什麼                                                     | 支持它的理由                                                                                                               |
+| ---------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `BINV-5`               | pT1b 與 pT1a/pN1mi 併在同一格（4 個區塊對 5 個標籤）         | `BINV-9` 明文把兩者寫成同一句                                                                                              |
+| `BINV-10`              | 五個分層對三個 outcome                                       | 與 `BINV-9` 同構，而 `BINV-9` 在文字上是明確的                                                                             |
+| `BINV-11`              | ≥3 cm 與 pN+ 對應末兩個無標籤區塊                            | 順序一致，且各自只剩一個區塊                                                                                               |
+| `BINV-Q 3 of 15` (p92) | 2L：gBRCA→PARPi、Any→SG、無 gBRCA + HER2 IHC 1+/2+ISH−→T-DXd | 註腳 `l`（"if not used in a previous line"）只掛在 SG 上                                                                   |
+| `BINV-Q 5 of 15` (p94) | preferred / other recommended / useful 三欄的歸屬            | 第二欄的藥名帶 bullet，第一欄不帶（掛在 class 標題下）                                                                     |
+| `09-mbc-hr.md`         | 「以**化療**起始的病人穩定後可換回內分泌」                   | 註腳 `xxx` 只說 "acceptable to switch to endocrine-based therapy after disease stabilizes"，「以化療起始」是從方框位置推的 |
+| `11-mbc-tnbc.md`       | 2L gBRCA→PARPi「前提是第一線沒用過」                         | p92 沒寫這個前提，從第一線 PARPi 只給 CPS<10 那格推的                                                                      |
+| `BINV-16`              | 殘餘病灶那一格由兩個 HER2+ 列共用                            | 該區塊結尾是 "and If HR-positive, adjuvant endocrine therapy (category 1)"，且 7 個區塊對 8 格                             |
+
+---
+
+## 3. 素材缺頁　✅ 已修（2026-09-09），但課程還沒吃到
+
+**`dump_snippet_src.sh` 原本只倒每個 ref 的第 1 頁。** 根因在頁尾的 ref 樣式：多頁節點
+寫成 `BINV-Q 4 OF 15`，而抓頁尾的正則只認 `-數字` 結尾，於是 15 頁一頁都對不上，只能
+靠 TOC 給的那一個條目。**已修**，重跑之後：
+
+| ref      | 之前   | 現在      |
+| -------- | ------ | --------- |
+| `BINV-Q` | 4.6 KB | **58 KB** |
+| `BINV-M` | 4.7 KB | **35 KB** |
+| `BINV-N` | 2.0 KB | 16 KB     |
+| `BINV-K` | 3.5 KB | 13.6 KB   |
+| `BINV-A` | 2.7 KB | 12 KB     |
+| `BINV-P` | 1.8 KB | 8.4 KB    |
+
+**但 13 課是在補齊之前寫的。** 它們在缺頁處誠實指路而不是編內容（`08` 甚至明寫
+「`BINV-M 1 OF 10` 沒有列任何 regimen」），所以沒有錯誤——只是每一課現在都能再厚一層，
+而且下面這些原本「查不到所以沒寫」的東西現在查得到了：
+
+| 課             | 現在可以補的                                                                            |
+| -------------- | --------------------------------------------------------------------------------------- |
+| `01`           | ER/PR 判讀原則（`BINV-A 2–4`）、五個 gene assay 的細節（`BINV-N 2–5`）                  |
+| `06` `07` `08` | **CDK4/6 的 eligibility criteria**（`BINV-K 2–3`）、regimen 名稱與劑量（`BINV-M 2–10`） |
+| `09` `11`      | `BINV-Q` / `BINV-P` 的完整方案表（先前是逐頁從 D1 手撈的）                              |
+| `04`           | 重建方式的選擇（`BINV-H 2–7`）、RT 原則（`BINV-I 2–3`）                                 |
+
+**下一輪要做的事**，不是現在。做之前先重跑一次
+`KIND=all bash dump_snippet_src.sh breast`。
+
+原本的缺頁清單（保留作為記錄）：
+
+| ref                                 | 實際頁數   | 缺了什麼                                                    |
+| ----------------------------------- | ---------- | ----------------------------------------------------------- |
+| `BINV-M`                            | 1 OF 10    | **所有 regimen 的名稱與劑量**（第 1 頁只有 considerations） |
+| `BINV-Q`                            | 1 OF 15    | 除第 1 頁外的全部方案表（09/11 是另外從 D1 撈的）           |
+| `BINV-K`                            | 1 OF 4     | **CDK4/6 inhibitor 的 eligibility criteria**                |
+| `BINV-A`                            | 1 OF 4     | ER/PR 判讀原則（只有 HER2 testing）                         |
+| `BINV-N`                            | 1 OF 5     | 五個 gene assay 各自的細節                                  |
+| `BINV-H`                            | 1 OF 7     | 依 RT 狀態選重建方式                                        |
+| `BINV-P`                            | 1 OF 3     | 分線的內分泌方案（09 另外從 D1 撈的）                       |
+| `BINV-F` `BINV-I` `BINV-L` `BINV-J` | 各缺後續頁 |                                                             |
+
+課程已經在缺頁處誠實指路而不是編內容（`08` 甚至明寫「`BINV-M 1 OF 10` 沒有列任何
+regimen」），但補齊素材之後這幾課都能再厚一層。
+
+**這個缺口不只影響課程**——`cf/snippets/` 的核對清單用同一份素材。修 `dump_snippet_src.sh`
+讓它把 `2 OF n` 之後的頁一起倒出來，是一件獨立的事。
+
+> 另有一個更大的缺口：`snippets/_src/` 曾是 TOC-only 時代的舊 dump。重建後乳癌從
+> 42 → 67 個節點，其中 `BINV-4`、`13`、`14`、`15`、`20`、`22`–`27` 是**從來沒被做成
+> 核對清單的臨床決策頁**。其他 90 份指引很可能有同一個缺口。
+
+---
+
+## 4. NCCN 原文自身的瑕疵（記錄用，不需要處理）
+
+- `ST-1` 的進位規則自相矛盾（見 1.5）
+- `BINV-P 1 of 3` 交叉引用寫 "BINV-Q 2 of **14**"，但 `BINV-Q` 是 15 頁
+- `IBC-1` 指向「Preoperative/Adjuvant Therapy Regimens (**BINV-L**)」，但方案表在 `BINV-M`
+- `BINV-D` 註腳 g 把 OTOASOR 拼成 **OTOASAR**（Sávolt Á, Ann Oncol 2017）
+- `BINV-19` 的 `consider surgical axillary staging^nnn`，按語意上標應為 `mmm`（repeat SLNB）；
+  `nnn` 講的是 repeat BCS
+- `BINV-22` / `BINV-23` / `BINV-27` 的素材檔 `title:` 欄是空的（第 9 段只會顯示 ref 與頁碼）
+
+---
+
+## 5. 沒有素材依據的策展內容
+
+這些不在 NCCN 頁面上，是為了教學加的。它們都標了「策展補充」，但仍需要有人確認：
+
+- **每一課的「關鍵試驗」表**。第三輪審查已獨立查核過課程 10 與 11 的所有數字
+  （CLEOPATRA 57.1/40.8 用的是 2020 的 8 年分析而非 2015 的 56.5/40.8；DESTINY-Breast03
+  28.8/6.8 是 2023 更新分析；HER2CLIMB、EMILIA、OlympiAD 等也都對得上）。**其餘 11 課的
+  試驗數字尚未逐一查核。**
+- **`12-special.md` 的關鍵試驗表整張是證據型態的評論**（「三段都做的族群結果較好」
+  「歐洲曾做過單臂 phase II 檢驗保乳路徑」），沒有具體引用。特殊情境本來就少有隨機試驗，
+  但這一張需要人看過。
+- **每張圖節點裡的試驗名小字**（CLEOPATRA、HER2CLIMB、DESTINY-Breast03/09、EMILIA、
+  SOPHIA、NALA、monarcHER…）。圖會被單獨拿去做投影片，脫離課程的「策展補充」聲明。

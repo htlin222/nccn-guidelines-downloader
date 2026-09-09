@@ -11,22 +11,22 @@ Everything runs from `cf/`. `wrangler.jsonc` is the source of truth for bindings
 
 ## 0. What has to exist
 
-| Thing | Name | Where it is declared |
-|---|---|---|
-| Worker | `nccn-download` | `cf/wrangler.jsonc` |
-| KV namespace | `NCCN_KV` → binding `NCCN_KV` | `wrangler.jsonc` `kv_namespaces` |
-| R2 bucket | `nccn-pdfs` → binding `PDFS` | `wrangler.jsonc` `r2_buckets` |
-| D1 database | `nccn-search` → binding `DB` | `wrangler.jsonc` `d1_databases` |
-| Workers AI | binding `AI` | `wrangler.jsonc` `ai` |
-| Custom domain | `nccn.hsiehting.com` | `wrangler.jsonc` `routes` |
-| Cron trigger | `0 3 * * *` (daily 03:00 UTC) | `wrangler.jsonc` `triggers.crons` |
-| Worker secret | `API_KEY_SECRET` (issue #11 — every per-email API key derives from it) | `wrangler secret put` |
-| Worker secret | `ANTIGRAVITY_API_KEY` (optional) | `wrangler secret put` |
-| Worker secret | `GROQ_API_KEY` (optional, issue #9) | `wrangler secret put` |
-| Repo secret | `CLOUDFLARE_API_TOKEN` | GitHub → Settings → Secrets |
-| Repo secret | `ANTIGRAVITY_API_KEY`, `GROQ_API_KEY` (optional, issue #9 — feeds `gen_insights.sh` in the weekly workflow) | GitHub → Settings → Secrets |
-| Access application | gates the custom domain | Cloudflare Zero Trust |
-| Access application (bypass) | opens **only** `/api/v1` for the skill's token | Cloudflare Zero Trust |
+| Thing                       | Name                                                                                                        | Where it is declared              |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| Worker                      | `nccn-download`                                                                                             | `cf/wrangler.jsonc`               |
+| KV namespace                | `NCCN_KV` → binding `NCCN_KV`                                                                               | `wrangler.jsonc` `kv_namespaces`  |
+| R2 bucket                   | `nccn-pdfs` → binding `PDFS`                                                                                | `wrangler.jsonc` `r2_buckets`     |
+| D1 database                 | `nccn-search` → binding `DB`                                                                                | `wrangler.jsonc` `d1_databases`   |
+| Workers AI                  | binding `AI`                                                                                                | `wrangler.jsonc` `ai`             |
+| Custom domain               | `nccn.hsiehting.com`                                                                                        | `wrangler.jsonc` `routes`         |
+| Cron trigger                | `0 3 * * *` (daily 03:00 UTC)                                                                               | `wrangler.jsonc` `triggers.crons` |
+| Worker secret               | `API_KEY_SECRET` (issue #11 — every per-email API key derives from it)                                      | `wrangler secret put`             |
+| Worker secret               | `ANTIGRAVITY_API_KEY` (optional)                                                                            | `wrangler secret put`             |
+| Worker secret               | `GROQ_API_KEY` (optional, issue #9)                                                                         | `wrangler secret put`             |
+| Repo secret                 | `CLOUDFLARE_API_TOKEN`                                                                                      | GitHub → Settings → Secrets       |
+| Repo secret                 | `ANTIGRAVITY_API_KEY`, `GROQ_API_KEY` (optional, issue #9 — feeds `gen_insights.sh` in the weekly workflow) | GitHub → Settings → Secrets       |
+| Access application          | gates the custom domain                                                                                     | Cloudflare Zero Trust             |
+| Access application (bypass) | opens **only** `/api/v1` for the skill's token                                                              | Cloudflare Zero Trust             |
 
 The ids in `wrangler.jsonc` are already filled in for the existing account. On a
 fresh account, create the resources first and replace them:
@@ -46,12 +46,12 @@ One token does everything: local scripts, `deploy.sh`, and both Actions. It need
 **four** permissions — a token missing any one of them fails in a way that is easy
 to misread as "the script did nothing".
 
-| Permission | Needed by |
-|---|---|
-| Account → Workers Scripts → **Edit** | `wrangler deploy` |
-| Account → Workers R2 Storage → **Edit** | every `wrangler r2 object` call |
-| Account → D1 → **Edit** | `build_index.sh`, all `wrangler d1 execute` |
-| Account → Workers KV Storage → **Edit** | reading `cron_health` / the cookie by hand |
+| Permission                              | Needed by                                   |
+| --------------------------------------- | ------------------------------------------- |
+| Account → Workers Scripts → **Edit**    | `wrangler deploy`                           |
+| Account → Workers R2 Storage → **Edit** | every `wrangler r2 object` call             |
+| Account → D1 → **Edit**                 | `build_index.sh`, all `wrangler d1 execute` |
+| Account → Workers KV Storage → **Edit** | reading `cron_health` / the cookie by hand  |
 
 Create it at **dash.cloudflare.com → My Profile → API Tokens → Create Token →
 Custom token**. The "Edit Cloudflare Workers" template covers Scripts + R2 + KV
@@ -116,7 +116,7 @@ own schema and gets re-derived on every rebuild. The others are
 AI cache, anything the user saved, an unread alert, or an issued API key.** Never
 merge them into `schema.sql`.
 
-`api.sql` is the one exception that is half-derived: `page_text` *is* rebuilt by
+`api.sql` is the one exception that is half-derived: `page_text` _is_ rebuilt by
 `build_index.sh` (into `page_text_new`, promoted alongside `pages`), while
 `api_keys` in the same file must never be touched. `build_index.sh` pulls out only
 the `page_text` CREATE block by `awk` and refuses to run if `api_keys` shows up in
@@ -137,7 +137,7 @@ The Worker reads `cf-access-authenticated-user-email` and shows it in the footer
 If that header is absent the site is unprotected — check before pointing anyone at it.
 
 **Except `/api/v1`.** The Claude Code skill authenticates with a bearer token, so
-it needs a path Access lets through. A *second* application, with a **Bypass
+it needs a path Access lets through. A _second_ application, with a **Bypass
 (Everyone)** policy, covers exactly that prefix:
 
 - Application domain: `nccn.hsiehting.com`, path `api/v1`
@@ -220,7 +220,7 @@ puts a warning dot on the gear when the last run failed, partly failed, or has n
 run in 2 days. **A totally failed run logs via `console.error`** so it shows up as
 error-level in Workers Observability — that is the thing to alert on.
 
-KV only ever holds the *last* run, so it cannot answer "was it also broken last
+KV only ever holds the _last_ run, so it cannot answer "was it also broken last
 week?". The same record is therefore written a second time, as a row in the
 notification centre (§5.5), which keeps history and read/unread state.
 
@@ -252,26 +252,25 @@ Order matters; each step is a script in `cf/`:
 3. `gen_versions.sh` → `meta/versions.json` (the version badges)
 4. `gen_thumbs.sh` → `thumb/<id>.webp`
 5. `build_index.sh` → the D1 FTS5 index
-5.5. `gen_insights.sh` → AI page insights for `needsVision` pages of the ids that
+   5.5. `gen_insights.sh` → AI page insights for `needsVision` pages of the ids that
    genuinely changed this run (issue #9). Reads Gemini's per-model daily budget and
    Groq's daily budget before each call and stops cleanly (not a failure) when
    either is spent, picking up where it left off next run. `continue-on-error:
-   true` — a broken run here must never block TOC/updates/verify.
+true` — a broken run here must never block TOC/updates/verify.
 
    **`page_raw` is keyed on content, not just `(gid, page)`.** Each row stores
    `sha = sha256(cleanPageText(page_text.body))`, and a cached transcription is
    reused only when that hash still matches; a `NULL` or unobtainable sha counts as
    stale. Without it, `get_or_create_raw` had no version awareness at all — after a
-   guideline shipped a new version it would hand the *previous* version's
+   guideline shipped a new version it would hand the _previous_ version's
    transcription to Groq and silently succeed, since that transcription is the sole
    source for all four formats. The table sat nearly empty for a year, so the defect
    never surfaced until 922 pages were loaded into it in September 2026.
 
    Two deliberate negatives, both measured:
-
    - **Not the PDF bytes, and not the page image.** NCCN regenerates the PDF on
      every download, so byte hashes never match (§the `gen_clean.sh` note below).
-     A *page image* hash fails differently: the batch rasterizes with
+     A _page image_ hash fails differently: the batch rasterizes with
      `pdftoppm -scale-to-x 1100`, the Worker with the browser's pdf.js, so the same
      page yields different bytes on each side — and both write to this one table,
      so they would endlessly invalidate each other's work. Extracted text carries
@@ -293,18 +292,19 @@ Order matters; each step is a script in `cf/`:
    usually touches only a few pages; regenerating the rest would burn the daily
    budget and overwrite existing notes — including hand-made ones — with a fresh
    `gpt-oss-20b` pass.
+
 6. `build_toc.sh` → `meta/toc/<id>.json`
 7. `build_updates.sh` → `meta/updates/<id>.json` (what changed in this version)
 8. **Verify the result** — index row count, `page_text` row count matching it, and
    that both manifests cover the catalogue. A step can pass on its own terms and
    still leave the site wrong.
 9. **Bump `api:gen`** — one KV write that invalidates every `/api/v1` cache entry
-   at once. It runs *after* verification on purpose: dropping the cache first and
+   at once. It runs _after_ verification on purpose: dropping the cache first and
    only then discovering the rebuild was broken trades a good cache for bad data.
 
 The last two steps feed the notification centre: `archive_notify.sh` rolls
 anything older than 90 days off to R2, and a final `if: always()` step posts the
-run's own outcome — green *or* red — so a silently-broken weekly rebuild is
+run's own outcome — green _or_ red — so a silently-broken weekly rebuild is
 visible on the home page.
 
 Run it by hand: `gh workflow run update-versions.yml`, then
@@ -348,7 +348,7 @@ and records the version; no forced full rebuild.
 
 **`gen_clean.sh` runs first, and that ordering is load-bearing.** It is the step
 that writes the root object `<id>.pdf`; every step after it derives from that
-object. It used to run *last*, which meant each week's badges, thumbnails, search
+object. It used to run _last_, which meant each week's badges, thumbnails, search
 index, TOC and updates all described the **previous** week's PDF — measured:
 breast shipped v6.2026 in the 2026-08-03 run and `versions.json` still said
 v5.2026 until a manual dispatch on 08-06 happened to catch up.
@@ -362,7 +362,7 @@ that local file (`fetch_clean` in `cf/lib.sh`; the same rule is reimplemented in
 
 Ids that `gen_clean.sh` **skipped** (source sha unchanged) or **failed** to upload
 deliberately do not land in `CLEAN_DIR`, so those fall back to R2. That is
-correct, not a gap: what is live for those ids *is* the older object, and derived
+correct, not a gap: what is live for those ids _is_ the older object, and derived
 data must describe what readers actually get.
 
 That is also why this step alone carries `continue-on-error: true`. Its guard is
@@ -405,12 +405,12 @@ The bell in the header. Answers one question: **is the cron still alive?**
 
 Four kinds of event land in the D1 `notifications` table:
 
-| kind | written by | when |
-|---|---|---|
-| `cron` | Worker, `refreshBatch` → `notifyCron` | every daily run, info / warn / error |
-| `cookie` | Worker, same call | only when a run gets **nothing** through |
-| `version` | `gen_versions.sh` | a guideline's `Version X.YYYY` changed |
-| `ci` | `update-versions.yml`, final step | the weekly rebuild, green or red |
+| kind      | written by                            | when                                     |
+| --------- | ------------------------------------- | ---------------------------------------- |
+| `cron`    | Worker, `refreshBatch` → `notifyCron` | every daily run, info / warn / error     |
+| `cookie`  | Worker, same call                     | only when a run gets **nothing** through |
+| `version` | `gen_versions.sh`                     | a guideline's `Version X.YYYY` changed   |
+| `ci`      | `update-versions.yml`, final step     | the weekly rebuild, green or red         |
 
 Three decisions worth not undoing:
 
@@ -443,7 +443,7 @@ Archived history is at `meta/notify/YYYY-MM.jsonl` in R2. `archive_notify.sh`
 prunes a month from D1 **only** after that month's object writes successfully, so
 a failed upload costs a retry, never the history.
 
-Every script ends with `[ "$ok" -gt 0 ]` — a run where *nothing* succeeded goes
+Every script ends with `[ "$ok" -gt 0 ]` — a run where _nothing_ succeeded goes
 red. That guard exists because these scripts once reported success for weeks while
 an empty `CLOUDFLARE_API_TOKEN` made every read a no-op.
 
@@ -476,20 +476,19 @@ saved bookmarks, cached AI notes, full-text search, and the PDFs themselves —
   on the fly (`lib/zip.js` writes store-mode zip by hand — Workers has no zip
   writer, and a compression library is not worth 40 KB of text).
 - **Keys are derived, not stored** (issue #11). `key = "nccn_" +
-  b64url(HMAC-SHA256(API_KEY_SECRET, "<email>:<version>"))`. `api_users` holds the
+b64url(HMAC-SHA256(API_KEY_SECRET, "<email>:<version>"))`. `api_users` holds the
   email and an integer and **no key column**: the minter and the validator each
   recompute it, so there is nothing to store and nothing to leak. Revoking is
   `key_version + 1` — one write, scoped to one person. Changing `API_KEY_SECRET`
   revokes everyone at once.
 - **The email is bound into the key, so it can be self-asserted.** The caller
-  sends `X-User-Email`; that header selects the row *and* goes into the HMAC, so
+  sends `X-User-Email`; that header selects the row _and_ goes into the HMAC, so
   claiming somebody else's address just produces a hash that does not match.
 
   **Unknown email and wrong key must be indistinguishable.** `/api/v1` is Access-
   bypassed, so a different response for "no such user" would let the open internet
   enumerate who has access. A missing row therefore runs the full HMAC with
-  version 0 (versions start at 1, so it never matches) and returns the identical
-  401. `test/derivedkey.test.js` asserts the two results are `toEqual`.
+  version 0 (versions start at 1, so it never matches) and returns the identical 401. `test/derivedkey.test.js` asserts the two results are `toEqual`.
 
 The older random keys (`api_keys`, `sha256(key)` + a 12-char prefix) still
 validate. They are deprecated, not removed: they are already installed on other
@@ -528,7 +527,7 @@ Adding one is an expand/contract migration and deliberately not part of issue #1
 
 ### Caching
 
-Four layers: isolate memory → `caches.default` (keyed on the URL *without* the
+Four layers: isolate memory → `caches.default` (keyed on the URL _without_ the
 token, so all keys share one entry) → KV → D1/R2. Every KV key carries a
 generation prefix (`api:<gen>:toc:aml`); CI bumps `api:gen` once per rebuild and
 the whole cache goes stale at once, with 30-day TTLs clearing the orphans.
@@ -562,20 +561,20 @@ the validation result in KV and deleted that entry on revoke, which looks
 airtight. In production a revoked key kept working for over 24 seconds with D1
 already marked and the KV entry already gone: KV reads have their own edge cache
 and KV is eventually consistent, so "this key is dead" propagates on KV's
-schedule, not yours. A cache layer can hold data; it must not hold *may this
-caller in*. `test/apiflow.test.js` asserts nothing under `apikey:` is ever
+schedule, not yours. A cache layer can hold data; it must not hold _may this
+caller in_. `test/apiflow.test.js` asserts nothing under `apikey:` is ever
 written to KV.
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| Skill gets the Access login page as HTML | The bypass application is missing or its path is wrong | §3 — path must be `api/v1` |
-| Every call 401s right after issuing a key | `sql/api.sql` / `sql/apiuser.sql` was never run | §2 |
-| Every call 401s but the key looks right | The `.env` has `NCCN_USER_EMAIL` and the request did not send `X-User-Email` — a derived key only validates against its own address | send the header; `nccn.py whoami` shows which kind of key this is |
-| The settings sheet says "尚未啟用" | `API_KEY_SECRET` is not set, so downloads fall back to the legacy random key | `openssl rand -hex 32 \| wrangler secret put API_KEY_SECRET` |
-| `/raw/:id` 404s | That page has no transcription — it is not a flowchart page, or the vision budget has not reached it yet | expected; use `/page`, and only then the PDF |
-| `/page` and `/section` 404 on everything | `page_text` is empty — the index has not been rebuilt since this feature landed | run `build_index.sh`, or wait for Monday |
-| Stale data after a rebuild | `api:gen` was not bumped (that CI step failed) | `wrangler kv key put api:gen "$(date +%s)" --binding NCCN_KV --remote` |
-| `/updates/:id` 404s for one guideline | It ships no update pages, or uses an older heading | normal; `build_updates.log` says `no-updates` |
+| Symptom                                   | Cause                                                                                                                               | Fix                                                                    |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Skill gets the Access login page as HTML  | The bypass application is missing or its path is wrong                                                                              | §3 — path must be `api/v1`                                             |
+| Every call 401s right after issuing a key | `sql/api.sql` / `sql/apiuser.sql` was never run                                                                                     | §2                                                                     |
+| Every call 401s but the key looks right   | The `.env` has `NCCN_USER_EMAIL` and the request did not send `X-User-Email` — a derived key only validates against its own address | send the header; `nccn.py whoami` shows which kind of key this is      |
+| The settings sheet says "尚未啟用"        | `API_KEY_SECRET` is not set, so downloads fall back to the legacy random key                                                        | `openssl rand -hex 32 \| wrangler secret put API_KEY_SECRET`           |
+| `/raw/:id` 404s                           | That page has no transcription — it is not a flowchart page, or the vision budget has not reached it yet                            | expected; use `/page`, and only then the PDF                           |
+| `/page` and `/section` 404 on everything  | `page_text` is empty — the index has not been rebuilt since this feature landed                                                     | run `build_index.sh`, or wait for Monday                               |
+| Stale data after a rebuild                | `api:gen` was not bumped (that CI step failed)                                                                                      | `wrangler kv key put api:gen "$(date +%s)" --binding NCCN_KV --remote` |
+| `/updates/:id` 404s for one guideline     | It ships no update pages, or uses an older heading                                                                                  | normal; `build_updates.log` says `no-updates`                          |
 
 ---
 
@@ -591,7 +590,7 @@ index, same pdf.js viewer.
 - **`mda-` namespaces every id.** Both catalogues contain `vte`, `pain` and
   `distress`, and every source shares one R2 root for `<id>.pdf`. Without the
   prefix the collision is not a lookup bug, it is one PDF overwriting another.
-- **The id comes from the *filename*, never the title.** The upstream names are
+- **The id comes from the _filename_, never the title.** The upstream names are
   irregular in four different ways — some lack `-web`, one lives under
   `survivorship/` rather than `clinical-management/`, one contains `%20`. So the
   catalogue stores `file` verbatim (the path under `…/for-physicians/algorithms/`)
@@ -609,14 +608,14 @@ index, same pdf.js viewer.
 The algorithms cross-reference each other, and the viewer turns those into local
 navigation. `lib/view.js` `internalLinkId` is the whole rule:
 
-| link in the PDF | becomes |
-|---|---|
-| `…/physician_gls/pdf/breast.pdf` | `/preview/breast` |
+| link in the PDF                                                                          | becomes             |
+| ---------------------------------------------------------------------------------------- | ------------------- |
+| `…/physician_gls/pdf/breast.pdf`                                                         | `/preview/breast`   |
 | `…/for-physicians/algorithms/clinical-management/clin-management-pert-web-algorithm.pdf` | `/preview/mda-pert` |
-| `mdandersonorg.sharepoint.com/…` (hospital intranet) | left external |
-| `…/algorithms/cancer-treatment/…` (the sibling family, not ingested) | left external |
+| `mdandersonorg.sharepoint.com/…` (hospital intranet)                                     | left external       |
+| `…/algorithms/cancer-treatment/…` (the sibling family, not ingested)                     | left external       |
 
-The NCCN rule can slice the id out of the URL because the filename *is* the id.
+The NCCN rule can slice the id out of the URL because the filename _is_ the id.
 The MDA rule **cannot**, and looks the path up in `ID_BY_FILE` instead — keyed on
 the same `file` string used to fetch, so link resolution and fetching cannot
 drift apart. Within-document jumps (`see Appendix A` → page 4) need no rule at
@@ -631,14 +630,14 @@ python3 -c "import json;d=json.load(open('algorithms.json'));print(len(d))"
 LIMIT=3 SLEEP=0 bash refresh_mda.sh    # 抓三份（需要 R2 token）
 ```
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| An algorithm's card says 未快取 forever | Its `file` no longer exists upstream | `bash gen_mda_catalogue.sh` — a renamed file shows up as one `-` and one `+` |
-| A cross-reference inside a PDF opens mdanderson.org instead of staying on-site | That target is not in the catalogue (a `cancer-treatment` algorithm, or the catalogue is stale) | expected for `cancer-treatment`; otherwise regenerate the catalogue and redeploy |
-| The MD Anderson tab is empty after a deploy | `src/data/algorithms.js` was not regenerated/committed | `bash gen_mda_catalogue.sh && pnpm run deploy` |
-| `gen_mda_catalogue.sh` exits non-zero with "refusing to overwrite" | The index page returned something that parses to <50 entries (redesign, or an error page) | Look at it by hand before touching the guard — the guard is what stops a truncated catalogue retiring 40 PDFs |
-| Cards show no version badge | `gen_versions.sh` has not run since these landed | wait for Monday, or run it |
-| `versions.json` covers 90/91, never 91 | `mda-adult-blood` is a one-page placeholder upstream ("currently undergoing updates"), with no `Department of Clinical Effectiveness V<N>` footer to read | expected — leave it; it comes back on its own when MD Anderson republishes the algorithm |
+| Symptom                                                                        | Cause                                                                                                                                                     | Fix                                                                                                           |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| An algorithm's card says 未快取 forever                                        | Its `file` no longer exists upstream                                                                                                                      | `bash gen_mda_catalogue.sh` — a renamed file shows up as one `-` and one `+`                                  |
+| A cross-reference inside a PDF opens mdanderson.org instead of staying on-site | That target is not in the catalogue (a `cancer-treatment` algorithm, or the catalogue is stale)                                                           | expected for `cancer-treatment`; otherwise regenerate the catalogue and redeploy                              |
+| The MD Anderson tab is empty after a deploy                                    | `src/data/algorithms.js` was not regenerated/committed                                                                                                    | `bash gen_mda_catalogue.sh && pnpm run deploy`                                                                |
+| `gen_mda_catalogue.sh` exits non-zero with "refusing to overwrite"             | The index page returned something that parses to <50 entries (redesign, or an error page)                                                                 | Look at it by hand before touching the guard — the guard is what stops a truncated catalogue retiring 40 PDFs |
+| Cards show no version badge                                                    | `gen_versions.sh` has not run since these landed                                                                                                          | wait for Monday, or run it                                                                                    |
+| `versions.json` covers 90/91, never 91                                         | `mda-adult-blood` is a one-page placeholder upstream ("currently undergoing updates"), with no `Department of Clinical Effectiveness V<N>` footer to read | expected — leave it; it comes back on its own when MD Anderson republishes the algorithm                      |
 
 ---
 
@@ -721,6 +720,111 @@ bash load_snippets.sh                     # 檔案 → D1（冪等，不覆寫 r
 
 ---
 
+## 5.10 核心課程與簡報圖庫
+
+第四個 tab。把 NCCN 拆成能講給別人聽的學習模組，外加一個白底雙色、可匯出 PNG 的
+簡報圖庫。前三個 tab 是查詢，這一個是**學習與輸出**。
+
+設計在 [`docs/plans/2026-09-09-core-course-design.md`](docs/plans/2026-09-09-core-course-design.md)，
+要寫一堂課看 [`cf/courses/AUTHORING.md`](cf/courses/AUTHORING.md)（讀完那一頁就能寫，
+不需要對話紀錄），**還沒有人審過的東西列在
+[`cf/courses/REVIEW.md`](cf/courses/REVIEW.md)**。
+
+乳癌 13 課已完成並經過三輪對抗性審查（56 處修正）。`REVIEW.md` 記著五件必須由臨床
+醫師拍板的事，其中最重要的是 `BINV-7` 的 recurrence score 分段對應——它決定停經前
+RS 16–25 的病人要不要化療，而那個對應**從 `page_text` 重建不出來**（5 個標籤對 4 個
+outcome 區塊，其中兩個逐字元相同，且區塊順序不是標籤順序）。
+
+```
+cf/courses/breast/<order>-<slug>.md        課程本文，TOML frontmatter + Markdown
+cf/courses/figures/figure.css              圖的共用 primitives（配色的唯一真相）
+cf/courses/figures/breast/<slug>.html      一張圖一個檔，手刻
+cf/gen_courses.sh                          md + 圖 → src/data/courses.js（CI 用 --check 比對）
+cf/gen_figures.sh                          圖 → figures-out/*.png（3200×1600）
+cf/upload_figures.sh                       PNG → R2 figure/<id>.png
+cf/verify_courses.py                       四關
+```
+
+路由：`/course`（學習路徑）、`/course/<track>/<module>`（本文）、`/figures`（圖庫）、
+`/figures/<id>.png`（R2）。
+
+### 五個決定值得知道
+
+- **內容真相在 git，網頁唯讀。** 勾選與遮罩進度走 `localStorage`，不動 D1、不加 API。
+  為了跨裝置同步而開一張表、一組讀寫 API 與一套 per-user 語意，代價遠大於「在另一台
+  電腦上重新勾一次」。
+- **預先編譯成 JS 模組。** Worker 裡沒有檔案系統，把 markdown parser 搬進去等於每個
+  請求重做同樣的解析。`src/data/courses.js` 是**生成檔**——改 md 之後要重跑
+  `gen_courses.sh`，CI 的 `Courses in sync` 那一步會抓沒重跑的情況。
+- **課程本文中英夾雜，圖裡的文字一律英文。** 圖要貼進學會演講的投影片，那個場合的
+  語言是英文。同一課裡文字中文、圖英文是刻意的。
+- **圖永遠白底，不隨主題變。** 深色模式下就是一張白卡片。網頁上看到的那張圖，就是
+  匯出成 PNG 的那一張——跟著主題反白就有兩套渲染，而只有其中一套會出現在演講裡。
+- **2:1 是因為 16:9 的投影片上面要留標題、下面要留引用。** 中間剩下的就是 2:1，所以
+  圖生下來就是這個比例，貼進去不用裁。因此**圖裡不放大標題**。
+
+### 三個踩過的坑
+
+- **圖的 CSS 變數全部帶 `--fig-` 前綴。** 沒有前綴的第一版裡，課程頁面 `:root` 的
+  `--brand`（HSL 分量 `181 27% 32%`）蓋掉了圖的 `--brand`（色碼 `#3d6869`），
+  `background: var(--brand)` 收到一段不是顏色的字串而失效——整排 preferred 方案在
+  網頁上消失，而 PNG 完全正常，因為那裡沒有宿主頁面。
+- **`transform: scale(calc(100cqw / 1600px))`**，除以 `1600px` 不是 `1600`。長度除以
+  無單位數還是長度，而 `scale()` 只吃無單位數，整條 transform 會被丟掉、圖以 1:1
+  溢出容器。
+- **`gen_courses.sh --check` 用環境變數傳模式**，不是位置參數。`node -e 'script' --check`
+  會被 node 當成自己的旗標（`either --check or --eval can be used, not both`），而那個
+  錯誤訊息完全看不出跟這支腳本有關。
+
+### 版面的兩條經驗
+
+矩陣圖用 `.fig-col.fill` 平分欄高才填得滿；流程圖不要平分，節點自然高度、整列
+`align-items:center` 成團置中，留白對稱落在上下。**內容不夠撐滿 1600×800 時，加有
+價值的資訊（試驗名、貫穿全程的橫帶），不要放大盒子**——放大盒子會得到一堆 300px 高
+的空框。
+
+### 操作
+
+```bash
+cd cf
+bash gen_courses.sh                    # 編譯（缺段、段名打錯、frontmatter 缺欄位都會爆）
+bash gen_figures.sh [<fig id>...]      # 截 PNG 到 figures-out/（gitignore）
+bash upload_figures.sh                 # PNG → R2，讓「下載 PNG」按鈕能用
+python3 verify_courses.py [--debug]    # 四關；--debug 印出每張圖量到的尺寸
+npx wrangler dev --local --port 8791   # http://127.0.0.1:8791/course
+```
+
+| Symptom                               | Cause                                                        | Fix                                             |
+| ------------------------------------- | ------------------------------------------------------------ | ----------------------------------------------- |
+| 課程頁的圖變成沒有版面的純文字        | `FIGURE_CSS` 沒被編進 `courses.js`，或 view 沒插進 `<style>` | 重跑 `gen_courses.sh`                           |
+| 圖在網頁上少了實心節點，PNG 卻正常    | 圖用了沒有 `--fig-` 前綴的 CSS 變數，被頁面的 `:root` 蓋掉   | 加前綴                                          |
+| 圖在網頁上以 1:1 溢出                 | `.figwrap > .fig` 的 scale 算式壞了                          | 見上面第二個坑                                  |
+| 「下載 PNG」404                       | PNG 還沒上傳 R2                                              | `bash gen_figures.sh && bash upload_figures.sh` |
+| 改了 md 但網頁沒變                    | 忘了重跑 `gen_courses.sh`                                    | 重跑；CI 也會擋                                 |
+| `verify_courses.py` 說某個 ref 找不到 | `snippets/_src/<gid>/` 是舊的 dump                           | `bash .devcontainer/dump-src.sh <gid>`          |
+| 課程頁 404 或被導回 `/course`         | 該 id 不在 `COURSES` 裡                                      | 檢查 frontmatter 的 `id` 與檔名 slug 是否一致   |
+
+**四關全過不代表內容是對的。** 跟 §5.9 的清單同一個問題：機械檢查擋不住編出來的
+藥名、掉了的限定詞（`±` 寫成 `+`、`consider` 寫成 `should`）與憑空生成的規則。
+每一課寫完要拿 `snippets/_src` 的素材逐條對。`review` 維持 NULL 直到臨床人審。
+
+三輪對抗性審查抓到 56 處，分佈值得知道：**最常見的不是編造，是限定詞被抹平**
+（`up to 3` 寫成 `3`、`± pertuzumab` 寫成 `+`、`consider` 寫成「要」、category 2B 沒標），
+其次是**「好記但錯」的記憶法**——那一類最危險，因為它會被背起來。圖上的錯誤又比文字
+嚴重一級：圖會被單獨拿去做投影片，脫離課程的脈絡與聲明。
+
+**素材缺頁（已修，2026-09-09）。** `dump_snippet_src.sh` 原本只倒每個 ref 的第 1 頁。
+根因在頁尾樣式：多頁節點寫成 `BINV-Q 4 OF 15`，而抓頁尾的正則只認 `-數字` 結尾
+（`BINV-Q` 的 Q 不是數字），於是那 15 頁一頁都對不上，只能靠 TOC 給的那一個條目。
+乳癌重跑後 `BINV-Q` 4.6 KB → 58 KB、`BINV-M` 4.7 KB → 35 KB（**所有 regimen 的名稱與
+劑量**）、`BINV-K` 補回 CDK4/6 的 eligibility criteria、`BINV-A` 補回 ER/PR 判讀原則。
+
+這個缺口跟課程無關，**`cf/snippets/` 的核對清單用的是同一份素材**——其他 90 份指引都
+該重跑一次 `_src` 並比對。乳癌 13 課是在補齊之前寫的，它們在缺頁處誠實指路沒有編內容，
+但每一課現在都能再厚一層（清單在 `cf/courses/REVIEW.md` §3）。
+
+---
+
 ## 6. R2 layout
 
 ```
@@ -734,6 +838,7 @@ meta/toc/<id>.json  Discussion table of contents (NCCN only)
 meta/updates/<id>.json  "Summary of the Guidelines Updates", parsed into items (NCCN only)
 meta/notify/*.jsonl notifications older than 90 days, one month per object
 asset/*.png         PWA icons
+figure/<id>.png     簡報素材圖，3200x1600（§5.10；<id> 的斜線換成連字號）
 ```
 
 There is deliberately **no `raw/mda-*.pdf`**: `raw/` exists so `gen_clean.sh` has
@@ -776,28 +881,28 @@ curl -sI -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
 > the old bytes and the old `last-modified` back. Do not conclude a write failed
 > from a stale timestamp — check the job log for the `OK <id>` line instead.
 > (This is also why `build_index.sh` strips the NCCN banner from the extracted
-> *text* rather than trusting the object to already be banner-free.)
+> _text_ rather than trusting the object to already be banner-free.)
 
 ---
 
 ## 7. Troubleshooting, by symptom
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| Preview returns 502 | Cookie expired | Re-paste the cookie (§5) |
-| Gear has a warning dot | Cookie missing, or the last cron failed / is stale | Open settings — the chip says which |
-| Search returns nothing | Index rebuild wiped it | Re-run `build_index.sh`; the staging swap should now prevent this |
-| Action green but nothing changed | A script exiting 0 on total failure | Every `gen_*.sh` / `refresh_*.sh` ends with `[ "$ok" -gt 0 ]` — if you add another, do the same |
-| Every R2/D1 read is empty in CI | Token missing or under-scoped | §1; the "Check the token" step catches this now |
-| `Invalid access token` on deploy | OAuth creds revoked | Use the API token, not `wrangler login` |
-| A rebuilt PDF still looks old in the browser | `/pdf/:id` is browser-cached for a day | §6 — hard-reload, or wait out `max-age` |
-| A guideline never refreshes | Parked after 3 consecutive failures | `wrangler kv key get cron_state --binding NCCN_KV --remote`; delete its entry to retry now |
-| Bell says "已 N 天沒有紀錄" | The Worker cron did not fire, or D1 writes are failing | `wrangler tail nccn-download` over a run; compare KV `cron_health` against the newest `cron` row in D1 |
-| Bell is empty on a working site | `sql/notify.sql` was never run | §2 — every read in `lib/notify.js` swallows the missing-table error by design |
-| The Claude Code skill stopped working | Key revoked, `sql/api.sql` missing, or the Access bypass changed | §5.6 has its own symptom table |
-| Anything about the MD Anderson tab | — | §5.7 has its own symptom table |
-| Search in one tab returns the other source's PDFs | `/api/search` was called without `src=` | the home page always sends it; a hand-rolled call has to as well |
-| Some cards say 未快取 although R2 has the file | `R2.list` truncated at 1000 objects | fixed by the cursor loop in `/api/r2-status`; if it comes back, the bucket has grown past what one page can hold *plus* the loop is broken |
+| Symptom                                           | Cause                                                            | Fix                                                                                                                                        |
+| ------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Preview returns 502                               | Cookie expired                                                   | Re-paste the cookie (§5)                                                                                                                   |
+| Gear has a warning dot                            | Cookie missing, or the last cron failed / is stale               | Open settings — the chip says which                                                                                                        |
+| Search returns nothing                            | Index rebuild wiped it                                           | Re-run `build_index.sh`; the staging swap should now prevent this                                                                          |
+| Action green but nothing changed                  | A script exiting 0 on total failure                              | Every `gen_*.sh` / `refresh_*.sh` ends with `[ "$ok" -gt 0 ]` — if you add another, do the same                                            |
+| Every R2/D1 read is empty in CI                   | Token missing or under-scoped                                    | §1; the "Check the token" step catches this now                                                                                            |
+| `Invalid access token` on deploy                  | OAuth creds revoked                                              | Use the API token, not `wrangler login`                                                                                                    |
+| A rebuilt PDF still looks old in the browser      | `/pdf/:id` is browser-cached for a day                           | §6 — hard-reload, or wait out `max-age`                                                                                                    |
+| A guideline never refreshes                       | Parked after 3 consecutive failures                              | `wrangler kv key get cron_state --binding NCCN_KV --remote`; delete its entry to retry now                                                 |
+| Bell says "已 N 天沒有紀錄"                       | The Worker cron did not fire, or D1 writes are failing           | `wrangler tail nccn-download` over a run; compare KV `cron_health` against the newest `cron` row in D1                                     |
+| Bell is empty on a working site                   | `sql/notify.sql` was never run                                   | §2 — every read in `lib/notify.js` swallows the missing-table error by design                                                              |
+| The Claude Code skill stopped working             | Key revoked, `sql/api.sql` missing, or the Access bypass changed | §5.6 has its own symptom table                                                                                                             |
+| Anything about the MD Anderson tab                | —                                                                | §5.7 has its own symptom table                                                                                                             |
+| Search in one tab returns the other source's PDFs | `/api/search` was called without `src=`                          | the home page always sends it; a hand-rolled call has to as well                                                                           |
+| Some cards say 未快取 although R2 has the file    | `R2.list` truncated at 1000 objects                              | fixed by the cursor loop in `/api/r2-status`; if it comes back, the bucket has grown past what one page can hold _plus_ the loop is broken |
 
 ---
 
@@ -828,7 +933,7 @@ curl -sI -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
   and `pnpm test` cannot see it. Measure it in a real browser before believing
   it. Deferring a page's canvas until its render finished — so it could crossfade
   instead of flashing white — measured 463 ms → 1305 ms to first pixels, because
-  the browser can no longer paint pdf.js's progress. A page's *first* canvas now
+  the browser can no longer paint pdf.js's progress. A page's _first_ canvas now
   goes straight into the DOM; only replacements get the crossfade.
 - Views are single template literals in `cf/src/views/*`. There is no build step
   for the front end; `node --check` the extracted `<script>` block if you change
@@ -846,7 +951,7 @@ curl -sI -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
   rule in `internalLinkId`, a `gen_versions.sh` case, and a decision about each of
   `build_toc` / `build_updates` / `gen_clean`. Everything else follows from the id
   namespace.
-- `src/skill/*` is the *content* of the `.skill` package, pulled into the bundle as
+- `src/skill/*` is the _content_ of the `.skill` package, pulled into the bundle as
   Text modules. It lives under `src/` because that is where wrangler's module rules
   can reach it — read the two warnings above `rules` in `wrangler.jsonc` before
   changing anything there, both were found the hard way. `vitest.config.js` mirrors
@@ -865,7 +970,7 @@ curl -sI -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
 三件會咬人的事：
 
 - **Codespaces secret 只需要 `CLOUDFLARE_API_TOKEN` 一個**（`gh secret set … --app
-  codespaces`）。account id 已經明文在 `devcontainer.json` 與所有 workflow 裡。
+codespaces`）。account id 已經明文在 `devcontainer.json` 與所有 workflow 裡。
   `.env` 由 `setup-env.sh` 在**每次啟動**時還原，不是建立時——prebuild 階段拿不到
   secrets，用 postCreate 寫的話預建出來的機器會帶著一份空的 `.env`，然後每個
   wrangler 呼叫都安靜地讀到 0 筆。
