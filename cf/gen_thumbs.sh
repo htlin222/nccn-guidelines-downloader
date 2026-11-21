@@ -5,7 +5,7 @@
 # Covers both catalogues: pdftoppm does not care where the PDF came from.
 set -u
 cd "$(dirname "$0")"
-[ -f ../.env ] && set -a && . ../.env && set +a  # load token if present
+. ./_dotenv.sh  # ../.env (op:// refs → re-exec under op run)  # load token if present
 . ./lib.sh
 BUCKET="nccn-pdfs"
 IDS=$(python3 -c "import json;print('\n'.join(g['id'] for f in ('guidelines.json','algorithms.json') for g in json.load(open(f))))")

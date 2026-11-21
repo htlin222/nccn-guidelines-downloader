@@ -70,6 +70,10 @@ EOF
 gh secret set CLOUDFLARE_API_TOKEN
 ```
 
+> **Local `.env` holds 1Password `op://` refs.** The `cf/*.sh` scripts handle it
+> (`cf/_dotenv.sh` re-execs them under `op run`). For the hand-run snippets in this
+> file, replace `set -a && . ../.env && set +a` with `op run --env-file=../.env -- <cmd>`.
+
 Verify it reaches all three bindings before trusting it:
 
 ```bash

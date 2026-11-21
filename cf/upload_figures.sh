@@ -11,12 +11,7 @@
 set -u
 cd "$(dirname "$0")" || exit 1
 
-if [ -f ../.env ]; then
-  set -a
-  # shellcheck disable=SC1091
-  . ../.env
-  set +a
-fi
+. ./_dotenv.sh  # ../.env (op:// refs → re-exec under op run)
 if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
   echo "沒有 CLOUDFLARE_API_TOKEN — 見 CLAUDE.md §1" >&2
   exit 1

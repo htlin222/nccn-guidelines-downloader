@@ -50,7 +50,7 @@
 #   LIMIT=5 bash gen_clean.sh  # only the first 5 ids (smoke test)
 set -u
 cd "$(dirname "$0")"
-[ -f ../.env ] && set -a && . ../.env && set +a  # load token if present
+. ./_dotenv.sh  # ../.env (op:// refs → re-exec under op run)  # load token if present
 BUCKET="nccn-pdfs"
 STRIP="../strip_nccn_disclaimer.py"
 FORCE="${FORCE:-0}"

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
 	badgeCount,
 	cronEvents,
+	eventGid,
 	fmtEvent,
 	relTime,
 	staleEvent,
@@ -256,5 +257,44 @@ describe("fmtEvent", () => {
 			sub: "",
 		});
 		expect(fmtEvent(null)).toEqual({ icon: "✓", sub: "" });
+	});
+});
+
+describe("eventGid", () => {
+	it("names the guideline a version bump is about", () => {
+		expect(
+			eventGid({
+				kind: "version",
+				body: JSON.stringify({ id: "hepatobiliary", from: "1.2026", to: "2.2026" }),
+			}),
+		).toBe("hepatobiliary");
+		expect(eventGid({ kind: "version", body: { id: "mda-pert" } })).toBe("mda-pert");
+	});
+
+	it("stays silent for events that are not about one document", () => {
+		// cron 講的是今天輪到的三份，digest 講的是一整批 —— 兩者都沒有單一目標。
+		expect(eventGid({ kind: "cron", body: { ids: ["aml", "cll", "nscl"] } })).toBe("");
+		expect(eventGid({ kind: "version", body: { ids: ["aml", "cll"] } })).toBe("");
+		expect(eventGid({ kind: "ci", body: { rows: 10670 } })).toBe("");
+	});
+
+	it("refuses anything that is not a plain id", () => {
+		// 這個字串會被接成 href，所以路徑分隔與協定都不能放行。
+		expect(eventGid({ kind: "version", body: { id: "../../etc/passwd" } })).toBe("");
+		expect(eventGid({ kind: "version", body: { id: "//evil.example" } })).toBe("");
+		expect(eventGid({ kind: "version", body: { id: "javascript:alert(1)" } })).toBe("");
+		expect(eventGid({ kind: "version", body: { id: 42 } })).toBe("");
+	});
+
+	it("does not blow up on a malformed body", () => {
+		expect(eventGid({ kind: "version", body: "{not json" })).toBe("");
+		expect(eventGid({ kind: "version" })).toBe("");
+		expect(eventGid(null)).toBe("");
+	});
+
+	it("is self-contained enough to inject into the page", () => {
+		// views/home.js 用 .toString() 原樣注入，所以不能參照模組層的任何東西。
+		const fn = new Function("return (" + eventGid.toString() + ")")();
+		expect(fn({ kind: "version", body: { id: "breast" } })).toBe("breast");
 	});
 });

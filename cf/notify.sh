@@ -15,7 +15,7 @@
 # 同 title 且還沒讀，就只把時間往前推，不再插一筆——否則連壞五天會洗出五列一樣的話。
 set -u
 cd "$(dirname "$0")"
-[ -f ../.env ] && set -a && . ../.env && set +a
+. ./_dotenv.sh  # ../.env (op:// refs → re-exec under op run)
 
 KIND="${1:-ci}"
 LEVEL="${2:-info}"

@@ -8,7 +8,7 @@
 # infection guideline and MD Anderson's four inpatient algorithms in one list.
 set -u
 cd "$(dirname "$0")" || exit 1
-[ -f ../.env ] && set -a && . ../.env && set +a  # load token if present
+. ./_dotenv.sh  # ../.env (op:// refs → re-exec under op run)  # load token if present
 BUCKET="nccn-pdfs"
 DB="nccn-search"
 LIMIT="${LIMIT:-0}"

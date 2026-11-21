@@ -20,7 +20,7 @@
 #   SLEEP=0 bash refresh_mda.sh   # no pacing
 set -u
 cd "$(dirname "$0")" || exit 1
-[ -f ../.env ] && set -a && . ../.env && set +a  # load token if present
+. ./_dotenv.sh  # ../.env (op:// refs → re-exec under op run)  # load token if present
 BUCKET="nccn-pdfs"
 BASE="https://www.mdanderson.org/content/dam/mdanderson/documents/for-physicians/algorithms"
 UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"

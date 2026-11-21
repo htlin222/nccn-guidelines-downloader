@@ -10,7 +10,7 @@
 # algorithms carry a version stamp in the footer but no changelog pages.
 set -u
 cd "$(dirname "$0")" || exit 1
-[ -f ../.env ] && set -a && . ../.env && set +a
+. ./_dotenv.sh  # ../.env (op:// refs → re-exec under op run)
 del(){ command rip "$@" 2>/dev/null || find "$@" -delete 2>/dev/null; }
 . ./lib.sh
 BUCKET="nccn-pdfs"

@@ -8,7 +8,7 @@
 // CI 那兩種不打 Worker：站台在 Cloudflare Access 後面，webhook 會被登入頁擋下來，
 // 而 CI 本來就有一把 D1: Edit 的 token，直接寫表最省事，也少一組 secret。
 //
-// relTime / badgeCount / fmtEvent 會被 views/home.js 用 `.toString()` 原樣注入頁面，
+// relTime / badgeCount / fmtEvent / eventGid 會被 views/home.js 用 `.toString()` 原樣注入頁面，
 // 所以跟 lib/cite.js、lib/marks.js 的那幾支一樣 MUST 保持自足：只能用自己的參數與
 // JS 內建，不能參照模組層的任何東西（包括本檔的 const）。
 
@@ -221,13 +221,39 @@ export function fmtEvent(row) {
 	}
 	b = b || {};
 	var icon =
-		r.level === "error" ? "⛔" : r.level === "warn" ? "⚠️" : r.kind === "version" ? "✨" : "✓";
+		r.level === "error"
+			? "⛔"
+			: r.level === "warn"
+				? "⚠️"
+				: r.kind === "version"
+					? "✨"
+					: "✓";
 	var sub = "";
 	if (b.errors && b.errors.length) sub = b.errors.join("　");
 	else if (b.ids && b.ids.length) sub = b.ids.join("、");
 	else if (b.rows != null) sub = "索引 " + b.rows + " 筆";
 	else if (b.date) sub = b.date;
 	return { icon: icon, sub: sub };
+}
+
+// 這則通知在講哪一份指引 —— 有的話，通知中心那一列就直接連到 /preview/<id>。
+// 版本更新是唯一「一則對一份」的事件：cron 那列講的是今天輪到的三份、digest 講的
+// 是一整批，兩者都沒有單一目標，硬給一個連結只會連錯。所以這裡只認 body.id。
+// 注入前端用，MUST 保持自足。
+export function eventGid(row) {
+	var r = row || {};
+	if (r.kind !== "version") return "";
+	var b = r.body;
+	if (typeof b === "string") {
+		try {
+			b = JSON.parse(b);
+		} catch (e) {
+			b = {};
+		}
+	}
+	b = b || {};
+	var id = typeof b.id === "string" ? b.id : "";
+	return /^[a-z0-9][a-z0-9_.-]*$/.test(id) ? id : "";
 }
 
 // ---------------------------------------------------------------- D1 存取

@@ -11,7 +11,7 @@
 #   KIND=all bash dump_snippet_src.sh breast # 連參考附錄一起
 set -u
 cd "$(dirname "$0")" || exit 1
-[ -f ../.env ] && set -a && . ../.env && set +a
+. ./_dotenv.sh  # ../.env (op:// refs → re-exec under op run)
 GID="${1:?usage: dump_snippet_src.sh <gid>}"
 KIND="${KIND:-decision}"
 OUT="snippets/_src/$GID"

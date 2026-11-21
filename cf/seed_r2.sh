@@ -13,7 +13,7 @@
 # NCCN only：MDA 的 PDF 是公開的、沒有橫幅、也沒有 raw/ 副本，用 refresh_mda.sh。
 set -u
 cd "$(dirname "$0")"
-[ -f ../.env ] && set -a && . ../.env && set +a  # load token if present
+. ./_dotenv.sh  # ../.env (op:// refs → re-exec under op run)  # load token if present
 # cookie 以 KV 上那份為準——設定頁改的是它，../cookie.txt 通常是更早以前留下的。
 # 讀不到（沒有 token、沒有網路）才退回本機檔。
 COOKIE="$(wrangler kv key get cookie --binding NCCN_KV --remote 2>/dev/null | tail -1)"

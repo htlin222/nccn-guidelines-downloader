@@ -25,7 +25,7 @@ echo "BUILD_TIME → $STAMP"
 # "Edit Cloudflare Workers" template covers it. We used to hide .env here so
 # wrangler fell back to OAuth, but OAuth credentials get revoked and then
 # deploys fail with a bare "Invalid access token"; a scoped API token does not.
-if [ -f ../.env ]; then set -a; . ../.env; set +a; fi
+. ./_dotenv.sh  # ../.env (op:// refs → re-exec under op run)
 if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
 	echo "! 找不到 CLOUDFLARE_API_TOKEN（預期在 NCCN/.env）— 會退回 wrangler OAuth 登入" >&2
 fi

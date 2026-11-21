@@ -22,7 +22,7 @@
 
 set -euo pipefail
 cd "$(dirname "$0")"
-[ -f ../.env ] && { set -a; . ../.env; set +a; }
+. ./_dotenv.sh  # ../.env (op:// refs → re-exec under op run)
 
 DB="${DB:-nccn-search}"
 DRY="${DRY:-0}"

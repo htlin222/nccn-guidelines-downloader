@@ -60,6 +60,8 @@ wrangler kv key put "cookie" --path=../cookie.txt \
   --namespace-id=f1c25d8c3a604b3c9fb56d4ddc5f24bb --remote
 ```
 
+推完就 `rip ../cookie.txt`：KV 是唯一正本，`../nccn.sh`、`seed_r2.sh` 都直接讀 KV（`NCCN_COOKIE` 環境變數可覆寫），本機不留明文 cookie。
+
 ### 認證（手動下 wrangler 指令時要注意）
 
 token 放在 **repo 根目錄的 `NCCN/.env`**（gitignore 中，範本見 `.env.example`）。

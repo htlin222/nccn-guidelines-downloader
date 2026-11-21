@@ -22,7 +22,7 @@
 
 set -u
 cd "$(dirname "$0")" || exit 1
-[ -f ../.env ] && set -a && . ../.env && set +a
+. ./_dotenv.sh  # ../.env (op:// refs → re-exec under op run)
 GID="${1:?usage: dump_snippet_src_mda.sh <mda-gid>}"
 case "$GID" in
   mda-*) ;;

@@ -13,7 +13,7 @@
 # versionEvents need no idea which side a guideline came from.
 set -u
 cd "$(dirname "$0")"
-[ -f ../.env ] && set -a && . ../.env && set +a  # load token if present
+. ./_dotenv.sh  # ../.env (op:// refs → re-exec under op run)  # load token if present
 del(){ command rip "$@" 2>/dev/null || find "$@" -delete 2>/dev/null; }
 . ./lib.sh
 BUCKET="nccn-pdfs"

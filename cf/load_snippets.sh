@@ -10,7 +10,7 @@
 #   DRY=1 bash load_snippets.sh breast # 只產生 SQL，不寫 D1
 set -u
 cd "$(dirname "$0")" || exit 1
-[ -f ../.env ] && set -a && . ../.env && set +a
+. ./_dotenv.sh  # ../.env (op:// refs → re-exec under op run)
 GID="${1:-}"
 DRY="${DRY:-0}"
 DB="nccn-search"

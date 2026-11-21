@@ -24,8 +24,8 @@
 #     線是通的，不花任何 API 額度。DRY_RUN 不需要真的金鑰。
 set -u
 cd "$(dirname "$0")"
-[ -f ../.env ] && set -a && . ../.env && set +a
-[ -f ../groq_token ] && GROQ_API_KEY="${GROQ_API_KEY:-$(head -1 ../groq_token | tr -d '[:space:]')}"
+. ./_dotenv.sh  # ../.env (op:// refs → re-exec under op run)
+# GROQ_API_KEY comes from ../.env (op://Env/env-oncologist-snippets-nccn/GROQ_API_KEY).
 BUCKET="nccn-pdfs"
 DB="nccn-search"
 CLEAN_DIR="${CLEAN_DIR:-}"

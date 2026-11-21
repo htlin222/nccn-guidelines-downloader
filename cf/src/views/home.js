@@ -4,7 +4,7 @@ import { CATS } from "../data/categories.js";
 import { PER_DAY, BUILD_TIME } from "../lib/constants.js";
 import { escapeHtml } from "../lib/http.js";
 import { citeText, copyText, showToast, TOAST_CSS } from "../lib/cite.js";
-import { fmtEvent, relTime, staleEvent } from "../lib/notify.js";
+import { eventGid, fmtEvent, relTime, staleEvent } from "../lib/notify.js";
 import { hayHit } from "../lib/search.js";
 import { COURSES, FIGURES } from "../data/courses.js";
 
@@ -13,7 +13,12 @@ export function renderPage(request) {
 	// 兩份目錄各自成組地送到前端。合成一個陣列再靠 src 欄位篩看起來更省，但每次切
 	// 分頁都要重掃 178 筆——分開存，切換就只是換一個指標。
 	const srcs = JSON.stringify({
-		nccn: { label: "NCCN", title: "NCCN Guidelines", data: GUIDELINES, cats: CATS },
+		nccn: {
+			label: "NCCN",
+			title: "NCCN Guidelines",
+			data: GUIDELINES,
+			cats: CATS,
+		},
 		mda: {
 			label: "MD Anderson",
 			title: "Clinical Management Algorithms",
@@ -198,7 +203,8 @@ document.documentElement.dataset.inv=(d&&localStorage.getItem('nccninv')!=='0')?
   .badge.quiet{min-width:8px;height:8px;padding:0;background:hsl(var(--muted-foreground));font-size:0;line-height:0;top:2px;right:2px;}
   .nlist{display:flex;flex-direction:column;gap:7px;}
   .nrow{display:flex;gap:10px;align-items:flex-start;text-align:left;font:inherit;width:100%;cursor:pointer;
-    padding:9px 11px;border:1px solid hsl(var(--border));border-radius:10px;background:hsl(var(--card));color:inherit;}
+    padding:9px 11px;border:1px solid hsl(var(--border));border-radius:10px;background:hsl(var(--card));color:inherit;
+    text-decoration:none;}
   .nrow:hover{border-color:hsl(var(--ring));background:hsl(var(--accent));}
   .nrow.read{opacity:.55;}
   .nrow.synthetic{cursor:default;border-style:dashed;}
@@ -210,6 +216,8 @@ document.documentElement.dataset.inv=(d&&localStorage.getItem('nccninv')!=='0')?
   .nsub{font-size:.74rem;color:hsl(var(--muted-foreground));margin-top:2px;overflow-wrap:anywhere;}
   .nwhen{font-size:.7rem;color:hsl(var(--muted-foreground));flex-shrink:0;margin-top:1px;}
   .ndot{width:7px;height:7px;border-radius:999px;background:#3b82f6;flex-shrink:0;margin-top:7px;}
+  .ngo{font-size:.7rem;color:hsl(var(--muted-foreground));flex-shrink:0;margin-top:1px;}
+  a.nrow:hover .ngo{color:inherit;}
   .nrow.read .ndot{background:transparent;}
   .sheethead .btn{font-size:.74rem;padding:5px 10px;}
   .kin{background:hsl(var(--card));color:inherit;border:1px solid hsl(var(--border));border-radius:8px;padding:6px 9px;font-size:.8rem;width:190px;}
@@ -261,6 +269,9 @@ const SRCS = ${srcs};
 var SRC='nccn';try{var _s=localStorage.getItem('nccnsrc');if(_s&&SRCS[_s])SRC=_s;}catch(e){}
 try{var _u=new URLSearchParams(location.search).get('src');if(_u&&SRCS[_u]){SRC=_u;localStorage.setItem('nccnsrc',_u);}}catch(e){}
 var DATA=SRCS[SRC].data, CATS=SRCS[SRC].cats;
+// 兩份目錄合起來的 id 集合。只有通知中心用得到：它的事件不分來源，而 DATA 只是
+// 目前這個分頁的那一份。
+var IDSET={};Object.keys(SRCS).forEach(function(k){(SRCS[k].data||[]).forEach(function(g){IDSET[g.id]=1;});});
 const ICONS = {
   droplet:'<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>',
   utensils:'<path d="M3 2v7c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',
@@ -700,6 +711,7 @@ document.getElementById('makeSkill').onclick=async function(){
 var relTime=${relTime.toString()};
 var fmtEvent=${fmtEvent.toString()};
 var staleEvent=${staleEvent.toString()};
+var eventGid=${eventGid.toString()};
 var NOTIF={unread:0,alert:0};
 function paintBell(){
   var b=document.getElementById('bell');if(!b)return;
@@ -707,14 +719,24 @@ function paintBell(){
   b.innerHTML=svg('bell')+(n?'<span class="badge">'+(n>9?'9+':n)+'</span>':quiet?'<span class="badge quiet"></span>':'');
   b.title=n?n+' 則未處理的警示':quiet?NOTIF.unread+' 則未讀':'通知';
 }
+// 版本更新那幾列直接連到那份文件——看到「乳癌 v6.2026」的下一個動作就是去翻它，
+// 中間不該再隔一次「關掉通知、在格線裡找到它」。只在該 id 還在目錄裡時才連：
+// 指引被 NCCN 下架之後，舊通知還留著，連過去只會得到 404。
+// 不在目錄裡（或不是版本事件）就退回原本的 <button>，行為完全不變。
+function notifGoto(r){
+  var gid=eventGid(r);
+  return gid&&IDSET[gid]?'/preview/'+encodeURIComponent(gid):'';
+}
 function notifRow(r){
-  var f=fmtEvent(r), read=!!r.read_at, syn=!!r.synthetic;
-  return '<button class="nrow lv-'+esc(r.level||'info')+(read?' read':'')+(syn?' synthetic':'')+'"'+
-    (syn?' disabled':' data-nid="'+esc(String(r.id))+'"')+'>'+
+  var f=fmtEvent(r), read=!!r.read_at, syn=!!r.synthetic, go=syn?'':notifGoto(r);
+  var tag=go?'a':'button';
+  return '<'+tag+' class="nrow lv-'+esc(r.level||'info')+(read?' read':'')+(syn?' synthetic':'')+'"'+
+    (syn?' disabled':' data-nid="'+esc(String(r.id))+'"')+(go?' href="'+esc(go)+'"':'')+'>'+
     '<span class="ndot"></span><span class="nico">'+f.icon+'</span>'+
     '<span class="nbody"><span class="ntitle">'+esc(r.title||'')+'</span>'+
     (f.sub?'<span class="nsub">'+esc(f.sub)+'</span>':'')+'</span>'+
-    '<span class="nwhen">'+esc(relTime(r.created))+'</span></button>';
+    (go?'<span class="ngo">開啟 ›</span>':'')+
+    '<span class="nwhen">'+esc(relTime(r.created))+'</span></'+tag+'>';
 }
 // cron 沒跑的時候沒有人會來寫那一列，所以「靜默」是前端從最新一筆推出來的，
 // 排在清單最上面。這也是整個通知中心真正回答「它還活著嗎」的那一行。
@@ -736,7 +758,10 @@ async function loadNotif(){
     NOTIF={unread:d.unread||0,alert:d.alert||0};paintBell();renderNotif(d);
   }catch(e){var el=document.getElementById('notifList');if(el)el.innerHTML='<div class="empty">讀不到通知</div>';}
 }
-async function markNotif(payload){
+// leaving=true 是「按完這一列就要換頁了」：await 會被導頁打斷，重畫清單也沒有意義，
+// 所以改用 keepalive 送出去就不管——瀏覽器會在換頁後把它送完。
+async function markNotif(payload,leaving){
+  if(leaving){try{fetch('/api/notifications/read',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload),keepalive:true});}catch(e){}return;}
   try{await fetch('/api/notifications/read',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});}
   catch(e){showToast('標記已讀失敗',String(e&&e.message||e));}
   loadNotif();
@@ -748,7 +773,8 @@ document.getElementById('notifAll').onclick=function(){markNotif({all:true});};
 // 逐筆已讀：開面板不自動全部標掉，否則你今天瞄一眼，明天就不知道昨天壞過。
 document.getElementById('notifList').addEventListener('click',function(e){
   var b=e.target.closest&&e.target.closest('[data-nid]');if(!b)return;
-  b.classList.add('read');markNotif({id:parseInt(b.getAttribute('data-nid'),10)});});
+  b.classList.add('read');
+  markNotif({id:parseInt(b.getAttribute('data-nid'),10)},b.tagName==='A'&&!e.metaKey&&!e.ctrlKey&&!e.shiftKey);});
 
 async function refreshR2(){
   try{const s=await(await fetch('/api/r2-status')).json();

@@ -8,7 +8,7 @@
 #   KEEP_DAYS=90 bash archive_notify.sh
 set -u
 cd "$(dirname "$0")"
-[ -f ../.env ] && set -a && . ../.env && set +a
+. ./_dotenv.sh  # ../.env (op:// refs → re-exec under op run)
 del(){ command rip "$@" 2>/dev/null || find "$@" -delete 2>/dev/null; }
 
 DB="nccn-search"

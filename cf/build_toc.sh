@@ -11,7 +11,7 @@
 # adding them here would buy 91 consecutive "no-toc" lines and nothing else.
 set -u
 cd "$(dirname "$0")"
-[ -f ../.env ] && set -a && . ../.env && set +a
+. ./_dotenv.sh  # ../.env (op:// refs → re-exec under op run)
 del(){ command rip "$@" 2>/dev/null || find "$@" -delete 2>/dev/null; }
 . ./lib.sh
 BUCKET="nccn-pdfs"
