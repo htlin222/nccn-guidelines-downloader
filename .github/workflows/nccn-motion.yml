@@ -78,7 +78,9 @@ jobs:
           path: dist
           merge-multiple: true
       - name: Verify every PDF page, movie, and soundtrack
-        run: python3 walkthrough/verify.py dist
+        run: |
+          command -v ffprobe || { sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg; }
+          python3 walkthrough/verify.py dist
       - name: Publish temporary release
         run: |
           gh release create "$TAG" dist/* --target "$GITHUB_SHA" \

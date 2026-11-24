@@ -11,6 +11,7 @@ import subprocess
 import tempfile
 import wave
 
+from aiohttp import ClientError
 import edge_tts
 import fitz
 import numpy as np
@@ -56,32 +57,42 @@ def text_lines(page):
         yield fitz.Rect(block[:4]), " ".join(block[4].split())
 
 
-def source_page(page, number, override, previous):
+def source_page(page, number, entry, previous):
     lines = list(text_lines(page))
-    header = [s for box, s in lines if 0.10 < box.y0 / page.rect.height < 0.24 and s]
-    refs = [m.group(0) for box, line in lines if box.y0 > page.rect.height * .86
-            for m in [re.fullmatch(r"[A-Z][A-Z0-9]{1,12}-[A-Z0-9]+(?:\s+\d+ of \d+)?", line)]
-            if m]
-    code = refs[-1] if refs else ""
+    height = page.rect.height
+    header = [s for box, s in lines if .10 < box.y0 / height < .24 and s]
+    footer = [s for box, s in lines if box.y0 / height > .86]
+    code = ""
+    for line in footer:
+        matches = re.findall(r"(?<![A-Z-])[A-Z][A-Z0-9]{1,12}-[A-Z0-9]+(?:\s+\d+ of \d+)?", line)
+        if matches and len(line) < 35:
+            code = matches[-1]
+    override, indexed_kind, indexed_ref = entry
+    if indexed_kind == "algorithm" and code and indexed_ref and code.split()[0] != indexed_ref.split()[0]:
+        override, indexed_kind = "", ""
     if number == 1:
         kind = "overview"
-    elif "UPDATES" in code or any(re.search(r"Updates in Version", s, re.I) for s in header):
+    elif any(re.fullmatch(r"UPDATES(?: Continued)?", t, re.I) for t in footer) or any(
+            re.search(r"Updates (?:in|to) Version", t, re.I) for t in header):
         kind = "changes"
-    elif "References" == override or previous == "references":
+    elif previous == "references" or any(re.fullmatch(r"References(?: and Resources)?", t, re.I)
+                                         for t in [override, *header]):
         kind = "references"
-    elif code.startswith("MS-") or previous == "discussion":
+    elif re.fullmatch(r"(?:NCCN )?(?:Panel Members|Table of Contents|Guidelines Index)", override, re.I):
+        kind = "contents"
+    elif code.startswith("MS-") or indexed_kind == "discussion" or previous == "discussion":
         kind = "discussion"
     elif code.startswith(("ST-", "ABBR-")):
         kind = "staging"
     elif override and re.match(r"^(principles|systemic therapy regimens)", override, re.I):
         kind = "principles"
-    elif code or override:
+    elif code or indexed_kind == "algorithm":
         kind = "algorithm"
     elif previous in ("algorithm", "principles", "staging"):
         kind = previous
     else:
         kind = "contents"
-    heading = override or next((s for s in header if 8 <= len(s) <= 93 and "NCCN" not in s), "")
+    heading = override or next((t for t in header if 8 <= len(t) <= 93 and "NCCN" not in t), "")
     if kind in {"algorithm", "principles", "staging", "discussion"}:
         for expr, title, helptext in TOPICS:
             if re.search(expr, heading, re.I):
@@ -208,7 +219,7 @@ async def voice(title, work):
                  "-ac", "1", "-f", "s16le", "-"])
             if audio:
                 return np.frombuffer(audio, dtype="<i2")
-        except (subprocess.CalledProcessError, RuntimeError, TimeoutError, OSError, edge_tts.exceptions.EdgeTTSException):
+        except (subprocess.CalledProcessError, RuntimeError, TimeoutError, OSError, ClientError, edge_tts.exceptions.EdgeTTSException):
             if attempt == 3:
                 raise
             await asyncio.sleep(2 ** attempt)
@@ -225,10 +236,23 @@ def movement(a, b, fraction):
     return fitz.Rect([x + s * (y - x) for x, y in zip(a, b)])
 
 
+def mask_print_name(page, source):
+    draw = ImageDraw.Draw(source)
+    sx, sy = source.width / page.rect.width, source.height / page.rect.height
+    for box, line in text_lines(page):
+        match = re.search(r"Printed by\s+(.+?)\s+on\s+\d{1,2}/\d{1,2}/\d{2,4}", line, re.I)
+        if box.y0 > 38 or not match:
+            continue
+        for name_box in page.search_for(match[1], clip=fitz.Rect(0, 0, page.rect.width, 38)):
+            draw.rectangle((math.floor(name_box.x0 * sx), math.floor(name_box.y0 * sy),
+                            math.ceil(name_box.x1 * sx), math.ceil(name_box.y1 * sy)), fill="white")
+
+
 def render_page(timeline, page, page_number, total, title, stamp, detail, narration):
     kind, code, heading, topic, summary = detail
     image = page.get_pixmap(matrix=fitz.Matrix(2.35, 2.35), alpha=False, annots=True)
     source = Image.frombytes("RGB", (image.width, image.height), image.samples)
+    mask_print_name(page, source)
     entire = page.rect
     content = blocks_for_region(page)
     regions = division(entire, content)
@@ -309,12 +333,12 @@ def render(gid, inputs, out, limit):
         raise ValueError(f"{gid}: missing version on PDF cover")
     stamp = stamp.group(0)
     saved_toc = json.loads((inputs / "toc" / f"{gid}.toc.json").read_text())
-    headings = {r["p"]: r["t"].replace("…", "") for r in saved_toc
+    headings = {r["p"]: (r["t"].replace("…", ""), r.get("sec", ""), r.get("ref", "")) for r in saved_toc
                 if isinstance(r.get("p"), int) and 1 < r["p"] <= total}
     # PDF bookmarks can supply discussion pages missing from the mirror’s TOC.
     for _, text, page in doc.get_toc():
         if 1 < page <= total and len(text) <= 145 and not text.lower().endswith(".pdf"):
-            headings.setdefault(page, text)
+            headings.setdefault(page, (text, "", ""))
     count = min(limit or total, total)
     rows, previous, heard = [], "", set()
     version = re.search(r"\d+\.\d+", stamp).group(0)
@@ -324,7 +348,7 @@ def render(gid, inputs, out, limit):
         timeline = Timeline(folder, inputs / "sfx")
         for number in range(1, count + 1):
             page = doc[number - 1]
-            detail = source_page(page, number, headings.get(number, ""), previous)
+            detail = source_page(page, number, headings.get(number, ("", "", "")), previous)
             kind = detail[0]
             speech = None
             if kind not in heard:
