@@ -75,13 +75,14 @@ def source_page(page, number, entry, previous):
     elif any(re.fullmatch(r"UPDATES(?: Continued)?", t, re.I) for t in footer) or any(
             re.search(r"Updates (?:in|to) Version", t, re.I) for t in header):
         kind = "changes"
-    elif previous == "references" or any(re.fullmatch(r"References(?: and Resources)?", t, re.I)
-                                         for t in [override, *header]):
-        kind = "references"
     elif re.fullmatch(r"(?:NCCN )?(?:Panel Members|Table of Contents|Guidelines Index)", override, re.I):
         kind = "contents"
-    elif code.startswith("MS-") or indexed_kind == "discussion" or previous == "discussion":
-        kind = "discussion"
+    elif code.startswith("MS-") or indexed_kind == "discussion" or (
+            not code and not indexed_kind and previous in ("discussion", "references")):
+        is_reference = previous == "references" or any(
+            re.fullmatch(r"References(?: and Resources)?", t, re.I) for t in [override, *header]
+        )
+        kind = "references" if is_reference else "discussion"
     elif code.startswith(("ST-", "ABBR-")):
         kind = "staging"
     elif override and re.match(r"^(principles|systemic therapy regimens)", override, re.I):
