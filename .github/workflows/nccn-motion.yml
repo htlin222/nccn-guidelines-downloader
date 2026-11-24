@@ -1,0 +1,85 @@
+name: NCCN motion render
+
+# action-as-cpu pattern: one shard per input, then verify and publish one release.
+on:
+  push:
+    branches: ["render/nccn-motion"]
+    paths: ["walkthrough/request.json"]
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      shards: ${{ steps.plan.outputs.shards }}
+      tag: ${{ steps.plan.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: plan
+        run: |
+          jq -er '"tag=" + (.tag | select(test("^nccn-motion-[a-z0-9-]+$")))' walkthrough/request.json >> "$GITHUB_OUTPUT"
+          echo 'shards=[0,1,2,3,4,5,6,7,8,9,10,11,12]' >> "$GITHUB_OUTPUT"
+
+  compute:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    strategy:
+      fail-fast: false
+      max-parallel: 13
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: htlin222/nccn-motion-render
+          ref: main
+          ssh-key: ${{ secrets.NCCN_MOTION_INPUT_KEY }}
+          persist-credentials: false
+          path: private-inputs
+      - name: Move inputs out of the artifact tree
+        run: mv private-inputs "$RUNNER_TEMP/nccn-inputs"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install renderer dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-noto-cjk
+          python -m pip install 'pymupdf==1.28.0' 'Pillow==12.3.0' 'numpy<3' 'edge-tts>=7,<8'
+      - name: Render complete guideline
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: bash walkthrough/run.sh "$SHARD" 13 "$GITHUB_WORKSPACE/out"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nccn-motion-${{ matrix.shard }}
+          path: out/
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
+
+  release:
+    needs: [plan, compute]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ needs.plan.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: nccn-motion-*
+          path: dist
+          merge-multiple: true
+      - name: Verify every PDF page, movie, and soundtrack
+        run: python3 walkthrough/verify.py dist
+      - name: Publish temporary release
+        run: |
+          gh release create "$TAG" dist/* --target "$GITHUB_SHA" \
+            --title "NCCN motion walkthroughs" --notes "13 versioned PDF walkthroughs. Temporary delivery." --prerelease
